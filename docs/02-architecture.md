@@ -25,6 +25,13 @@ The app uses the Next.js App Router with locale-prefixed routes. Server componen
 
 The locale prefix is enforced in `src/proxy.ts` (Next.js Proxy) and defaults to `/en` when missing.
 
+`src/proxy.ts` is also where we enforce security-sensitive request behavior:
+- Auth gating + redirects
+- Locale cookie hardening
+- **Nonce-based CSP** (production)
+
+See: `docs/07-security-headers-and-csp.md`
+
 ## Internationalization
 
 - Locale data lives in `src/messages/*.json`.

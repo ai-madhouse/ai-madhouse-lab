@@ -16,26 +16,12 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-site" },
+
+  // NOTE: CSP is set dynamically in src/proxy.ts (nonce per request), so it
+  // cannot live in next.config headers().
 ];
 
 if (isProd) {
-  // CSP: conservative defaults. Stronger CSP would require nonces/hashes.
-  securityHeaders.push({
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "img-src 'self' data: blob:",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "connect-src 'self' https: wss: ws:",
-      "font-src 'self' data:",
-    ].join("; "),
-  });
-
   securityHeaders.push({
     key: "Strict-Transport-Security",
     value: "max-age=15552000; includeSubDomains",

@@ -1,10 +1,43 @@
+import crypto from "node:crypto";
+
 import { type NextRequest, NextResponse } from "next/server";
 
 import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { decideProxyAction } from "@/lib/proxy-logic";
 import { getSession } from "@/lib/sessions";
 
-function applySecurityHeaders(response: NextResponse) {
+function createNonce() {
+  return crypto.randomBytes(16).toString("base64url");
+}
+
+function buildCsp({ nonce }: { nonce: string }) {
+  // "nonce-..." is the hook Next.js uses to automatically add nonce attributes
+  // to framework scripts/bundles/styles during dynamic SSR.
+  //
+  // We intentionally avoid 'unsafe-inline' / 'unsafe-eval' in production.
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
+    // Next.js may emit inline <style> tags; nonce makes them legal.
+    `style-src 'self' 'nonce-${nonce}'`,
+    // Block inline event handlers.
+    "script-src-attr 'none'",
+    // By default we assume same-origin websockets via reverse proxy.
+    // If realtime runs on a different origin, add it explicitly.
+    "connect-src 'self'",
+  ].join("; ");
+}
+
+function applySecurityHeaders(
+  response: NextResponse,
+  opts?: { nonce?: string; csp?: string },
+) {
   // Minimal, production-safe defaults. Prefer enforcing these at the edge too.
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -17,23 +50,9 @@ function applySecurityHeaders(response: NextResponse) {
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-site");
 
-  // CSP is valuable but easy to get wrong in Next.js. We keep it conservative
-  // and only enforce in production. (In dev, HMR often relies on inline/eval.)
   if (process.env.NODE_ENV === "production") {
-    const csp = [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "img-src 'self' data: blob:",
-      // Note: Next often needs inline scripts unless you implement nonces.
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      // Allow websockets in production deployments (ports may differ).
-      "connect-src 'self' https: wss: ws:",
-      "font-src 'self' data:",
-    ].join("; ");
+    const effectiveNonce = opts?.nonce ?? createNonce();
+    const csp = opts?.csp ?? buildCsp({ nonce: effectiveNonce });
 
     response.headers.set("Content-Security-Policy", csp);
     response.headers.set(
@@ -60,6 +79,11 @@ function setLocaleCookie(response: NextResponse, locale: string) {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  // Only needed in production (dev HMR often relies on eval/inline).
+  const nonce =
+    process.env.NODE_ENV === "production" ? createNonce() : undefined;
+  const csp = nonce ? buildCsp({ nonce }) : undefined;
+
   const rawCookie = request.cookies.get(authCookieName)?.value;
   const sessionId = decodeAndVerifySessionCookie(rawCookie);
 
@@ -82,14 +106,21 @@ export async function proxy(request: NextRequest) {
     if (decision.setLocaleCookie) {
       setLocaleCookie(response, decision.setLocaleCookie);
     }
-    return applySecurityHeaders(response);
+    return applySecurityHeaders(response, { nonce, csp });
   }
 
-  const response = NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  if (nonce && csp) {
+    // Next.js reads the nonce from the CSP header during SSR.
+    requestHeaders.set("Content-Security-Policy", csp);
+    requestHeaders.set("x-nonce", nonce);
+  }
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
   if (decision.setLocaleCookie) {
     setLocaleCookie(response, decision.setLocaleCookie);
   }
-  return applySecurityHeaders(response);
+  return applySecurityHeaders(response, { nonce, csp });
 }
 
 export const config = {
