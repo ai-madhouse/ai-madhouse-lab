@@ -28,6 +28,7 @@ import {
   listSessionsForUser,
 } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
+import { describeUserAgent } from "@/lib/user-agent";
 
 export default async function SettingsPage({
   params,
@@ -127,6 +128,38 @@ export default async function SettingsPage({
                 <p className="text-sm text-muted-foreground">
                   {t("sessions.active", { count: String(sessions.length) })}
                 </p>
+
+                <div className="space-y-2">
+                  {sessions.map((s) => {
+                    const ua = describeUserAgent(s.user_agent);
+                    const ip = s.ip || t("sessions.unknownIp");
+                    const current = s.id === sessionId;
+
+                    return (
+                      <div
+                        key={s.id}
+                        className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {ua.browser} • {ua.os} • {ip}
+                          </p>
+                          {current ? (
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                              {t("sessions.current")}
+                            </p>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("sessions.createdAt")}:{" "}
+                          {new Date(s.created_at).toLocaleString()} •{" "}
+                          {t("sessions.expiresAt")}:{" "}
+                          {new Date(s.expires_at).toLocaleString()}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <form action={revokeOtherSessionsAction}>
                     <Button

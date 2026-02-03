@@ -66,9 +66,9 @@ async function loginAction(formData: FormData) {
     redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
   }
 
-  const session = await createSession({ username });
-
   const userAgent = (await headers()).get("user-agent") ?? "";
+  const session = await createSession({ username, ip, userAgent });
+
   console.log(
     JSON.stringify({
       ts: new Date().toISOString(),

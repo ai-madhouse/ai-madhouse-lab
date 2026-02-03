@@ -251,6 +251,10 @@
       "title": "Sesijos",
       "subtitle": "Valdykite, kur šiuo metu prisijungta prie jūsų paskyros.",
       "active": "Aktyvios sesijos: {count}",
+      "current": "Dabartinė",
+      "createdAt": "Sukurta",
+      "expiresAt": "Galioja iki",
+      "unknownIp": "nežinomas IP",
       "revokeOthers": "Atšaukti kitas sesijas",
       "signOutEverywhere": "Atsijungti visur",
       "note": "Atšaukus sesijas jos pašalinamos serveryje. Kitas užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
@@ -314,6 +318,6 @@
   "Notes": {
     "eyebrow": "Užrašai",
     "title": "Užrašai",
-    "subtitle": "Maža CRUD demonstracija su vietiniu sqlite per libsql."
+    "subtitle": "E2EE užrašų demo: priedo-iki galo šifravimas ir įvykių žurnalas."
   }
 }

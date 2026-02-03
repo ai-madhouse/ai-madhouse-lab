@@ -28,6 +28,31 @@ async function migrate(client: Client) {
   await client.execute(
     "CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), expires_at TEXT NOT NULL)",
   );
+
+  // Backfill columns for newer builds.
+  try {
+    await client.execute("ALTER TABLE sessions ADD COLUMN ip TEXT");
+  } catch {
+    // ignore
+  }
+
+  try {
+    await client.execute("ALTER TABLE sessions ADD COLUMN user_agent TEXT");
+  } catch {
+    // ignore
+  }
+
+  await client.execute(
+    "CREATE TABLE IF NOT EXISTS user_keys (username TEXT PRIMARY KEY, kdf_salt TEXT NOT NULL, wrapped_key_iv TEXT NOT NULL, wrapped_key_ciphertext TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+  );
+
+  await client.execute(
+    "CREATE TABLE IF NOT EXISTS notes_events (id TEXT PRIMARY KEY, username TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), kind TEXT NOT NULL, note_id TEXT NOT NULL, target_event_id TEXT, payload_iv TEXT, payload_ciphertext TEXT)",
+  );
+
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS notes_events_user_time ON notes_events(username, created_at)",
+  );
 }
 
 export async function getDb(): Promise<Client> {

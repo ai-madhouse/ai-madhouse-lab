@@ -251,6 +251,10 @@
       "title": "Sessions",
       "subtitle": "Manage where your account is currently signed in.",
       "active": "Active sessions: {count}",
+      "current": "Current",
+      "createdAt": "Created",
+      "expiresAt": "Expires",
+      "unknownIp": "unknown IP",
       "revokeOthers": "Revoke other sessions",
       "signOutEverywhere": "Sign out everywhere",
       "note": "Revoking sessions removes them from the server. The next request from that device will be forced to re-auth."
@@ -314,6 +318,6 @@
   "Notes": {
     "eyebrow": "Notes",
     "title": "Notes",
-    "subtitle": "A tiny CRUD demo backed by local sqlite via libsql."
+    "subtitle": "An end-to-end encrypted notes demo stored as an append-only event log."
   }
 }
