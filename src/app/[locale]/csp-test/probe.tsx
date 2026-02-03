@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 
-export function CspViolationProbe() {
+export function CspViolationProbe({
+  sentryEndpoint,
+}: {
+  sentryEndpoint: string | null;
+}) {
   const [status, setStatus] = useState<string>("idle");
 
   async function triggerViolation() {
@@ -25,7 +29,8 @@ export function CspViolationProbe() {
           }),
         );
 
-        const res = await fetch("/api/csp-report", {
+        // 1) Always hit local endpoint (same-origin). Useful for fallback + tests.
+        const resLocal = await fetch("/api/csp-report", {
           method: "POST",
           headers: { "content-type": "application/reports+json" },
           body: JSON.stringify([
@@ -42,7 +47,28 @@ export function CspViolationProbe() {
           ]),
         });
 
-        console.log("csp-test: report sent", String(res.status));
+        // 2) If Sentry DSN is configured, also send directly to Sentry Security.
+        // This simulates the browser-native reporting flow and helps confirm
+        // end-to-end visibility in Sentry.
+        if (sentryEndpoint) {
+          await fetch(sentryEndpoint, {
+            method: "POST",
+            headers: { "content-type": "application/csp-report" },
+            body: JSON.stringify({
+              "csp-report": {
+                "document-uri": e.documentURI,
+                "blocked-uri": e.blockedURI,
+                "violated-directive": e.violatedDirective,
+                "effective-directive": e.effectiveDirective,
+                disposition: e.disposition,
+              },
+            }),
+          }).catch(() => {
+            // best-effort
+          });
+        }
+
+        console.log("csp-test: report sent", String(resLocal.status));
         setStatus("reported");
       } catch {
         setStatus("report-failed");
