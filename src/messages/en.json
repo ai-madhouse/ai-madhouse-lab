@@ -15,6 +15,8 @@
     "aboutIcon": "About",
     "login": "Sign in",
     "loginIcon": "Sign in",
+    "register": "Register",
+    "registerIcon": "Register",
     "logout": "Sign out",
     "logoutIcon": "Sign out",
     "notes": "Notes",
@@ -42,19 +44,38 @@
     "version": "Milestone {version}"
   },
   "Auth": {
-    "badge": "Secure access",
+    "badge": "Account",
     "title": "Welcome back",
-    "subtitle": "Enter the lab with credentials issued for this demo environment.",
-    "hint": "Default credentials: operator / madhouse (override via DEMO_USER and DEMO_PASS).",
+    "subtitle": "Sign in to continue.",
+    "hint": "If you don't have an account yet, create one.",
     "form": {
-      "title": "Operator login",
-      "subtitle": "Credentials are validated on the server before unlocking the dashboard.",
-      "error": "Those credentials do not match. Try again.",
+      "title": "Sign in",
+      "subtitle": "Sessions are stored in sqlite and checked on every request.",
+      "error": "Sign-in failed. Check your username and password.",
       "username": "Username",
-      "usernamePlaceholder": "operator",
+      "usernamePlaceholder": "yourname",
       "password": "Password",
-      "passwordPlaceholder": "madhouse",
-      "submit": "Enter the lab"
+      "passwordPlaceholder": "••••••••••",
+      "submit": "Sign in",
+      "noAccount": "No account?",
+      "registerLink": "Register"
+    },
+    "register": {
+      "badge": "Create account",
+      "title": "Create your account",
+      "subtitle": "Pick a username and a strong password.",
+      "hint": "Username: a-z, 0-9, . _ -. Password: 10+ characters.",
+      "form": {
+        "title": "Register",
+        "subtitle": "Passwords are hashed with scrypt before being stored.",
+        "error": "Registration failed: {error}",
+        "username": "Username",
+        "password": "Password",
+        "password2": "Confirm password",
+        "submit": "Create account",
+        "haveAccount": "Already have an account?",
+        "signIn": "Sign in"
+      }
     }
   },
   "Landing": {

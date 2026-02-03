@@ -28,10 +28,11 @@
 
 ## Environment variables
 
-- `DEMO_USER`: login username (default: `operator`)
-- `DEMO_PASS`: login password (default: `madhouse`)
+- `AUTH_SECRET`: required in production (>= 16 chars). Used for signing session cookies.
+- `DB_PATH`: optional, defaults to `data/app.db`.
+- `REALTIME_*`: see `realtime/server.ts` for WebSocket settings.
 
 ## Notes
 
-- Routes `/dashboard`, `/settings`, and `/live` require authentication.
-- Locale routing is enforced by `src/middleware.ts`.
+- Users can register at `/{locale}/register`.
+- Auth is session-based (sqlite `sessions` table) and checked on every request.

@@ -8,6 +8,7 @@ import {
   NotebookPen,
   Settings,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -81,6 +82,19 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />
+
+          {!isAuthed ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => router.push(`/${locale}/register`)}
+            >
+              <UserPlus className="h-4 w-4" aria-label={t("registerIcon")} />
+              {t("register")}
+            </Button>
+          ) : null}
+
           <Button
             variant="outline"
             size="sm"

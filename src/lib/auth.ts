@@ -3,17 +3,15 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
 import { getSession } from "@/lib/sessions";
+import { normalizeUsername, verifyCredentials } from "@/lib/users";
 
 export const authCookieName = "madhouse_auth";
-
-const defaultUser = "operator";
-const defaultPassword = "madhouse";
 
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
   if (secret && secret.length >= 16) return secret;
 
-  // For local/demo use only. In production, require a strong secret.
+  // For local/dev use only. In production, require a strong secret.
   if (process.env.NODE_ENV === "production") {
     throw new Error("AUTH_SECRET must be set in production");
   }
@@ -21,10 +19,9 @@ function getAuthSecret() {
   return "dev-secret-change-me-please";
 }
 
-export function authenticate(username: string, password: string) {
-  const expectedUser = process.env.DEMO_USER ?? defaultUser;
-  const expectedPassword = process.env.DEMO_PASS ?? defaultPassword;
-  return username === expectedUser && password === expectedPassword;
+export async function authenticate(username: string, password: string) {
+  const normalized = normalizeUsername(username);
+  return await verifyCredentials({ username: normalized, password });
 }
 
 function signSessionId(sessionId: string) {

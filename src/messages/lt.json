@@ -15,6 +15,8 @@
     "aboutIcon": "Apie",
     "login": "Prisijungti",
     "loginIcon": "Prisijungti",
+    "register": "Registruotis",
+    "registerIcon": "Registruotis",
     "logout": "Atsijungti",
     "logoutIcon": "Atsijungti",
     "notes": "Užrašai",
@@ -42,19 +44,38 @@
     "version": "Etapas {version}"
   },
   "Auth": {
-    "badge": "Saugus prisijungimas",
+    "badge": "Paskyra",
     "title": "Sveiki sugrįžę",
-    "subtitle": "Įveskite šiai demonstracinei aplinkai suteiktus duomenis.",
-    "hint": "Numatytieji duomenys: operator / madhouse (galima pakeisti per DEMO_USER ir DEMO_PASS).",
+    "subtitle": "Prisijunkite, kad tęstumėte.",
+    "hint": "Neturite paskyros? Susikurkite ją.",
     "form": {
-      "title": "Operatoriaus prisijungimas",
-      "subtitle": "Duomenys patvirtinami serveryje prieš atveriant skydelį.",
-      "error": "Neteisingi prisijungimo duomenys. Bandykite dar kartą.",
+      "title": "Prisijungti",
+      "subtitle": "Sesijos saugomos sqlite ir tikrinamos kiekvienoje užklausoje.",
+      "error": "Prisijungti nepavyko. Patikrinkite vardą ir slaptažodį.",
       "username": "Vartotojo vardas",
-      "usernamePlaceholder": "operator",
+      "usernamePlaceholder": "yourname",
       "password": "Slaptažodis",
-      "passwordPlaceholder": "madhouse",
-      "submit": "Įeiti į laboratoriją"
+      "passwordPlaceholder": "••••••••••",
+      "submit": "Prisijungti",
+      "noAccount": "Neturite paskyros?",
+      "registerLink": "Registruotis"
+    },
+    "register": {
+      "badge": "Registracija",
+      "title": "Sukurkite paskyrą",
+      "subtitle": "Pasirinkite vartotojo vardą ir stiprų slaptažodį.",
+      "hint": "Vardas: a-z, 0-9, . _ -. Slaptažodis: 10+ simbolių.",
+      "form": {
+        "title": "Registruotis",
+        "subtitle": "Slaptažodžiai prieš įrašant maišomi su scrypt.",
+        "error": "Registracija nepavyko: {error}",
+        "username": "Vartotojo vardas",
+        "password": "Slaptažodis",
+        "password2": "Pakartokite slaptažodį",
+        "submit": "Sukurti paskyrą",
+        "haveAccount": "Jau turite paskyrą?",
+        "signIn": "Prisijungti"
+      }
     }
   },
   "Landing": {
