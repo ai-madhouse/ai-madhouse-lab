@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type React from "react";
 import { locales } from "@/lib/i18n";
+import { switchLocalePathname } from "@/lib/locale-path";
 
 export function LocaleSwitcher() {
   const locale = useLocale();
@@ -15,13 +16,8 @@ export function LocaleSwitcher() {
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const nextLocale = event.target.value;
-    const segments = pathname.split("/");
+    const nextPath = switchLocalePathname({ pathname, nextLocale });
 
-    if (segments.length > 1) {
-      segments[1] = nextLocale;
-    }
-
-    const nextPath = segments.join("/") || `/${nextLocale}`;
     const query = searchParams.toString();
     const hash = typeof window === "undefined" ? "" : window.location.hash;
 
