@@ -9,8 +9,8 @@ test("CSP present on authenticated pages too", async ({ page }) => {
   expect(res).toBeTruthy();
 
   const headers = res!.headers();
-  expect(headers["content-security-policy"]).toContain("report-to csp");
-  expect(headers["reporting-endpoints"]).toBe('csp="/api/csp-report"');
+  expect(headers["content-security-policy"]).toContain("report-to");
+  expect(headers["reporting-endpoints"]).toContain('csp="/api/csp-report"');
 });
 
 test("/api/csp-report returns 204 to a sample report payload", async ({

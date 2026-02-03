@@ -12,13 +12,16 @@ test("CSP + Reporting-Endpoints headers present in production", async ({
   expect(headers).toBeTruthy();
 
   // CSP should be set by proxy middleware in production.
-  expect(headers!["content-security-policy"]).toContain("report-to csp");
+  expect(headers!["content-security-policy"]).toContain("report-to");
+  expect(headers!["content-security-policy"]).toContain("/api/csp-report");
+  // When SENTRY_DSN is configured, we also route to Sentry security endpoint.
   expect(headers!["content-security-policy"]).toContain(
-    "report-uri /api/csp-report",
+    "/security/?sentry_key=",
   );
 
   // Reporting API mapping
-  expect(headers!["reporting-endpoints"]).toBe('csp="/api/csp-report"');
+  expect(headers!["reporting-endpoints"]).toContain('csp="/api/csp-report"');
+  expect(headers!["reporting-endpoints"]).toContain("csp-endpoint=");
 });
 
 test("Theme toggle does not shift the logout button", async ({ page }) => {

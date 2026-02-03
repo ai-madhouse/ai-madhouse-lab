@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -46,4 +47,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const configWithPlugins = withNextIntl(nextConfig);
+
+export default withSentryConfig(configWithPlugins, {
+  // No source maps upload by default (no auth token configured).
+  silent: true,
+});

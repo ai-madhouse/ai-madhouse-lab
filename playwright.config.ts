@@ -22,7 +22,7 @@ export default defineConfig({
   },
   webServer: {
     // `next start` requires a build. Run `bun run build` before `bun run e2e`.
-    command: `PORT=${PORT} NODE_ENV=production E2E_TEST=1 AUTH_SECRET=playwright-test-secret bun run start -- -p ${PORT}`,
+    command: `PORT=${PORT} NODE_ENV=production E2E_TEST=1 AUTH_SECRET=playwright-test-secret SENTRY_DSN=https://4646900ef519dfe814da453cc50e3ad9@o1113565.ingest.us.sentry.io/4510823535411200 bun run start -- -p ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     timeout: 120_000,

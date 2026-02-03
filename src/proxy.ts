@@ -10,6 +10,24 @@ function createNonce() {
   return crypto.randomBytes(16).toString("base64url");
 }
 
+function getSentrySecurityCspEndpoint(): string | null {
+  const dsn = (process.env.SENTRY_DSN || "").trim();
+  if (!dsn) return null;
+
+  try {
+    const u = new URL(dsn);
+    const publicKey = u.username;
+    const host = u.host;
+    const projectId = u.pathname.replace(/^\//, "");
+
+    if (!publicKey || !host || !projectId) return null;
+
+    return `https://${host}/api/${projectId}/security/?sentry_key=${publicKey}`;
+  } catch {
+    return null;
+  }
+}
+
 export function buildCsp({ nonce }: { nonce: string }) {
   // "nonce-..." is the hook Next.js uses to automatically add nonce attributes
   // to framework scripts/bundles/styles during dynamic SSR.
@@ -19,6 +37,17 @@ export function buildCsp({ nonce }: { nonce: string }) {
   // Reporting:
   // - Prefer Reporting-Endpoints + `report-to`.
   // - Keep `report-uri` as a practical fallback for coverage.
+  const sentryEndpoint = getSentrySecurityCspEndpoint();
+  const sentryHost = sentryEndpoint ? new URL(sentryEndpoint).origin : null;
+
+  const connectSrc = ["'self'", ...(sentryHost ? [sentryHost] : [])].join(" ");
+
+  const reportUris = [
+    // Always keep local endpoint as a fallback.
+    "/api/csp-report",
+    ...(sentryEndpoint ? [sentryEndpoint] : []),
+  ].join(" ");
+
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -34,10 +63,12 @@ export function buildCsp({ nonce }: { nonce: string }) {
     "script-src-attr 'none'",
     // By default we assume same-origin websockets via reverse proxy.
     // If realtime runs on a different origin, add it explicitly.
-    "connect-src 'self'",
-    // Reporting wiring (endpoint name "csp" -> /api/csp-report via Reporting-Endpoints header)
-    "report-to csp",
-    "report-uri /api/csp-report",
+    `connect-src ${connectSrc}`,
+    // Reporting wiring:
+    // - Local (same-origin) endpoint exists for safety and tests.
+    // - Sentry security endpoint (if configured) gets direct browser reports.
+    sentryEndpoint ? "report-to csp-endpoint" : "report-to csp",
+    `report-uri ${reportUris}`,
   ].join("; ");
 }
 
@@ -62,7 +93,13 @@ export function applySecurityHeaders(
     const csp = opts?.csp ?? buildCsp({ nonce: effectiveNonce });
 
     // Map endpoint-name -> URL for Reporting API.
-    response.headers.set("Reporting-Endpoints", 'csp="/api/csp-report"');
+    const sentryEndpoint = getSentrySecurityCspEndpoint();
+    const reportingEndpoints = [
+      'csp="/api/csp-report"',
+      ...(sentryEndpoint ? [`csp-endpoint="${sentryEndpoint}"`] : []),
+    ].join(", ");
+
+    response.headers.set("Reporting-Endpoints", reportingEndpoints);
 
     response.headers.set("Content-Security-Policy", csp);
     response.headers.set(
