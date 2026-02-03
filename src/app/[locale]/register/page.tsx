@@ -1,23 +1,12 @@
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
-import { PasswordFields } from "@/components/auth/password-fields";
-import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
+import { RegisterForm } from "@/components/auth/register-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   clearAuthCookie,
   isAuthenticated,
@@ -28,14 +17,10 @@ import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/redirects";
 import { getClientIp } from "@/lib/request";
+import { registerFormSchema } from "@/lib/schemas/auth";
 import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
-import {
-  createUser,
-  normalizeUsername,
-  validatePassword,
-  validateUsername,
-} from "@/lib/users";
+import { createUser } from "@/lib/users";
 
 type RegisterPageProps = {
   params: Promise<{ locale: string }>;
@@ -45,18 +30,28 @@ type RegisterPageProps = {
 async function registerAction(formData: FormData) {
   "use server";
 
-  const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
-  const nextPath = safeNextPath(locale, String(formData.get("next") ?? ""));
+  const parsed = registerFormSchema.safeParse({
+    locale: String(formData.get("locale") ?? "en"),
+    next: String(formData.get("next") ?? ""),
+    username: String(formData.get("username") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    password2: String(formData.get("password2") ?? ""),
+    csrfToken: String(formData.get("csrfToken") ?? ""),
+  });
 
-  const usernameRaw = String(formData.get("username") ?? "");
+  if (!parsed.success) {
+    const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
+    const msg = parsed.error.issues[0]?.message ?? "invalid";
+    redirect(`/${locale}/register?error=${encodeURIComponent(msg)}`);
+  }
+
+  const { locale, next, username, csrfToken } = parsed.data;
   const password = String(formData.get("password") ?? "");
-  const password2 = String(formData.get("password2") ?? "");
-  const csrfToken = String(formData.get("csrfToken") ?? "");
 
   const hdrs = await headers();
   const ip = getClientIp(hdrs);
 
-  const username = normalizeUsername(usernameRaw);
+  const nextPath = safeNextPath(locale, next);
 
   const limiter = consumeRateLimit({
     key: `register:${username || "unknown"}`,
@@ -76,30 +71,9 @@ async function registerAction(formData: FormData) {
     );
   }
 
-  const usernameError = validateUsername(username);
-  if (usernameError) {
-    redirect(
-      `/${locale}/register?error=${encodeURIComponent(usernameError)}&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  const passwordError = validatePassword(password);
-  if (passwordError) {
-    redirect(
-      `/${locale}/register?error=${encodeURIComponent(passwordError)}&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  if (password !== password2) {
-    redirect(
-      `/${locale}/register?error=passwords_mismatch&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
   try {
     await createUser({ username, password });
   } catch {
-    // Probably username already exists.
     redirect(
       `/${locale}/register?error=exists&next=${encodeURIComponent(nextPath)}`,
     );
@@ -139,6 +113,7 @@ export default async function RegisterPage({
 
   const isAuthed = await isAuthenticated();
   const err = resolvedSearchParams?.error;
+  const nextPath = resolvedSearchParams?.next ?? `/${locale}/dashboard`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,61 +133,22 @@ export default async function RegisterPage({
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>{t("register.form.title")}</CardTitle>
-              <CardDescription>{t("register.form.subtitle")}</CardDescription>
-            </CardHeader>
             <CardContent className="space-y-4">
-              {err ? (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                  {t("register.form.error", { error: err })}
-                </div>
-              ) : null}
-
-              <form action={registerAction} className="space-y-4">
-                <CsrfTokenField />
-                <input type="hidden" name="locale" value={locale} />
-                <input
-                  type="hidden"
-                  name="next"
-                  value={resolvedSearchParams?.next ?? `/${locale}/dashboard`}
-                />
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">
-                    {t("register.form.username")}
-                  </Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    required
-                  />
-                </div>
-
-                <PasswordFields
-                  passwordId="password"
-                  passwordName="password"
-                  password2Id="password2"
-                  password2Name="password2"
-                  passwordLabel={t("register.form.password")}
-                  password2Label={t("register.form.password2")}
-                />
-
-                <Button className="w-full">{t("register.form.submit")}</Button>
-
-                <p className="text-sm text-muted-foreground">
-                  {t("register.form.haveAccount")}{" "}
-                  <Link
-                    href={`/${locale}/login?next=${encodeURIComponent(resolvedSearchParams?.next ?? `/${locale}/dashboard`)}`}
-                    className="underline"
-                  >
-                    {t("register.form.signIn")}
-                  </Link>
-                </p>
-              </form>
+              <RegisterForm
+                action={registerAction}
+                locale={locale}
+                nextPath={nextPath}
+                error={err}
+                errorText={t("register.form.error", { error: err ?? "" })}
+                title={t("register.form.title")}
+                subtitle={t("register.form.subtitle")}
+                usernameLabel={t("register.form.username")}
+                passwordLabel={t("register.form.password")}
+                password2Label={t("register.form.password2")}
+                submitLabel={t("register.form.submit")}
+                haveAccountText={t("register.form.haveAccount")}
+                signInText={t("register.form.signIn")}
+              />
             </CardContent>
           </Card>
         </section>

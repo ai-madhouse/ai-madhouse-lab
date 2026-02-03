@@ -7,6 +7,7 @@ import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { changePasswordFormSchema } from "@/lib/schemas/auth";
 
 export function ChangePasswordForm({
   action,
@@ -24,10 +25,42 @@ export function ChangePasswordForm({
   submitLabel: string;
 }) {
   const [nextPassword, setNextPassword] = useState("");
+  const [clientError, setClientError] = useState<string | null>(null);
 
   return (
-    <form action={action} className="space-y-4">
+    <form
+      action={action}
+      className="space-y-4"
+      onSubmit={(e) => {
+        const form = e.currentTarget;
+        const fd = new FormData(form);
+
+        const parsed = changePasswordFormSchema.safeParse({
+          csrfToken: String(fd.get("csrfToken") ?? ""),
+          currentPassword: String(fd.get("currentPassword") ?? ""),
+          newPassword: String(fd.get("newPassword") ?? ""),
+          newPassword2: String(fd.get("newPassword2") ?? ""),
+        });
+
+        if (!parsed.success) {
+          const first = parsed.error.issues[0];
+          setClientError(first?.message ?? "Please check the form fields.");
+          e.preventDefault();
+        } else {
+          setClientError(null);
+        }
+      }}
+    >
       <CsrfTokenField />
+
+      {clientError ? (
+        <div
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
+          {clientError}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="currentPassword">{currentPasswordLabel}</Label>

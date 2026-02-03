@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
+import { passwordSchema, usernameSchema } from "@/lib/validation/users";
 
 export type UserRow = {
   username: string;
@@ -7,31 +8,19 @@ export type UserRow = {
   created_at: string;
 };
 
-export function normalizeUsername(raw: string) {
-  return raw.trim().toLowerCase();
-}
+export { normalizeUsername } from "@/lib/validation/users";
 
+// Backwards-compatible helpers (internally powered by zod).
 export function validateUsername(username: string) {
-  if (username.length < 3) return "username too short";
-  if (username.length > 32) return "username too long";
-  if (!/^[a-z0-9._-]+$/.test(username)) {
-    return "username must use a-z, 0-9, dot, underscore, dash";
-  }
-  return null;
+  const parsed = usernameSchema.safeParse(username);
+  if (parsed.success) return null;
+  return parsed.error.issues[0]?.message ?? "invalid username";
 }
 
 export function validatePassword(password: string) {
-  if (password.length < 12) return "password must be at least 12 characters";
-  if (password.length > 200) return "password too long";
-
-  if (!/[A-Z]/.test(password)) return "password must include a capital letter";
-  if (!/[a-z]/.test(password))
-    return "password must include a lowercase letter";
-  if (!/\d/.test(password)) return "password must include a digit";
-  if (!/[^A-Za-z0-9]/.test(password))
-    return "password must include a special character";
-
-  return null;
+  const parsed = passwordSchema.safeParse(password);
+  if (parsed.success) return null;
+  return parsed.error.issues[0]?.message ?? "invalid password";
 }
 
 export async function getUserByUsername(

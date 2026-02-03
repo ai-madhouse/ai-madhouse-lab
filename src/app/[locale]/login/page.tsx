@@ -1,21 +1,12 @@
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
-import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
+import { LoginForm } from "@/components/auth/login-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   authenticate,
   isAuthenticated,
@@ -26,6 +17,7 @@ import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/redirects";
 import { getClientIp } from "@/lib/request";
+import { loginFormSchema } from "@/lib/schemas/auth";
 import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 
@@ -36,17 +28,30 @@ type LoginPageProps = {
 
 async function loginAction(formData: FormData) {
   "use server";
-  const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
-  const nextPath = safeNextPath(locale, String(formData.get("next") ?? ""));
-  const username = String(formData.get("username") ?? "");
+
+  const parsed = loginFormSchema.safeParse({
+    locale: String(formData.get("locale") ?? "en"),
+    next: String(formData.get("next") ?? ""),
+    username: String(formData.get("username") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    csrfToken: String(formData.get("csrfToken") ?? ""),
+  });
+
+  // Generic error for invalid payload.
+  if (!parsed.success) {
+    const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
+    redirect(`/${locale}/login?error=1`);
+  }
+
+  const { locale, next, username, csrfToken } = parsed.data;
   const password = String(formData.get("password") ?? "");
-  const csrfToken = String(formData.get("csrfToken") ?? "");
+  const nextPath = safeNextPath(locale, next);
 
   const hdrs = await headers();
   const ip = getClientIp(hdrs);
 
   const limiter = consumeRateLimit({
-    key: `login:${username.trim().toLowerCase() || "unknown"}`,
+    key: `login:${username || "unknown"}`,
     limit: 10,
     windowSeconds: 60,
   });
@@ -67,12 +72,8 @@ async function loginAction(formData: FormData) {
     redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
   }
 
-  const userAgent = (await headers()).get("user-agent") ?? "";
-  const session = await createSession({
-    username: username.trim().toLowerCase(),
-    ip,
-    userAgent,
-  });
+  const userAgent = hdrs.get("user-agent") ?? "";
+  const session = await createSession({ username, ip, userAgent });
 
   console.log(
     JSON.stringify({
@@ -97,10 +98,13 @@ export default async function LoginPage({
   const { locale: rawLocale } = await params;
   const locale = normalizeLocale(rawLocale);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Auth");
+
   const isAuthed = await isAuthenticated();
   const hasError = resolvedSearchParams?.error === "1";
+  const nextPath = resolvedSearchParams?.next ?? `/${locale}/dashboard`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,59 +122,23 @@ export default async function LoginPage({
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>{t("form.title")}</CardTitle>
-              <CardDescription>{t("form.subtitle")}</CardDescription>
-            </CardHeader>
             <CardContent className="space-y-4">
-              {hasError ? (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                  {t("form.error")}
-                </div>
-              ) : null}
-              <form action={loginAction} className="space-y-4">
-                <CsrfTokenField />
-                <input type="hidden" name="locale" value={locale} />
-                <input
-                  type="hidden"
-                  name="next"
-                  value={resolvedSearchParams?.next ?? `/${locale}/dashboard`}
-                />
-                <div className="space-y-2">
-                  <Label htmlFor="username">{t("form.username")}</Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    placeholder={t("form.usernamePlaceholder")}
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t("form.password")}</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder={t("form.passwordPlaceholder")}
-                    autoComplete="current-password"
-                    required
-                  />
-                </div>
-                <Button className="w-full">{t("form.submit")}</Button>
-
-                <p className="text-sm text-muted-foreground">
-                  {t("form.noAccount")}{" "}
-                  <Link
-                    href={`/${locale}/register?next=${encodeURIComponent(resolvedSearchParams?.next ?? `/${locale}/dashboard`)}`}
-                    className="underline"
-                  >
-                    {t("form.registerLink")}
-                  </Link>
-                </p>
-              </form>
+              <LoginForm
+                action={loginAction}
+                locale={locale}
+                nextPath={nextPath}
+                hasError={hasError}
+                errorText={t("form.error")}
+                title={t("form.title")}
+                subtitle={t("form.subtitle")}
+                usernameLabel={t("form.username")}
+                usernamePlaceholder={t("form.usernamePlaceholder")}
+                passwordLabel={t("form.password")}
+                passwordPlaceholder={t("form.passwordPlaceholder")}
+                submitLabel={t("form.submit")}
+                noAccountText={t("form.noAccount")}
+                registerLinkText={t("form.registerLink")}
+              />
             </CardContent>
           </Card>
         </section>

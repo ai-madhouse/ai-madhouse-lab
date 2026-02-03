@@ -25,6 +25,7 @@ import {
 } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { changePasswordFormSchema } from "@/lib/schemas/auth";
 import {
   deleteOtherSessionsForUser,
   deleteSessionsForUser,
@@ -32,7 +33,7 @@ import {
   listSessionsForUser,
 } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
-import { updateUserPassword, validatePassword } from "@/lib/users";
+import { updateUserPassword } from "@/lib/users";
 
 export default async function SettingsPage({
   params,
@@ -117,21 +118,22 @@ export default async function SettingsPage({
       redirect(`/${locale}/settings?error=rate`);
     }
 
-    const currentPassword = String(formData.get("currentPassword") ?? "");
-    const newPassword = String(formData.get("newPassword") ?? "");
-    const newPassword2 = String(formData.get("newPassword2") ?? "");
+    const parsed = changePasswordFormSchema.safeParse({
+      csrfToken,
+      currentPassword: String(formData.get("currentPassword") ?? ""),
+      newPassword: String(formData.get("newPassword") ?? ""),
+      newPassword2: String(formData.get("newPassword2") ?? ""),
+    });
+
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "invalid";
+      redirect(`/${locale}/settings?error=${encodeURIComponent(msg)}`);
+    }
+
+    const { currentPassword, newPassword } = parsed.data;
 
     if (!(await authenticate(current.username, currentPassword))) {
       redirect(`/${locale}/settings?error=bad_current_password`);
-    }
-
-    const pwError = validatePassword(newPassword);
-    if (pwError) {
-      redirect(`/${locale}/settings?error=${encodeURIComponent(pwError)}`);
-    }
-
-    if (newPassword !== newPassword2) {
-      redirect(`/${locale}/settings?error=passwords_mismatch`);
     }
 
     await updateUserPassword({ username: current.username, newPassword });

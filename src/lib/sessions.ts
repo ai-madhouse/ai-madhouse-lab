@@ -62,6 +62,13 @@ export async function getSession(sessionId: string) {
 
 export async function deleteSession(sessionId: string) {
   const db = await getDb();
+
+  // sessions_meta isn't a FK; delete explicitly.
+  await db.execute({
+    sql: "delete from sessions_meta where session_id = ?",
+    args: [sessionId],
+  });
+
   await db.execute({
     sql: "delete from sessions where id = ?",
     args: [sessionId],
@@ -85,6 +92,13 @@ export async function listSessionsForUser(username: string) {
 
 export async function deleteSessionsForUser(username: string) {
   const db = await getDb();
+
+  // sessions_meta isn't a FK; delete explicitly.
+  await db.execute({
+    sql: "delete from sessions_meta where username = ?",
+    args: [username],
+  });
+
   await db.execute({
     sql: "delete from sessions where username = ?",
     args: [username],
@@ -99,6 +113,13 @@ export async function deleteOtherSessionsForUser({
   keepSessionId: string;
 }) {
   const db = await getDb();
+
+  // sessions_meta isn't a FK; delete explicitly.
+  await db.execute({
+    sql: "delete from sessions_meta where username = ? and session_id <> ?",
+    args: [username, keepSessionId],
+  });
+
   await db.execute({
     sql: "delete from sessions where username = ? and id <> ?",
     args: [username, keepSessionId],
