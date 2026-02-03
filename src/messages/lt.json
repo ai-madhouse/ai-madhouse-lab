@@ -60,11 +60,20 @@
       "noAccount": "Neturite paskyros?",
       "registerLink": "Registruotis"
     },
+    "passwordRequirements": {
+      "minLen12": "12 simbolių",
+      "upper": "Viena didžioji raidė",
+      "lower": "Viena mažoji raidė",
+      "digit": "Vienas skaitmuo",
+      "special": "Vienas specialus simbolis",
+      "met": "Įvykdyta",
+      "missing": "Trūksta"
+    },
     "register": {
       "badge": "Registracija",
       "title": "Sukurkite paskyrą",
       "subtitle": "Pasirinkite vartotojo vardą ir stiprų slaptažodį.",
-      "hint": "Vardas: a-z, 0-9, . _ -. Slaptažodis: 10+ simbolių.",
+      "hint": "Vardas: a-z, 0-9, . _ -. Slaptažodis: 12+ simbolių.",
       "form": {
         "title": "Registruotis",
         "subtitle": "Slaptažodžiai prieš įrašant maišomi su scrypt.",
@@ -95,7 +104,7 @@
         "value": "99.98%"
       },
       "experiments": {
-        "label": "Aktyvūs eksperimentai",
+        "label": "Prototipų maršrutai",
         "value": "24"
       }
     },
@@ -206,6 +215,7 @@
     "realtime": {
       "ok": "Veikia",
       "off": "Neveikia",
+      "detailZero": "Nėra aktyvių jungčių",
       "detail": "{users} naud., {conns} jung."
     },
     "next": {
@@ -270,10 +280,45 @@
       "signOutEverywhere": "Atsijungti visur",
       "note": "Atšaukus sesijas jos pašalinamos serveryje. Kitas užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
     },
+    "sessionsList": {
+      "unlockLabel": "Atrakinti sesijų detales",
+      "unlockDescription": "Sesijų įrenginių informacija yra šifruota end-to-end. Atrakinkite, kad matytumėte naršyklę/OS/IP ir užšifruotumėte dabartinės sesijos metaduomenis.",
+      "loading": "Kraunama…",
+      "metaWarning": "Nepavyko išsaugoti užšifruotos įrenginio informacijos šiai sesijai. Vis tiek galite atšaukti sesijas.",
+      "encryptedLocked": "Užšifruota (atrakinkite, kad matytumėte)",
+      "revoke": "Atšaukti",
+      "errors": {
+        "missingCsrf": "Trūksta CSRF žetono. Atnaujinkite puslapį ir bandykite dar kartą.",
+        "revokeFailed": "Nepavyko atšaukti sesijos.",
+        "sessionsFailed": "Nepavyko įkelti sesijų.",
+        "meFailed": "Nepavyko įkelti dabartinės sesijos.",
+        "metaFailed": "Nepavyko išsaugoti sesijos detalių."
+      }
+    },
     "language": {
       "title": "Kalba ir regionas",
       "subtitle": "Pasirinkite lokalę peržiūroms arba demo.",
       "note": "Lokalės keitimas atnaujina navigaciją, turinį ir gaires."
+    }
+  },
+  "Crypto": {
+    "e2ee": {
+      "loading": "Kraunama…",
+      "actions": {
+        "createAndUnlock": "Sukurti ir atrakinti"
+      },
+      "placeholders": {
+        "setupPassphrase": "Nustatykite E2EE slaptafrazę (min. 12 simbolių)",
+        "setupConfirm": "Patvirtinkite slaptafrazę",
+        "unlockPassphrase": "Įveskite savo E2EE slaptafrazę"
+      },
+      "errors": {
+        "passphraseTooShort": "Naudokite bent 12 simbolių.",
+        "passphrasesMismatch": "Slaptafrazės nesutampa.",
+        "passphraseRequired": "Reikalinga slaptafrazė.",
+        "loadFailed": "Nepavyko įkelti E2EE.",
+        "setupFailed": "Nepavyko nustatyti E2EE."
+      }
     }
   },
   "Live": {

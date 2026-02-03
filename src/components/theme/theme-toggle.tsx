@@ -16,17 +16,16 @@ export function ThemeToggle() {
       variant="ghost"
       size="sm"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="rounded-full"
+      className="h-9 w-9 shrink-0 rounded-full p-0"
       aria-label={t("toggle")}
+      title={t("toggle")}
     >
       {isDark ? (
         <Sun className="h-4 w-4" aria-label={t("lightIcon")} />
       ) : (
         <Moon className="h-4 w-4" aria-label={t("darkIcon")} />
       )}
-      <span className="hidden text-xs sm:inline">
-        {isDark ? t("light") : t("dark")}
-      </span>
+      <span className="sr-only">{isDark ? t("light") : t("dark")}</span>
     </Button>
   );
 }

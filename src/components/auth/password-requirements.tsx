@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -33,12 +34,14 @@ export function passwordRequirements(password: string) {
 export function PasswordRequirements({ password }: { password: string }) {
   const req = passwordRequirements(password);
 
+  const t = useTranslations("Auth.passwordRequirements");
+
   const items = [
-    { ok: req.minLen12, label: "12 characters total" },
-    { ok: req.upper, label: "one capital letter" },
-    { ok: req.lower, label: "one lowercase letter" },
-    { ok: req.digit, label: "one digit" },
-    { ok: req.special, label: "one special character" },
+    { ok: req.minLen12, label: t("minLen12") },
+    { ok: req.upper, label: t("upper") },
+    { ok: req.lower, label: t("lower") },
+    { ok: req.digit, label: t("digit") },
+    { ok: req.special, label: t("special") },
   ];
 
   return (
@@ -52,9 +55,9 @@ export function PasswordRequirements({ password }: { password: string }) {
           )}
         >
           {item.ok ? (
-            <Check className="h-4 w-4" aria-label="met" />
+            <Check className="h-4 w-4" aria-label={t("met")} />
           ) : (
-            <X className="h-4 w-4" aria-label="missing" />
+            <X className="h-4 w-4" aria-label={t("missing")} />
           )}
           <span>{item.label}</span>
         </div>

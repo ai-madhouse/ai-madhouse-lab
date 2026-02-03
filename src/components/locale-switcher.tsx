@@ -25,17 +25,21 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <label className="flex items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm text-muted-foreground">
+    <label className="flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm focus-within:ring-2 focus-within:ring-primary/40">
       <Globe2 className="h-4 w-4" aria-label={t("icon")} />
       <span className="sr-only">{t("label")}</span>
       <select
         value={locale}
         onChange={handleChange}
-        className="bg-transparent text-sm font-medium text-foreground outline-none"
+        className="appearance-none bg-transparent pr-5 text-sm font-medium text-foreground outline-none"
         aria-label={t("label")}
       >
         {locales.map((entry) => (
-          <option key={entry} value={entry}>
+          <option
+            key={entry}
+            value={entry}
+            className="bg-background text-foreground"
+          >
             {t(entry)}
           </option>
         ))}

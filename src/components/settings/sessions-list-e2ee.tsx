@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
@@ -35,7 +36,7 @@ async function fetchSessions() {
 
   if (!res.ok) {
     throw new Error(
-      (json && "error" in json && json.error) || "sessions failed",
+      (json && "error" in json && json.error) || "sessions_failed",
     );
   }
 
@@ -50,7 +51,7 @@ async function fetchMe() {
     | null;
 
   if (!res.ok) {
-    throw new Error((json && "error" in json && json.error) || "me failed");
+    throw new Error((json && "error" in json && json.error) || "me_failed");
   }
 
   if (!json || !("sessionId" in json) || !json.sessionId) {
@@ -88,7 +89,7 @@ async function upsertSessionMeta({
     | null;
 
   if (!res.ok) {
-    throw new Error((json && "error" in json && json.error) || "meta failed");
+    throw new Error((json && "error" in json && json.error) || "meta_failed");
   }
 }
 
@@ -103,10 +104,29 @@ export function SessionsListE2EE({
   const [dekKey, setDekKey] = useState<CryptoKey | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
+  const t = useTranslations("Settings.sessionsList");
+
   const [rows, setRows] = useState<SessionRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [metaWarning, setMetaWarning] = useState<string | null>(null);
+  const [metaWarning, setMetaWarning] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  function prettyError(raw: string) {
+    switch (raw) {
+      case "missing_csrf":
+        return t("errors.missingCsrf");
+      case "revoke_failed":
+        return t("errors.revokeFailed");
+      case "sessions_failed":
+        return t("errors.sessionsFailed");
+      case "me_failed":
+        return t("errors.meFailed");
+      case "meta_failed":
+        return t("errors.metaFailed");
+      default:
+        return raw;
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -134,9 +154,7 @@ export function SessionsListE2EE({
         if (!cancelled) setRows(sessions);
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "failed to load sessions",
-          );
+          setError(err instanceof Error ? err.message : "sessions_failed");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -155,7 +173,7 @@ export function SessionsListE2EE({
     dekKey: CryptoKey;
   }) {
     setError(null);
-    setMetaWarning(null);
+    setMetaWarning(false);
     setDekKey(result.dekKey);
     setCsrfToken(result.csrfToken);
 
@@ -170,22 +188,20 @@ export function SessionsListE2EE({
         payload,
       });
     } catch {
-      setMetaWarning(
-        "Couldn’t save encrypted device details for this session. You can still revoke sessions.",
-      );
+      setMetaWarning(true);
     }
 
     try {
       const sessions = await fetchSessions();
       setRows(sessions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "failed to load sessions");
+      setError(err instanceof Error ? err.message : "sessions_failed");
     }
   }
 
   async function revokeSession(sessionId: string) {
     if (!csrfToken) {
-      setError("Missing CSRF token. Refresh and try again.");
+      setError("missing_csrf");
       return;
     }
 
@@ -208,14 +224,14 @@ export function SessionsListE2EE({
 
       if (!res.ok || !json || !json.ok) {
         throw new Error(
-          (json && "error" in json && json.error) || "revoke failed",
+          (json && "error" in json && json.error) || "revoke_failed",
         );
       }
 
       const sessions = await fetchSessions();
       setRows(sessions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "revoke failed");
+      setError(err instanceof Error ? err.message : "revoke_failed");
     }
   }
 
@@ -223,18 +239,20 @@ export function SessionsListE2EE({
     <div className="space-y-3">
       {!dekKey ? (
         <E2EEDekUnlockCard
-          label="Unlock session details"
-          description="Session device details are end-to-end encrypted. Unlock to view browser/OS/IP and to encrypt your current session metadata."
+          label={t("unlockLabel")}
+          description={t("unlockDescription")}
           onUnlocked={handleUnlocked}
         />
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
       ) : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive">{prettyError(error)}</p>
+      ) : null}
       {metaWarning ? (
-        <p className="text-sm text-muted-foreground">{metaWarning}</p>
+        <p className="text-sm text-muted-foreground">{t("metaWarning")}</p>
       ) : null}
 
       <div className="space-y-2">
@@ -263,6 +281,9 @@ function SessionRowItem({
   dekKey: CryptoKey | null;
   onRevoke: (sessionId: string) => void;
 }) {
+  const ts = useTranslations("Settings.sessions");
+  const t = useTranslations("Settings.sessionsList");
+
   const [meta, setMeta] = useState<SessionMeta | null>(null);
 
   useEffect(() => {
@@ -305,19 +326,19 @@ function SessionRowItem({
                 {desc.browser} • {desc.os} • {meta.ip}
               </>
             ) : (
-              "Encrypted (unlock to view)"
+              t("encryptedLocked")
             )}
           </p>
           <p className="text-xs text-muted-foreground">
-            Created: {new Date(row.created_at).toLocaleString()} • Expires:{" "}
-            {new Date(row.expires_at).toLocaleString()}
+            {ts("createdAt")}: {new Date(row.created_at).toLocaleString()} •{" "}
+            {ts("expiresAt")}: {new Date(row.expires_at).toLocaleString()}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {current ? (
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Current
+              {ts("current")}
             </p>
           ) : (
             <Button
@@ -326,7 +347,7 @@ function SessionRowItem({
               size="sm"
               onClick={() => onRevoke(row.id)}
             >
-              Revoke
+              {t("revoke")}
             </Button>
           )}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -77,12 +78,7 @@ function normalizePassphrase(value: string) {
   return value.trim();
 }
 
-function validatePassphrase(passphrase: string) {
-  if (passphrase.length < 12) {
-    return "Use at least 12 characters.";
-  }
-  return null;
-}
+// validatePassphrase moved inside component (needs i18n)
 
 export function E2EEDekUnlockCard({
   label,
@@ -93,6 +89,15 @@ export function E2EEDekUnlockCard({
   description: string;
   onUnlocked: (result: UnlockResult) => void | Promise<void>;
 }) {
+  const t = useTranslations("Crypto.e2ee");
+
+  function validatePassphrase(passphrase: string) {
+    if (passphrase.length < 12) {
+      return t("errors.passphraseTooShort");
+    }
+    return null;
+  }
+
   const [csrfToken, setCsrfToken] = useState<string>("");
   const [keyRecord, setKeyRecord] = useState<KeyRecord | null>(null);
 
@@ -121,7 +126,7 @@ export function E2EEDekUnlockCard({
         setKeyRecord(record);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "failed to load E2EE");
+          setError(err instanceof Error ? err.message : t("errors.loadFailed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -133,7 +138,7 @@ export function E2EEDekUnlockCard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   async function createAndUnlock() {
     if (busy) return;
@@ -150,7 +155,7 @@ export function E2EEDekUnlockCard({
     }
 
     if (passphrase !== confirm) {
-      setError("Passphrases do not match.");
+      setError(t("errors.passphrasesMismatch"));
       return;
     }
 
@@ -175,7 +180,7 @@ export function E2EEDekUnlockCard({
 
       await onUnlocked({ csrfToken: token, dekKey });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "failed to set up E2EE");
+      setError(err instanceof Error ? err.message : t("errors.setupFailed"));
     } finally {
       setBusy(false);
     }
@@ -188,7 +193,7 @@ export function E2EEDekUnlockCard({
 
     const passphrase = normalizePassphrase(unlockPassphrase);
     if (!passphrase) {
-      setError("Passphrase required.");
+      setError(t("errors.passphraseRequired"));
       return;
     }
 
@@ -224,7 +229,7 @@ export function E2EEDekUnlockCard({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
       ) : null}
 
       {needsSetup ? (
@@ -234,7 +239,7 @@ export function E2EEDekUnlockCard({
               type="password"
               value={setupPassphrase}
               onChange={(e) => setSetupPassphrase(e.target.value)}
-              placeholder="Set an E2EE passphrase (min 12 chars)"
+              placeholder={t("placeholders.setupPassphrase")}
               autoComplete="new-password"
               disabled={busy}
             />
@@ -242,14 +247,14 @@ export function E2EEDekUnlockCard({
               type="password"
               value={setupConfirm}
               onChange={(e) => setSetupConfirm(e.target.value)}
-              placeholder="Confirm passphrase"
+              placeholder={t("placeholders.setupConfirm")}
               autoComplete="new-password"
               disabled={busy}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={createAndUnlock} disabled={busy}>
-              Create & unlock
+              {t("actions.createAndUnlock")}
             </Button>
           </div>
         </div>
@@ -262,7 +267,7 @@ export function E2EEDekUnlockCard({
               type="password"
               value={unlockPassphrase}
               onChange={(e) => setUnlockPassphrase(e.target.value)}
-              placeholder="Enter your E2EE passphrase"
+              placeholder={t("placeholders.unlockPassphrase")}
               autoComplete="current-password"
               disabled={busy}
               onKeyDown={(e) => {

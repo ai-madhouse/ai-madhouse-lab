@@ -60,11 +60,20 @@
       "noAccount": "No account?",
       "registerLink": "Register"
     },
+    "passwordRequirements": {
+      "minLen12": "12 characters total",
+      "upper": "One capital letter",
+      "lower": "One lowercase letter",
+      "digit": "One digit",
+      "special": "One special character",
+      "met": "Met",
+      "missing": "Missing"
+    },
     "register": {
       "badge": "Create account",
       "title": "Create your account",
       "subtitle": "Pick a username and a strong password.",
-      "hint": "Username: a-z, 0-9, . _ -. Password: 10+ characters.",
+      "hint": "Username: a-z, 0-9, . _ -. Password: 12+ characters.",
       "form": {
         "title": "Register",
         "subtitle": "Passwords are hashed with scrypt before being stored.",
@@ -95,7 +104,7 @@
         "value": "99.98%"
       },
       "experiments": {
-        "label": "Live experiments",
+        "label": "Prototype routes",
         "value": "24"
       }
     },
@@ -206,6 +215,7 @@
     "realtime": {
       "ok": "Online",
       "off": "Offline",
+      "detailZero": "No active connections",
       "detail": "{users} user(s), {conns} connection(s)"
     },
     "next": {
@@ -270,10 +280,45 @@
       "signOutEverywhere": "Sign out everywhere",
       "note": "Revoking sessions removes them from the server. The next request from that device will be forced to re-auth."
     },
+    "sessionsList": {
+      "unlockLabel": "Unlock session details",
+      "unlockDescription": "Session device details are end-to-end encrypted. Unlock to view browser/OS/IP and to encrypt your current session metadata.",
+      "loading": "Loading…",
+      "metaWarning": "Couldn’t save encrypted device details for this session. You can still revoke sessions.",
+      "encryptedLocked": "Encrypted (unlock to view)",
+      "revoke": "Revoke",
+      "errors": {
+        "missingCsrf": "Missing CSRF token. Refresh and try again.",
+        "revokeFailed": "Revoke failed.",
+        "sessionsFailed": "Failed to load sessions.",
+        "meFailed": "Failed to load current session.",
+        "metaFailed": "Failed to save session details."
+      }
+    },
     "language": {
       "title": "Language & region",
       "subtitle": "Pick the locale you want to review or demo.",
       "note": "Locale changes update navigation, content, and system guidance."
+    }
+  },
+  "Crypto": {
+    "e2ee": {
+      "loading": "Loading…",
+      "actions": {
+        "createAndUnlock": "Create & unlock"
+      },
+      "placeholders": {
+        "setupPassphrase": "Set an E2EE passphrase (min 12 chars)",
+        "setupConfirm": "Confirm passphrase",
+        "unlockPassphrase": "Enter your E2EE passphrase"
+      },
+      "errors": {
+        "passphraseTooShort": "Use at least 12 characters.",
+        "passphrasesMismatch": "Passphrases do not match.",
+        "passphraseRequired": "Passphrase required.",
+        "loadFailed": "Failed to load E2EE.",
+        "setupFailed": "Failed to set up E2EE."
+      }
     }
   },
   "Live": {

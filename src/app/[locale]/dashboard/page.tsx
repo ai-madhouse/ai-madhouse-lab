@@ -201,10 +201,13 @@ export default async function DashboardPage({
               </p>
               {metrics?.realtime?.ok ? (
                 <p className="text-xs text-muted-foreground">
-                  {t("realtime.detail", {
-                    users: String(metrics.realtime.usersConnected ?? 0),
-                    conns: String(metrics.realtime.connectionsTotal ?? 0),
-                  })}
+                  {(metrics.realtime.usersConnected ?? 0) === 0 &&
+                  (metrics.realtime.connectionsTotal ?? 0) === 0
+                    ? t("realtime.detailZero")
+                    : t("realtime.detail", {
+                        users: String(metrics.realtime.usersConnected ?? 0),
+                        conns: String(metrics.realtime.connectionsTotal ?? 0),
+                      })}
                 </p>
               ) : null}
             </CardContent>
