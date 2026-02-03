@@ -1,9 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import {
-  authCookieName,
-  decodeAndVerifySessionCookie,
-} from "@/lib/auth";
+import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { decideProxyAction } from "@/lib/proxy-logic";
 import { getSession } from "@/lib/sessions";
 
