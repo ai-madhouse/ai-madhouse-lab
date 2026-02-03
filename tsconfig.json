@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "next-intl": ["./src/shims/next-intl"],
+      "next-intl/middleware": ["./src/shims/next-intl-middleware"],
+      "next-themes": ["./src/shims/next-themes"],
+      "lucide-react": ["./src/shims/lucide-react"]
     }
   },
   "include": [

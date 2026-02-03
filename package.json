@@ -10,7 +10,10 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "lucide-react": "latest",
     "next": "16.1.6",
+    "next-intl": "latest",
+    "next-themes": "latest",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
