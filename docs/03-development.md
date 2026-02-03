@@ -15,7 +15,7 @@
 ## Setup
 
 1. Install dependencies: `bun install`
-2. Create a local env file (optional but recommended): `.env.local`
+2. Create a local env file (optional but recommended): `.env.local` (see `.env.example`)
 3. Run the web app and realtime server (two terminals)
 
 ### Example `.env.local`

@@ -6,4 +6,5 @@
 - [02 — Architecture](./02-architecture.md)
 - [03 — Development](./03-development.md)
 - [04 — Features](./04-features.md)
+- [06 — UI Design](./06-ui-design.md)
 
