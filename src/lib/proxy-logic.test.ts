@@ -16,10 +16,18 @@ describe("proxy logic", () => {
     });
   });
 
-  test("allows public assets and _next", () => {
+  test("allows public assets and framework endpoints", () => {
     expect(
       decideProxyAction({
         pathname: "/_next/static/chunk.js",
+        search: "",
+        authCookieValue: "",
+      }),
+    ).toEqual({ kind: "next" });
+
+    expect(
+      decideProxyAction({
+        pathname: "/api/health",
         search: "",
         authCookieValue: "",
       }),
@@ -32,6 +40,42 @@ describe("proxy logic", () => {
         authCookieValue: "",
       }),
     ).toEqual({ kind: "next" });
+  });
+
+  test("does not treat lookalike segments as framework endpoints", () => {
+    expect(
+      decideProxyAction({
+        pathname: "/apiary",
+        search: "",
+        authCookieValue: "",
+      }),
+    ).toEqual({
+      kind: "redirect",
+      toPath: "/en/apiary",
+      setLocaleCookie: "en",
+    });
+
+    expect(
+      decideProxyAction({
+        pathname: "/_nextish",
+        search: "?x=1",
+        authCookieValue: "",
+      }),
+    ).toEqual({
+      kind: "redirect",
+      toPath: "/en/_nextish?x=1",
+      setLocaleCookie: "en",
+    });
+  });
+
+  test("redirects root to /en", () => {
+    expect(
+      decideProxyAction({ pathname: "/", search: "", authCookieValue: "" }),
+    ).toEqual({
+      kind: "redirect",
+      toPath: "/en/",
+      setLocaleCookie: "en",
+    });
   });
 
   test("redirects protected route to login with next param when unauthenticated", () => {

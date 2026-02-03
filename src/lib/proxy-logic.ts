@@ -23,8 +23,10 @@ export function decideProxyAction({
   authCookieValue?: string;
 }): ProxyDecision {
   if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
+    pathname === "/_next" ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/api" ||
+    pathname.startsWith("/api/") ||
     PUBLIC_FILE.test(pathname)
   ) {
     return { kind: "next" };
