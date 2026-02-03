@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,9 @@ export function NotesDemo() {
   const [lastSaved, setLastSaved] = useState<Record<string, Note>>({});
   const [undoStack, setUndoStack] = useState<NotesAction[]>([]);
   const [redoStack, setRedoStack] = useState<NotesAction[]>([]);
+
+  const undoRef = useRef<null | (() => void)>(null);
+  const redoRef = useRef<null | (() => void)>(null);
 
   async function refresh() {
     setError(null);
@@ -379,6 +382,56 @@ export function NotesDemo() {
     }
   }
 
+  useEffect(() => {
+    undoRef.current = () => {
+      void undo();
+    };
+    redoRef.current = () => {
+      void redo();
+    };
+  });
+
+  useEffect(() => {
+    function isEditableElement(el: Element | null) {
+      if (!el) return false;
+      if (!(el instanceof HTMLElement)) return false;
+
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return true;
+      if (el.isContentEditable) return true;
+
+      return false;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.altKey) return;
+      if (!event.ctrlKey && !event.metaKey) return;
+
+      if (isEditableElement(document.activeElement)) {
+        // Keep native text undo/redo inside inputs.
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        undoRef.current?.();
+        return;
+      }
+
+      if (key === "y" || (key === "z" && event.shiftKey)) {
+        event.preventDefault();
+        redoRef.current?.();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
@@ -412,6 +465,7 @@ export function NotesDemo() {
               variant="outline"
               onClick={undo}
               disabled={undoStack.length === 0}
+              title="Undo (Ctrl+Z / Cmd+Z)"
             >
               Undo
             </Button>
@@ -419,6 +473,7 @@ export function NotesDemo() {
               variant="outline"
               onClick={redo}
               disabled={redoStack.length === 0}
+              title="Redo (Ctrl+Y or Ctrl+Shift+Z / Cmd+Shift+Z)"
             >
               Redo
             </Button>
