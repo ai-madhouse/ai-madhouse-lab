@@ -1,6 +1,9 @@
+import Link from "next/link";
+
 import { PulseBoard } from "@/components/live/pulse-board";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { buttonClassName } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -39,12 +42,26 @@ export default async function LivePage({
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("notes.title")}</CardTitle>
-            <CardDescription>{t("notes.subtitle")}</CardDescription>
+            <CardTitle>{t("help.title")}</CardTitle>
+            <CardDescription>{t("help.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>{t("notes.pointOne")}</p>
-            <p>{t("notes.pointTwo")}</p>
+            <p>{t("help.pointOne")}</p>
+            <p>{t("help.pointTwo")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/${locale}/notes`}
+                className={buttonClassName({ variant: "outline", size: "sm" })}
+              >
+                {t("help.openNotes")}
+              </Link>
+              <Link
+                href={`/${locale}/settings`}
+                className={buttonClassName({ variant: "outline", size: "sm" })}
+              >
+                {t("help.openSettings")}
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </main>

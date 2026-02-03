@@ -280,19 +280,30 @@ export function NotesE2EEDemo() {
   }, []);
 
   useEffect(() => {
-    const url = getRealtimeWsUrl();
-    if (!url) return;
+    // Primary: same-origin SSE stream (works over SSH tunnels / no extra port).
+    // Secondary: realtime websocket server (optional).
 
-    const ws = new WebSocket(url);
+    const es = new EventSource("/api/notes-stream");
 
-    ws.onmessage = (event) => {
-      const data = safeParseJson<{ type?: string }>(String(event.data));
-      if (!data || data.type !== "notes:changed") return;
+    es.addEventListener("notes:changed", () => {
       void refreshRef.current?.();
-    };
+    });
+
+    // Optional ws (if you expose/forward the realtime port).
+    const url = getRealtimeWsUrl();
+    const ws = url ? new WebSocket(url) : null;
+
+    if (ws) {
+      ws.onmessage = (event) => {
+        const data = safeParseJson<{ type?: string }>(String(event.data));
+        if (!data || data.type !== "notes:changed") return;
+        void refreshRef.current?.();
+      };
+    }
 
     return () => {
-      ws.close();
+      es.close();
+      ws?.close();
     };
   }, []);
 

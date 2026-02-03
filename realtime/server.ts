@@ -152,7 +152,15 @@ Bun.serve<{ username: string; sessionId: string }>({
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
-      return json(200, { ok: true });
+      // Minimal introspection for dashboards.
+      let connectionsTotal = 0;
+      for (const set of socketsByUser.values()) connectionsTotal += set.size;
+
+      return json(200, {
+        ok: true,
+        connectionsTotal,
+        usersConnected: socketsByUser.size,
+      });
     }
 
     if (url.pathname === "/ws") {

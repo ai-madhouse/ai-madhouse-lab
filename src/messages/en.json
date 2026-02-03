@@ -178,75 +178,55 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Command center",
+    "eyebrow": "Your account",
     "title": "Command dashboard",
-    "subtitle": "A pulse check on your AI program with the right amount of clarity.",
-    "metrics": {
-      "experiments": {
-        "label": "Active experiments",
-        "value": "24",
-        "note": "Across 5 product pods",
-        "icon": "Experiments"
+    "subtitle": "A quick, honest view of what’s happening in your account right now.",
+    "status": {
+      "ok": "Done: {ok}.",
+      "error": "Couldn't complete that: {error}."
+    },
+    "cards": {
+      "sessions": {
+        "label": "Active sessions",
+        "note": "Devices currently signed in."
       },
-      "health": {
-        "label": "Service health",
-        "value": "Green",
-        "note": "No incidents this week",
-        "icon": "Health"
+      "notes": {
+        "label": "Notes",
+        "note": "E2EE notes in your notebook."
       },
-      "coverage": {
-        "label": "Signal coverage",
-        "value": "92%",
-        "note": "Up 8% from last sprint",
-        "icon": "Coverage"
+      "activity": {
+        "label": "Writes (24h)",
+        "note": "How many note events you generated today."
       },
-      "guardrails": {
-        "label": "Guardrails",
-        "value": "14",
-        "note": "3 in review",
-        "icon": "Guardrails"
+      "realtime": {
+        "label": "Realtime",
+        "note": "Is the realtime service reachable?"
       }
     },
-    "activity": {
-      "title": "Activity stream",
-      "subtitle": "Latest operational signals from the lab.",
-      "items": {
-        "batch": {
-          "title": "Batch evaluation complete",
-          "description": "New tone dataset scored above the quality threshold."
-        },
-        "alert": {
-          "title": "Latency alert resolved",
-          "description": "Model fallback engaged during peak traffic window."
-        },
-        "review": {
-          "title": "Launch review scheduled",
-          "description": "Team Delta approved for controlled rollout."
-        },
-        "handoff": {
-          "title": "Ops handoff ready",
-          "description": "Next cohort inherits updated runbooks and QA scripts."
-        }
-      }
+    "realtime": {
+      "ok": "Online",
+      "off": "Offline",
+      "detail": "{users} user(s), {conns} connection(s)"
     },
-    "ops": {
-      "title": "Ops rhythm",
-      "subtitle": "What the team is focused on next.",
-      "readiness": {
-        "eyebrow": "Readiness",
-        "title": "Finalize quality gates",
-        "description": "Ship new scoring heuristics for conversational reliability."
+    "next": {
+      "title": "Next steps",
+      "subtitle": "The three places you’ll actually use.",
+      "notes": "Open Notes",
+      "live": "Open Live view",
+      "settings": "Open Settings"
+    },
+    "security": {
+      "title": "Safety controls",
+      "subtitle": "These actions affect all your devices.",
+      "csp": {
+        "title": "Browser protection (CSP)",
+        "description": "In production we use a nonce-based Content Security Policy to reduce XSS blast radius."
       },
-      "handover": {
-        "eyebrow": "Handover",
-        "title": "Train the on-call cohort",
-        "description": "Run tabletop exercises for key failure scenarios."
+      "actions": {
+        "revokeOthers": "Revoke other sessions",
+        "signOutEverywhere": "Sign out everywhere"
       },
-      "next": {
-        "eyebrow": "Next",
-        "title": "Prototype multi-locale UX",
-        "description": "Expand translated UI coverage to three new markets."
-      }
+      "footer": "Use this if you lost a device or suspect your account is signed in somewhere else."
     }
   },
   "Settings": {
@@ -297,27 +277,44 @@
     }
   },
   "Live": {
-    "eyebrow": "Live ops",
-    "title": "Live pulse",
-    "subtitle": "A lightweight simulation of live telemetry for demos and walkthroughs.",
-    "boardTitle": "Pulse board",
+    "eyebrow": "Right now",
+    "title": "Live view",
+    "subtitle": "Live signals pulled from your real account data (not lorem ipsum).",
+    "boardTitle": "Live signals",
+    "boardSubtitle": "Updates every few seconds. If this page sits open on two devices, you should see it move together.",
     "icon": "Activity",
+    "errors": {
+      "stream": "Live stream disconnected (usually means you signed out)."
+    },
     "metrics": {
-      "latency": "Latency drift",
-      "throughput": "Throughput",
-      "errors": "Error rate",
-      "confidence": "Confidence"
+      "sessions": {
+        "label": "Sessions",
+        "note": "Signed-in devices right now.",
+        "icon": "Sessions"
+      },
+      "notes": {
+        "label": "Notes",
+        "note": "Total notes (E2EE).",
+        "icon": "Notes"
+      },
+      "writes": {
+        "label": "Writes (last hour)",
+        "note": "Note activity in the last 60 minutes.",
+        "icon": "Writes"
+      },
+      "lastActivity": {
+        "label": "Last activity",
+        "note": "Most recent note event timestamp."
+      }
     },
-    "units": {
-      "ms": "ms",
-      "perSecond": "/s",
-      "percent": "%"
-    },
-    "notes": {
-      "title": "Notes",
-      "subtitle": "Why this exists",
-      "pointOne": "Use this view in a workshop to explain how telemetry would look once wired to real streams.",
-      "pointTwo": "The UI updates on a short timer so teams can practice reading signal spikes."
+    "footer": "Last update: {ts}",
+    "help": {
+      "title": "What is this page?",
+      "subtitle": "A human-readable “what just happened” view.",
+      "pointOne": "It watches the same database your app uses, then streams small counters to the browser.",
+      "pointTwo": "Notes are end-to-end encrypted, so we only show metadata (counts/timestamps) here — not note content.",
+      "openNotes": "Go to Notes",
+      "openSettings": "Go to Settings"
     }
   },
   "About": {

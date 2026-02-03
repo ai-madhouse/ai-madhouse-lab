@@ -178,75 +178,55 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Valdymo centras",
-    "title": "Komandinis skydelis",
-    "subtitle": "AI programos pulsas su tinkamu aiškumu.",
-    "metrics": {
-      "experiments": {
-        "label": "Aktyvūs eksperimentai",
-        "value": "24",
-        "note": "5 produktų komandose",
-        "icon": "Eksperimentai"
+    "eyebrow": "Tavo paskyra",
+    "title": "Valdymo skydelis",
+    "subtitle": "Trumpai ir aiškiai: kas vyksta tavo paskyroje šiuo metu.",
+    "status": {
+      "ok": "Atlikta: {ok}.",
+      "error": "Nepavyko: {error}."
+    },
+    "cards": {
+      "sessions": {
+        "label": "Aktyvios sesijos",
+        "note": "Įrenginiai, kuriuose esi prisijungęs."
       },
-      "health": {
-        "label": "Paslaugos sveikata",
-        "value": "Žalia",
-        "note": "Šią savaitę incidentų nėra",
-        "icon": "Sveikata"
+      "notes": {
+        "label": "Užrašai",
+        "note": "Tavo užrašai (E2EE)."
       },
-      "coverage": {
-        "label": "Signalų aprėptis",
-        "value": "92%",
-        "note": "8% daugiau nei praėjusiame sprinte",
-        "icon": "Aprėptis"
+      "activity": {
+        "label": "Veiksmai (24 val.)",
+        "note": "Kiek užrašų įvykių buvo per parą."
       },
-      "guardrails": {
-        "label": "Apsaugos",
-        "value": "14",
-        "note": "3 peržiūroje",
-        "icon": "Apsaugos"
+      "realtime": {
+        "label": "Realtime",
+        "note": "Ar pasiekiama realtime paslauga?"
       }
     },
-    "activity": {
-      "title": "Veiklos srautas",
-      "subtitle": "Naujausi operaciniai signalai iš laboratorijos.",
-      "items": {
-        "batch": {
-          "title": "Paketinis vertinimas baigtas",
-          "description": "Naujas tono rinkinys viršijo kokybės ribą."
-        },
-        "alert": {
-          "title": "Vėlinimo perspėjimas išspręstas",
-          "description": "Piko metu įjungtas atsarginis modelis."
-        },
-        "review": {
-          "title": "Paleidimo peržiūra suplanuota",
-          "description": "Komanda Delta patvirtino kontroliuojamą paleidimą."
-        },
-        "handoff": {
-          "title": "Operacijų perdavimas paruoštas",
-          "description": "Kita grupė gauna atnaujintus scenarijus ir QA."
-        }
-      }
+    "realtime": {
+      "ok": "Veikia",
+      "off": "Neveikia",
+      "detail": "{users} naud., {conns} jung."
     },
-    "ops": {
-      "title": "Operacijų ritmas",
-      "subtitle": "Ką komanda daro toliau.",
-      "readiness": {
-        "eyebrow": "Parengtis",
-        "title": "Užbaigti kokybės vartus",
-        "description": "Diegiame naujas dialogų patikimumo heuristikas."
+    "next": {
+      "title": "Ką toliau",
+      "subtitle": "Trys vietos, kurias dažniausiai naudosiesi.",
+      "notes": "Atidaryti užrašus",
+      "live": "Atidaryti Live",
+      "settings": "Atidaryti nustatymus"
+    },
+    "security": {
+      "title": "Saugumas",
+      "subtitle": "Šie veiksmai paveiks visus tavo įrenginius.",
+      "csp": {
+        "title": "Naršyklės apsauga (CSP)",
+        "description": "Produkcijoje naudojame nonce pagrįstą CSP, kad sumažintume XSS riziką ir poveikį."
       },
-      "handover": {
-        "eyebrow": "Perdavimas",
-        "title": "Apmokyti budinčią komandą",
-        "description": "Vykdome pratybas kritiniams scenarijams."
+      "actions": {
+        "revokeOthers": "Atšaukti kitas sesijas",
+        "signOutEverywhere": "Atsijungti visur"
       },
-      "next": {
-        "eyebrow": "Toliau",
-        "title": "Prototipuoti daugiakalbį UX",
-        "description": "Plečiame lokalizaciją į tris naujas rinkas."
-      }
+      "footer": "Naudinga, jei pametei įrenginį arba įtari svetimą prisijungimą."
     }
   },
   "Settings": {
@@ -297,27 +277,44 @@
     }
   },
   "Live": {
-    "eyebrow": "Tiesioginės operacijos",
-    "title": "Gyvas pulsas",
-    "subtitle": "Lengvas telemetrijos simuliatorius demonstracijoms ir apžvalgoms.",
-    "boardTitle": "Pulso lenta",
-    "icon": "Veikla",
+    "eyebrow": "Dabar",
+    "title": "Live vaizdas",
+    "subtitle": "Gyvi signalai iš tavo paskyros duomenų (ne atsitiktiniai skaičiai).",
+    "boardTitle": "Gyvi signalai",
+    "boardSubtitle": "Atnaujinama kas kelias sekundes. Atidaryk dviejuose įrenginiuose — turėtų sinchronizuotis.",
+    "icon": "Activity",
+    "errors": {
+      "stream": "Tiesioginis srautas nutrūko (dažniausiai tai reiškia, kad atsijungei)."
+    },
     "metrics": {
-      "latency": "Vėlinimo poslinkis",
-      "throughput": "Pralaidumas",
-      "errors": "Klaidų dalis",
-      "confidence": "Pasitikėjimas"
+      "sessions": {
+        "label": "Sesijos",
+        "note": "Kiek įrenginių dabar prisijungę.",
+        "icon": "Sessions"
+      },
+      "notes": {
+        "label": "Užrašai",
+        "note": "Iš viso užrašų (E2EE).",
+        "icon": "Notes"
+      },
+      "writes": {
+        "label": "Veiksmai (1 val.)",
+        "note": "Užrašų įvykiai per paskutinę valandą.",
+        "icon": "Writes"
+      },
+      "lastActivity": {
+        "label": "Paskutinė veikla",
+        "note": "Paskutinio užrašų įvykio laikas."
+      }
     },
-    "units": {
-      "ms": "ms",
-      "perSecond": "/s",
-      "percent": "%"
-    },
-    "notes": {
-      "title": "Pastabos",
-      "subtitle": "Kodėl tai svarbu",
-      "pointOne": "Naudokite šį vaizdą dirbtuvėse, kad parodytumėte būsimą telemetriją.",
-      "pointTwo": "UI atsinaujina su trumpu intervalu, kad komandos treniruotųsi skaityti signalus."
+    "footer": "Paskutinis atnaujinimas: {ts}",
+    "help": {
+      "title": "Kas čia rodoma?",
+      "subtitle": "Žmogiškas „kas ką tik įvyko“ vaizdas.",
+      "pointOne": "Skaitome tą pačią DB ir į naršyklę transliuojame mažus skaitiklius.",
+      "pointTwo": "Užrašai šifruojami E2EE, todėl čia rodome tik metaduomenis (skaičius/laiką), ne turinį.",
+      "openNotes": "Eiti į užrašus",
+      "openSettings": "Eiti į nustatymus"
     }
   },
   "About": {

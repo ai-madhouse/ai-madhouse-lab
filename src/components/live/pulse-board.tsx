@@ -1,73 +1,76 @@
 "use client";
 
-import { Activity } from "lucide-react";
+import { Activity, FileText, Signal, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function randomBetween(min: number, max: number) {
-  return Math.round(min + Math.random() * (max - min));
+type PulsePayload =
+  | {
+      ts: number;
+      activeSessions: number;
+      notesCount: number;
+      notesEventsLastHour: number;
+      notesEventsLastDay: number;
+      lastNotesActivityAt: string | null;
+      realtime: {
+        ok: true;
+        connectionsTotal?: number;
+        usersConnected?: number;
+      } | null;
+      error?: undefined;
+    }
+  | { ts: number; error: string };
+
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
 }
 
-type PulsePayload = {
-  latency: number;
-  throughput: number;
-  errors: number;
-  confidence: number;
-};
+function formatWhen(value: string | null) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+}
 
 export function PulseBoard() {
   const t = useTranslations("Live");
+
   const [pulse, setPulse] = useState<PulsePayload>({
-    latency: 128,
-    throughput: 940,
-    errors: 0.4,
-    confidence: 87,
+    ts: Date.now(),
+    error: "loading",
   });
 
   useEffect(() => {
     let closed = false;
 
-    // Prefer server-sent events if available.
     const es = new EventSource("/api/pulse");
 
-    const fallbackId = setInterval(() => {
-      if (closed) return;
-      setPulse((prev) => ({
-        latency: randomBetween(110, 180),
-        throughput: randomBetween(880, 1040),
-        errors: Number((Math.random() * 0.8).toFixed(2)),
-        confidence: Math.min(
-          99,
-          Math.max(80, prev.confidence + randomBetween(-2, 2)),
-        ),
-      }));
-    }, 2200);
-
     es.addEventListener("pulse", (event) => {
-      try {
-        const data = JSON.parse((event as MessageEvent).data) as PulsePayload;
-        setPulse({
-          latency: data.latency,
-          throughput: data.throughput,
-          errors: data.errors,
-          confidence: data.confidence,
-        });
-      } catch {
-        // ignore
-      }
+      if (closed) return;
+      const data = safeParseJson<PulsePayload>((event as MessageEvent).data);
+      if (!data) return;
+      setPulse(data);
     });
 
     es.onerror = () => {
-      // Keep fallback timer running.
+      // If auth expires, the stream will fail.
+      // Keep the last payload on-screen.
     };
 
     return () => {
       closed = true;
-      clearInterval(fallbackId);
       es.close();
     };
   }, []);
+
+  const isOk = !("error" in pulse && pulse.error);
 
   return (
     <Card className="bg-secondary/40">
@@ -79,43 +82,83 @@ export function PulseBoard() {
             aria-label={t("icon")}
           />
         </div>
+        <p className="text-sm text-muted-foreground">{t("boardSubtitle")}</p>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("metrics.latency")}
-          </p>
-          <p className="text-2xl font-semibold">
-            {pulse.latency} {t("units.ms")}
-          </p>
+      <CardContent className="space-y-4">
+        {!isOk ? (
+          <div
+            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+            role="alert"
+          >
+            {t("errors.stream")}
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Users
+                className="h-4 w-4"
+                aria-label={t("metrics.sessions.icon")}
+              />
+              {t("metrics.sessions.label")}
+            </p>
+            <p className="text-2xl font-semibold">
+              {"error" in pulse ? "—" : pulse.activeSessions}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("metrics.sessions.note")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <FileText
+                className="h-4 w-4"
+                aria-label={t("metrics.notes.icon")}
+              />
+              {t("metrics.notes.label")}
+            </p>
+            <p className="text-2xl font-semibold">
+              {"error" in pulse ? "—" : pulse.notesCount}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("metrics.notes.note")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Signal
+                className="h-4 w-4"
+                aria-label={t("metrics.writes.icon")}
+              />
+              {t("metrics.writes.label")}
+            </p>
+            <p className="text-2xl font-semibold">
+              {"error" in pulse ? "—" : pulse.notesEventsLastHour}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("metrics.writes.note")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              {t("metrics.lastActivity.label")}
+            </p>
+            <p className="text-sm font-medium">
+              {"error" in pulse ? "—" : formatWhen(pulse.lastNotesActivityAt)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("metrics.lastActivity.note")}
+            </p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("metrics.throughput")}
-          </p>
-          <p className="text-2xl font-semibold">
-            {pulse.throughput}
-            {t("units.perSecond")}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("metrics.errors")}
-          </p>
-          <p className="text-2xl font-semibold">
-            {pulse.errors}
-            {t("units.percent")}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("metrics.confidence")}
-          </p>
-          <p className="text-2xl font-semibold">
-            {pulse.confidence}
-            {t("units.percent")}
-          </p>
-        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {t("footer", { ts: new Date(pulse.ts).toLocaleTimeString() })}
+        </p>
       </CardContent>
     </Card>
   );

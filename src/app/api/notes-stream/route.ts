@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import type { NextRequest } from "next/server";
 
 import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
-import { getUserDashboardMetrics } from "@/lib/dashboard-metrics";
+import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/sessions";
 
 async function requireSession(request: NextRequest) {
@@ -13,6 +13,17 @@ async function requireSession(request: NextRequest) {
   return await getSession(sessionId);
 }
 
+async function getLatestEventId(username: string) {
+  const db = await getDb();
+  const res = await db.execute({
+    sql: "select id from notes_events where username = ? order by created_at desc, id desc limit 1",
+    args: [username],
+  });
+
+  const row = res.rows[0] as unknown as { id?: string } | undefined;
+  return row?.id ?? null;
+}
+
 export async function GET(request: NextRequest) {
   const session = await requireSession(request);
   if (!session) {
@@ -20,7 +31,6 @@ export async function GET(request: NextRequest) {
   }
 
   const { signal } = request;
-  const username = session.username;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -31,37 +41,38 @@ export async function GET(request: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       }
 
-      async function sendPulse() {
-        try {
-          const metrics = await getUserDashboardMetrics(username);
-          send("pulse", {
-            ts: Date.now(),
-            activeSessions: metrics.activeSessions,
-            notesCount: metrics.notesCount,
-            notesEventsLastHour: metrics.notesEventsLastHour,
-            notesEventsLastDay: metrics.notesEventsLastDay,
-            lastNotesActivityAt: metrics.lastNotesActivityAt,
-            realtime: metrics.realtime,
-          });
-        } catch (err) {
-          send("pulse", {
-            ts: Date.now(),
-            error: err instanceof Error ? err.message : "pulse failed",
-          });
-        }
+      // Initial ping + initial state marker.
+      let lastId: string | null = null;
+      try {
+        lastId = await getLatestEventId(session.username);
+      } catch {
+        // ignore
       }
 
-      // Initial payload
-      await sendPulse();
+      send("hello", { ok: true });
+      send("notes:changed", { id: lastId });
 
-      const id = setInterval(() => {
-        void sendPulse();
-      }, 2000);
+      const intervalMs = 1500;
+
+      const intervalId = setInterval(async () => {
+        try {
+          const latest = await getLatestEventId(session.username);
+          if (latest && latest !== lastId) {
+            lastId = latest;
+            send("notes:changed", { id: latest });
+          } else {
+            // Keep-alive event to prevent proxies from closing the stream.
+            send("ping", { ts: Date.now() });
+          }
+        } catch {
+          // ignore
+        }
+      }, intervalMs);
 
       signal.addEventListener(
         "abort",
         () => {
-          clearInterval(id);
+          clearInterval(intervalId);
           controller.close();
         },
         { once: true },

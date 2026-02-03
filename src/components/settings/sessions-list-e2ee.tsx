@@ -105,6 +105,7 @@ export function SessionsListE2EE({
 
   const [rows, setRows] = useState<SessionRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [metaWarning, setMetaWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -154,11 +155,12 @@ export function SessionsListE2EE({
     dekKey: CryptoKey;
   }) {
     setError(null);
+    setMetaWarning(null);
     setDekKey(result.dekKey);
     setCsrfToken(result.csrfToken);
 
+    // Ensure current session meta exists (nice-to-have; not required for revocation).
     try {
-      // Ensure current session meta exists.
       const me = await fetchMe();
       const meta: SessionMeta = { ip: me.ip, userAgent: navigator.userAgent };
       const payload = await encryptJson({ key: result.dekKey, value: meta });
@@ -167,11 +169,17 @@ export function SessionsListE2EE({
         sessionId: me.sessionId,
         payload,
       });
+    } catch {
+      setMetaWarning(
+        "Couldn’t save encrypted device details for this session. You can still revoke sessions.",
+      );
+    }
 
+    try {
       const sessions = await fetchSessions();
       setRows(sessions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "unlock failed");
+      setError(err instanceof Error ? err.message : "failed to load sessions");
     }
   }
 
@@ -225,6 +233,9 @@ export function SessionsListE2EE({
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {metaWarning ? (
+        <p className="text-sm text-muted-foreground">{metaWarning}</p>
+      ) : null}
 
       <div className="space-y-2">
         {rows.map((s) => (
