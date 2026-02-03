@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authenticate, isAuthenticated, setAuthCookie } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
+import { safeNextPath } from "@/lib/redirects";
 import { createTranslator } from "@/lib/translator";
 
 type LoginPageProps = {
@@ -24,7 +25,7 @@ type LoginPageProps = {
 async function loginAction(formData: FormData) {
   "use server";
   const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
-  const nextPath = String(formData.get("next") ?? `/${locale}/dashboard`);
+  const nextPath = safeNextPath(locale, String(formData.get("next") ?? ""));
   const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
 
