@@ -41,7 +41,7 @@ export function buildCsp({ nonce }: { nonce: string }) {
   ].join("; ");
 }
 
-function applySecurityHeaders(
+export function applySecurityHeaders(
   response: NextResponse,
   opts?: { nonce?: string; csp?: string },
 ) {

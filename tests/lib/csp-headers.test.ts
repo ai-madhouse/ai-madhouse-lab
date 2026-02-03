@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { buildCsp } from "@/proxy";
 
-describe("CSP header", () => {
+describe("CSP policy", () => {
   test("includes required baseline directives", () => {
     const csp = buildCsp({ nonce: "abc" });
 
@@ -23,5 +23,11 @@ describe("CSP header", () => {
     const csp = buildCsp({ nonce: "abc" });
     expect(csp).toContain("report-to csp");
     expect(csp).toContain("report-uri /api/csp-report");
+  });
+
+  test("does not include unsafe-inline / unsafe-eval", () => {
+    const csp = buildCsp({ nonce: "abc" });
+    expect(csp).not.toContain("'unsafe-inline'");
+    expect(csp).not.toContain("'unsafe-eval'");
   });
 });
