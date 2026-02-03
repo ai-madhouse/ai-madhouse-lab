@@ -7,7 +7,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/dashboard",
         search: "",
-        authCookieValue: undefined,
+        isAuthed: false,
       }),
     ).toEqual({
       kind: "redirect",
@@ -21,7 +21,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/_next/static/chunk.js",
         search: "",
-        authCookieValue: "",
+        isAuthed: false,
       }),
     ).toEqual({ kind: "next" });
 
@@ -29,7 +29,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/api/health",
         search: "",
-        authCookieValue: "",
+        isAuthed: false,
       }),
     ).toEqual({ kind: "next" });
 
@@ -37,7 +37,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/favicon.ico",
         search: "",
-        authCookieValue: "",
+        isAuthed: false,
       }),
     ).toEqual({ kind: "next" });
   });
@@ -47,7 +47,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/apiary",
         search: "",
-        authCookieValue: "",
+        isAuthed: false,
       }),
     ).toEqual({
       kind: "redirect",
@@ -59,7 +59,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/_nextish",
         search: "?x=1",
-        authCookieValue: "",
+        isAuthed: false,
       }),
     ).toEqual({
       kind: "redirect",
@@ -70,7 +70,11 @@ describe("proxy logic", () => {
 
   test("redirects root to /en", () => {
     expect(
-      decideProxyAction({ pathname: "/", search: "", authCookieValue: "" }),
+      decideProxyAction({
+        pathname: "/",
+        search: "",
+        isAuthed: false,
+      }),
     ).toEqual({
       kind: "redirect",
       toPath: "/en/",
@@ -83,12 +87,24 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/ru/dashboard",
         search: "?a=1",
-        authCookieValue: undefined,
+        isAuthed: false,
       }),
     ).toEqual({
       kind: "redirect",
       toPath: "/ru/login?next=%2Fru%2Fdashboard%3Fa%3D1",
       setLocaleCookie: "ru",
+    });
+
+    expect(
+      decideProxyAction({
+        pathname: "/en/notes",
+        search: "",
+        isAuthed: false,
+      }),
+    ).toEqual({
+      kind: "redirect",
+      toPath: "/en/login?next=%2Fen%2Fnotes",
+      setLocaleCookie: "en",
     });
   });
 
@@ -97,7 +113,7 @@ describe("proxy logic", () => {
       decideProxyAction({
         pathname: "/lt/dashboard",
         search: "",
-        authCookieValue: "1",
+        isAuthed: true,
       }),
     ).toEqual({ kind: "next", setLocaleCookie: "lt" });
   });

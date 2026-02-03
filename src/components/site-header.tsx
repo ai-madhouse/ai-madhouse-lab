@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  NotebookPen,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const iconMap = {
   dashboard: LayoutDashboard,
   settings: Settings,
   live: Activity,
+  notes: NotebookPen,
   about: Sparkles,
 } as const;
 
@@ -35,6 +37,7 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
     { key: "dashboard", href: `/${locale}/dashboard` },
     { key: "settings", href: `/${locale}/settings` },
     { key: "live", href: `/${locale}/live` },
+    { key: "notes", href: `/${locale}/notes` },
     { key: "about", href: `/${locale}/about` },
   ] as const;
 

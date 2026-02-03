@@ -16,7 +16,9 @@
     "login": "Войти",
     "loginIcon": "Войти",
     "logout": "Выйти",
-    "logoutIcon": "Выйти"
+    "logoutIcon": "Выйти",
+    "notes": "Заметки",
+    "notesIcon": "Заметки"
   },
   "Theme": {
     "toggle": "Переключить тему",
@@ -300,5 +302,10 @@
     "subtitle": "Запрошенная страница не существует или была перемещена.",
     "backHome": "На главную",
     "backDashboard": "В панель"
+  },
+  "Notes": {
+    "eyebrow": "Заметки",
+    "title": "Заметки",
+    "subtitle": "Небольшая демонстрация CRUD на локальной sqlite через libsql."
   }
 }

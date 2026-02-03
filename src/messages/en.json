@@ -16,7 +16,9 @@
     "login": "Sign in",
     "loginIcon": "Sign in",
     "logout": "Sign out",
-    "logoutIcon": "Sign out"
+    "logoutIcon": "Sign out",
+    "notes": "Notes",
+    "notesIcon": "Notes"
   },
   "Theme": {
     "toggle": "Toggle theme",
@@ -300,5 +302,10 @@
     "subtitle": "The page you requested does not exist or was moved.",
     "backHome": "Return to landing",
     "backDashboard": "Go to dashboard"
+  },
+  "Notes": {
+    "eyebrow": "Notes",
+    "title": "Notes",
+    "subtitle": "A tiny CRUD demo backed by local sqlite via libsql."
   }
 }

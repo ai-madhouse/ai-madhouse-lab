@@ -16,7 +16,9 @@
     "login": "Prisijungti",
     "loginIcon": "Prisijungti",
     "logout": "Atsijungti",
-    "logoutIcon": "Atsijungti"
+    "logoutIcon": "Atsijungti",
+    "notes": "Užrašai",
+    "notesIcon": "Užrašai"
   },
   "Theme": {
     "toggle": "Perjungti temą",
@@ -300,5 +302,10 @@
     "subtitle": "Ieškomas puslapis neegzistuoja arba buvo perkeltas.",
     "backHome": "Į pradžią",
     "backDashboard": "Į skydelį"
+  },
+  "Notes": {
+    "eyebrow": "Užrašai",
+    "title": "Užrašai",
+    "subtitle": "Maža CRUD demonstracija su vietiniu sqlite per libsql."
   }
 }

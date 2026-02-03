@@ -16,11 +16,11 @@ export type ProxyDecision =
 export function decideProxyAction({
   pathname,
   search,
-  authCookieValue,
+  isAuthed,
 }: {
   pathname: string;
   search: string;
-  authCookieValue?: string;
+  isAuthed: boolean;
 }): ProxyDecision {
   if (
     pathname === "/_next" ||
@@ -45,7 +45,7 @@ export function decideProxyAction({
   }
 
   const locale = normalizeLocale(pathname.split("/").filter(Boolean)[0]);
-  const protectedRoutes = ["/dashboard", "/settings", "/live"]; // add more here if needed
+  const protectedRoutes = ["/dashboard", "/settings", "/live", "/notes"]; // add more here if needed
 
   const isProtected = protectedRoutes.some(
     (route) =>
@@ -53,7 +53,7 @@ export function decideProxyAction({
       pathname.startsWith(`/${locale}${route}/`),
   );
 
-  if (isProtected && authCookieValue !== "1") {
+  if (isProtected && !isAuthed) {
     const nextPath = `${pathname}${search}`;
     return {
       kind: "redirect",
