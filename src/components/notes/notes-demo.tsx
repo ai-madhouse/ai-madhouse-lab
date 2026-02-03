@@ -5,18 +5,52 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  type NoteSnapshot,
+  type NotesAction,
+  popLast,
+  pushUndo,
+} from "@/lib/notes-history";
 
-type Note = {
-  id: string;
-  title: string;
-  body: string;
-  created_at: string;
-};
+type Note = NoteSnapshot;
+
+type NotesApiList = { ok: boolean; notes?: Note[]; error?: string };
+
+type NotesApiSingle = { ok: boolean; note?: Note; error?: string };
+
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+function buildLastSaved(next: Note[]): Record<string, Note> {
+  const map: Record<string, Note> = {};
+  for (const n of next) map[n.id] = n;
+  return map;
+}
 
 async function fetchNotes() {
   const res = await fetch("/api/notes", { cache: "no-store" });
-  const json = (await res.json()) as { ok: boolean; notes?: Note[] };
-  return json.notes ?? [];
+  const json = (await res.json().catch(() => null)) as NotesApiList | null;
+  if (!res.ok) {
+    throw new Error(json?.error ?? "failed to load notes");
+  }
+  return json?.notes ?? [];
+}
+
+async function fetchCsrfToken() {
+  const res = await fetch("/api/csrf", { cache: "no-store" });
+  const json = (await res.json().catch(() => null)) as
+    | { ok: true; token: string }
+    | { ok: false; error?: string }
+    | null;
+
+  if (res.ok && json && "ok" in json && json.ok) return json.token;
+  throw new Error((json && "error" in json && json.error) || "csrf failed");
 }
 
 export function NotesDemo() {
@@ -28,12 +62,17 @@ export function NotesDemo() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
+  const [lastSaved, setLastSaved] = useState<Record<string, Note>>({});
+  const [undoStack, setUndoStack] = useState<NotesAction[]>([]);
+  const [redoStack, setRedoStack] = useState<NotesAction[]>([]);
+
   async function refresh() {
     setError(null);
     setLoading(true);
     try {
       const next = await fetchNotes();
       setNotes(next);
+      setLastSaved(buildLastSaved(next));
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to load notes");
     } finally {
@@ -48,16 +87,25 @@ export function NotesDemo() {
       setError(null);
       setLoading(true);
       try {
-        const [csrfRes, next] = await Promise.all([
-          fetch("/api/csrf", { cache: "no-store" }),
+        const storedUndo = safeParseJson<NotesAction[]>(
+          window.localStorage.getItem("madhouse-notes-undo"),
+        );
+        const storedRedo = safeParseJson<NotesAction[]>(
+          window.localStorage.getItem("madhouse-notes-redo"),
+        );
+
+        if (!cancelled && Array.isArray(storedUndo)) setUndoStack(storedUndo);
+        if (!cancelled && Array.isArray(storedRedo)) setRedoStack(storedRedo);
+
+        const [token, next] = await Promise.all([
+          fetchCsrfToken(),
           fetchNotes(),
         ]);
-        const csrfJson = (await csrfRes.json().catch(() => null)) as {
-          ok: true;
-          token: string;
-        } | null;
-        if (!cancelled && csrfJson?.ok) setCsrfToken(csrfJson.token);
-        if (!cancelled) setNotes(next);
+        if (!cancelled) setCsrfToken(token);
+        if (!cancelled) {
+          setNotes(next);
+          setLastSaved(buildLastSaved(next));
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "failed to load notes");
@@ -74,30 +122,43 @@ export function NotesDemo() {
     };
   }, []);
 
-  async function createNote() {
-    setError(null);
+  useEffect(() => {
+    window.localStorage.setItem(
+      "madhouse-notes-undo",
+      JSON.stringify(undoStack),
+    );
+    window.localStorage.setItem(
+      "madhouse-notes-redo",
+      JSON.stringify(redoStack),
+    );
+  }, [redoStack, undoStack]);
+
+  async function apiCreate(note: Note) {
     const res = await fetch("/api/notes", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-csrf-token": csrfToken,
       },
-      body: JSON.stringify({ title, body }),
+      body: JSON.stringify({
+        id: note.id,
+        created_at: note.created_at,
+        title: note.title,
+        body: note.body,
+      }),
     });
 
+    const json = (await res.json().catch(() => null)) as NotesApiSingle | null;
+
     if (!res.ok) {
-      const json = (await res.json().catch(() => null)) as { error?: string };
-      setError(json?.error ?? "failed to create note");
-      return;
+      throw new Error(json?.error ?? "failed to create note");
     }
 
-    setTitle("");
-    setBody("");
-    await refresh();
+    if (!json?.note) throw new Error("missing note");
+    return json.note;
   }
 
-  async function updateNote(note: Note) {
-    setError(null);
+  async function apiUpdate(note: Note) {
     const res = await fetch(`/api/notes/${note.id}`, {
       method: "PUT",
       headers: {
@@ -107,17 +168,17 @@ export function NotesDemo() {
       body: JSON.stringify({ title: note.title, body: note.body }),
     });
 
+    const json = (await res.json().catch(() => null)) as NotesApiSingle | null;
+
     if (!res.ok) {
-      const json = (await res.json().catch(() => null)) as { error?: string };
-      setError(json?.error ?? "failed to update note");
-      return;
+      throw new Error(json?.error ?? "failed to update note");
     }
 
-    await refresh();
+    if (!json?.note) throw new Error("missing note");
+    return json.note;
   }
 
-  async function deleteNote(id: string) {
-    setError(null);
+  async function apiDelete(id: string) {
     const res = await fetch(`/api/notes/${id}`, {
       method: "DELETE",
       headers: {
@@ -125,13 +186,170 @@ export function NotesDemo() {
       },
     });
 
+    const json = (await res.json().catch(() => null)) as {
+      ok: boolean;
+      error?: string;
+    } | null;
+
     if (!res.ok) {
-      const json = (await res.json().catch(() => null)) as { error?: string };
-      setError(json?.error ?? "failed to delete note");
+      throw new Error(json?.error ?? "failed to delete note");
+    }
+  }
+
+  async function createNote() {
+    setError(null);
+    if (!csrfToken) {
+      setError("missing csrf token");
       return;
     }
 
-    await refresh();
+    const temp: Note = {
+      id: crypto.randomUUID(),
+      title: title.trim(),
+      body,
+      created_at: new Date().toISOString(),
+    };
+
+    if (!temp.title) return;
+
+    try {
+      const created = await apiCreate(temp);
+      setTitle("");
+      setBody("");
+      setNotes((prev) => [created, ...prev]);
+      setLastSaved((prev) => ({ ...prev, [created.id]: created }));
+      setUndoStack((prev) => pushUndo(prev, { kind: "create", note: created }));
+      setRedoStack([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to create note");
+    }
+  }
+
+  async function saveNote(note: Note) {
+    setError(null);
+    if (!csrfToken) {
+      setError("missing csrf token");
+      return;
+    }
+
+    const before = lastSaved[note.id];
+    if (!before) {
+      await refresh();
+      return;
+    }
+
+    if (before.title === note.title && before.body === note.body) {
+      return;
+    }
+
+    try {
+      const updated = await apiUpdate(note);
+      setNotes((prev) => prev.map((n) => (n.id === note.id ? updated : n)));
+      setLastSaved((prev) => ({ ...prev, [note.id]: updated }));
+      setUndoStack((prev) =>
+        pushUndo(prev, { kind: "update", before, after: updated }),
+      );
+      setRedoStack([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to update note");
+    }
+  }
+
+  async function removeNote(note: Note) {
+    setError(null);
+    if (!csrfToken) {
+      setError("missing csrf token");
+      return;
+    }
+
+    try {
+      await apiDelete(note.id);
+      setNotes((prev) => prev.filter((n) => n.id !== note.id));
+      setLastSaved((prev) => {
+        const copy = { ...prev };
+        delete copy[note.id];
+        return copy;
+      });
+      setUndoStack((prev) => pushUndo(prev, { kind: "delete", note }));
+      setRedoStack([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to delete note");
+    }
+  }
+
+  async function applyAction(action: NotesAction, direction: "undo" | "redo") {
+    if (!csrfToken) {
+      throw new Error("missing csrf token");
+    }
+
+    if (action.kind === "create") {
+      if (direction === "undo") {
+        await apiDelete(action.note.id);
+        setNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+        setLastSaved((prev) => {
+          const copy = { ...prev };
+          delete copy[action.note.id];
+          return copy;
+        });
+        return;
+      }
+
+      const restored = await apiCreate(action.note);
+      setNotes((prev) => [restored, ...prev]);
+      setLastSaved((prev) => ({ ...prev, [restored.id]: restored }));
+      return;
+    }
+
+    if (action.kind === "delete") {
+      if (direction === "undo") {
+        const restored = await apiCreate(action.note);
+        setNotes((prev) => [restored, ...prev]);
+        setLastSaved((prev) => ({ ...prev, [restored.id]: restored }));
+        return;
+      }
+
+      await apiDelete(action.note.id);
+      setNotes((prev) => prev.filter((n) => n.id !== action.note.id));
+      setLastSaved((prev) => {
+        const copy = { ...prev };
+        delete copy[action.note.id];
+        return copy;
+      });
+      return;
+    }
+
+    const target = direction === "undo" ? action.before : action.after;
+    const updated = await apiUpdate(target);
+    setNotes((prev) => prev.map((n) => (n.id === target.id ? updated : n)));
+    setLastSaved((prev) => ({ ...prev, [target.id]: updated }));
+  }
+
+  async function undo() {
+    setError(null);
+    const { item, rest } = popLast(undoStack);
+    if (!item) return;
+
+    try {
+      await applyAction(item, "undo");
+      setUndoStack(rest);
+      setRedoStack((prev) => pushUndo(prev, item));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "undo failed");
+    }
+  }
+
+  async function redo() {
+    setError(null);
+    const { item, rest } = popLast(redoStack);
+    if (!item) return;
+
+    try {
+      await applyAction(item, "redo");
+      setRedoStack(rest);
+      setUndoStack((prev) => pushUndo(prev, item));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "redo failed");
+    }
   }
 
   return (
@@ -156,12 +374,26 @@ export function NotesDemo() {
             placeholder="Body"
             rows={4}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button onClick={createNote} disabled={!title.trim() || !csrfToken}>
               Create
             </Button>
             <Button variant="outline" onClick={refresh} disabled={loading}>
               Refresh
+            </Button>
+            <Button
+              variant="outline"
+              onClick={undo}
+              disabled={undoStack.length === 0}
+            >
+              Undo
+            </Button>
+            <Button
+              variant="outline"
+              onClick={redo}
+              disabled={redoStack.length === 0}
+            >
+              Redo
             </Button>
           </div>
 
@@ -213,8 +445,8 @@ export function NotesDemo() {
                 rows={4}
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={() => updateNote(note)}>Save</Button>
-                <Button variant="outline" onClick={() => deleteNote(note.id)}>
+                <Button onClick={() => saveNote(note)}>Save</Button>
+                <Button variant="outline" onClick={() => removeNote(note)}>
                   Delete
                 </Button>
                 <p className="text-xs text-muted-foreground">
