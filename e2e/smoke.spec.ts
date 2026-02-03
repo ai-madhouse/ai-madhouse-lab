@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-function uniqueUser() {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return {
-    username: `pw_${suffix}`.slice(0, 24),
-    password: `Aa1!${suffix}zzZZ`,
-  };
-}
+import { registerAndLandOnDashboard } from "./helpers";
 
 test("CSP + Reporting-Endpoints headers present in production", async ({
   page,
@@ -28,18 +22,7 @@ test("CSP + Reporting-Endpoints headers present in production", async ({
 });
 
 test("Theme toggle does not shift the logout button", async ({ page }) => {
-  const { username, password } = uniqueUser();
-
-  await page.goto("/en/register", { waitUntil: "networkidle" });
-
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByLabel("Confirm password").fill(password);
-
-  await page.getByRole("button", { name: "Create account" }).click();
-
-  // Should land on dashboard when authed.
-  await expect(page).toHaveURL(/\/en\/dashboard/);
+  await registerAndLandOnDashboard(page, { locale: "en" });
 
   const logout = page
     .locator("button", { hasText: "Sign out" })
