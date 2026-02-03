@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-const banned = ["use" + "Memo", "use" + "Callback"];
+const banned = ["use" + "Memo", "use" + "Callback", "use" + "LayoutEffect"];
 
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -20,7 +20,7 @@ async function walk(dir: string): Promise<string[]> {
 }
 
 describe("project conventions", () => {
-  test("avoid manual memoization hooks in src", async () => {
+  test("avoid certain manual optimization hooks in src", async () => {
     const root = path.join(process.cwd(), "src");
     const files = await walk(root);
 

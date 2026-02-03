@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { authCookieName } from "@/lib/auth";
+import { clearAuthCookie, getSignedSessionIdFromCookies } from "@/lib/auth";
 import { normalizeLocale } from "@/lib/i18n";
+import { deleteSession } from "@/lib/sessions";
 
 export async function GET(
   request: NextRequest,
@@ -9,12 +10,12 @@ export async function GET(
   const { locale: rawLocale } = await context.params;
   const locale = normalizeLocale(rawLocale);
 
-  const response = NextResponse.redirect(
-    new URL(`/${locale}/login`, request.url),
-  );
-  response.cookies.set(authCookieName, "", {
-    path: "/",
-    expires: new Date(0),
-  });
-  return response;
+  const sessionId = await getSignedSessionIdFromCookies();
+  if (sessionId) {
+    await deleteSession(sessionId);
+  }
+
+  await clearAuthCookie();
+
+  return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
 }

@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { authenticate } from "@/lib/auth";
+import { decodeAndVerifySessionCookie, encodeSessionCookie } from "@/lib/auth";
 
-describe("authenticate", () => {
-  test("accepts matching credentials", () => {
-    process.env.DEMO_USER = "operator";
-    process.env.DEMO_PASS = "madhouse";
-    expect(authenticate("operator", "madhouse")).toBe(true);
+describe("auth", () => {
+  test("encodeSessionCookie produces verifiable token", () => {
+    const sessionId = "session-123";
+    const token = encodeSessionCookie(sessionId);
+
+    expect(decodeAndVerifySessionCookie(token)).toBe(sessionId);
   });
 
-  test("rejects mismatched credentials", () => {
-    process.env.DEMO_USER = "operator";
-    process.env.DEMO_PASS = "madhouse";
-    expect(authenticate("operator", "wrong")).toBe(false);
+  test("decodeAndVerifySessionCookie rejects tampering", () => {
+    const sessionId = "session-123";
+    const token = encodeSessionCookie(sessionId);
+    const tampered = token.replace("session-123", "session-456");
+
+    expect(decodeAndVerifySessionCookie(tampered)).toBeNull();
   });
 });

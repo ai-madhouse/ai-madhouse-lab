@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { authenticate, isAuthenticated, setAuthCookie } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { safeNextPath } from "@/lib/redirects";
+import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 
 type LoginPageProps = {
@@ -33,7 +34,8 @@ async function loginAction(formData: FormData) {
     redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
   }
 
-  await setAuthCookie();
+  const session = await createSession({ username });
+  await setAuthCookie(session.id);
   redirect(nextPath);
 }
 

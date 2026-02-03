@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 
 import { cookies } from "next/headers";
 
+import { getSession } from "@/lib/sessions";
+
 export const authCookieName = "madhouse_auth";
 
 const defaultUser = "operator";
@@ -27,7 +29,10 @@ export function authenticate(username: string, password: string) {
 
 function signSessionId(sessionId: string) {
   const secret = getAuthSecret();
-  return crypto.createHmac("sha256", secret).update(sessionId).digest("base64url");
+  return crypto
+    .createHmac("sha256", secret)
+    .update(sessionId)
+    .digest("base64url");
 }
 
 export function encodeSessionCookie(sessionId: string) {
@@ -78,4 +83,12 @@ export async function getSignedSessionIdFromCookies() {
   const cookieStore = await cookies();
   const raw = cookieStore.get(authCookieName)?.value;
   return decodeAndVerifySessionCookie(raw);
+}
+
+export async function isAuthenticated() {
+  const sessionId = await getSignedSessionIdFromCookies();
+  if (!sessionId) return false;
+
+  const session = await getSession(sessionId);
+  return session !== null;
 }

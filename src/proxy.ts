@@ -1,15 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { authCookieName } from "@/lib/auth";
+import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { decideProxyAction } from "@/lib/proxy-logic";
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  const rawCookie = request.cookies.get(authCookieName)?.value;
+  const sessionId = decodeAndVerifySessionCookie(rawCookie);
+
   const decision = decideProxyAction({
     pathname,
     search,
-    authCookieValue: request.cookies.get(authCookieName)?.value,
+    authCookieValue: sessionId ? "1" : undefined,
   });
 
   if (decision.kind === "redirect") {
