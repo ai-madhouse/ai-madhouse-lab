@@ -55,11 +55,12 @@ function applyNotesEventsForStats(events: NotesEventRow[]) {
 }
 
 async function fetchRealtimeHealth() {
-  const port = Number(process.env.REALTIME_PORT || "8787");
-  const url = `http://127.0.0.1:${port}/health`;
+  // Keep in sync with realtime-client.ts: REALTIME_URL is the source of truth.
+  const baseUrl = (process.env.REALTIME_URL || "http://127.0.0.1:8787").trim();
+  const url = `${baseUrl.replace(/\/$/, "")}/health`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 300);
+  const timeout = setTimeout(() => controller.abort(), 500);
 
   try {
     const res = await fetch(url, {
