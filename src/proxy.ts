@@ -10,7 +10,7 @@ function createNonce() {
   return crypto.randomBytes(16).toString("base64url");
 }
 
-function buildCsp({ nonce }: { nonce: string }) {
+export function buildCsp({ nonce }: { nonce: string }) {
   // "nonce-..." is the hook Next.js uses to automatically add nonce attributes
   // to framework scripts/bundles/styles during dynamic SSR.
   //
