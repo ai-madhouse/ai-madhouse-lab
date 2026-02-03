@@ -268,6 +268,16 @@
       "title": "Appearance",
       "subtitle": "Switch between light, dark, or system themes."
     },
+    "password": {
+      "title": "Password",
+      "subtitle": "Update your password. Other sessions will be revoked.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "ok": "Password updated.",
+      "hint": "Requirements are enforced server-side."
+    },
     "sessions": {
       "title": "Sessions",
       "subtitle": "Manage where your account is currently signed in.",

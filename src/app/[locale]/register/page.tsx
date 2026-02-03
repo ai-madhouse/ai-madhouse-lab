@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
+import { PasswordFields } from "@/components/auth/password-fields";
 import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -189,31 +190,14 @@ export default async function RegisterPage({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    {t("register.form.password")}
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password2">
-                    {t("register.form.password2")}
-                  </Label>
-                  <Input
-                    id="password2"
-                    name="password2"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                  />
-                </div>
+                <PasswordFields
+                  passwordId="password"
+                  passwordName="password"
+                  password2Id="password2"
+                  password2Name="password2"
+                  passwordLabel={t("register.form.password")}
+                  password2Label={t("register.form.password2")}
+                />
 
                 <Button className="w-full">{t("register.form.submit")}</Button>
 

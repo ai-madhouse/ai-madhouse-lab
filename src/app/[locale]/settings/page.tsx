@@ -1,5 +1,6 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-
+import { ChangePasswordForm } from "@/app/[locale]/settings/change-password-form";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -15,12 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
 import {
+  authenticate,
   clearAuthCookie,
   getSignedSessionIdFromCookies,
   isAuthenticated,
+  verifyCsrfToken,
 } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request";
 import {
   deleteOtherSessionsForUser,
   deleteSessionsForUser,
@@ -29,17 +35,24 @@ import {
 } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 import { describeUserAgent } from "@/lib/user-agent";
+import { updateUserPassword, validatePassword } from "@/lib/users";
 
 export default async function SettingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ error?: string; pw?: string }>;
 }) {
   const { locale: rawLocale } = await params;
   const locale = normalizeLocale(rawLocale);
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Settings");
   const isAuthed = await isAuthenticated();
+
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const pageError = resolvedSearchParams?.error;
+  const passwordOk = resolvedSearchParams?.pw === "ok";
 
   const sessionId = await getSignedSessionIdFromCookies();
   const session = sessionId ? await getSession(sessionId) : null;
@@ -78,6 +91,63 @@ export default async function SettingsPage({
 
     await clearAuthCookie();
     redirect(`/${locale}/login`);
+  }
+
+  async function changePasswordAction(formData: FormData) {
+    "use server";
+
+    const sid = await getSignedSessionIdFromCookies();
+    if (!sid) redirect(`/${locale}/login`);
+
+    const current = await getSession(sid);
+    if (!current) {
+      await clearAuthCookie();
+      redirect(`/${locale}/login`);
+    }
+
+    const csrfToken = String(formData.get("csrfToken") ?? "");
+    if (!(await verifyCsrfToken(csrfToken))) {
+      redirect(`/${locale}/settings?error=csrf`);
+    }
+
+    const hdrs = await headers();
+    const ip = getClientIp(hdrs);
+    const limiter = consumeRateLimit({
+      key: `pw-change:${current.id}:${ip}`,
+      limit: 10,
+      windowSeconds: 60,
+    });
+
+    if (!limiter.ok) {
+      redirect(`/${locale}/settings?error=rate`);
+    }
+
+    const currentPassword = String(formData.get("currentPassword") ?? "");
+    const newPassword = String(formData.get("newPassword") ?? "");
+    const newPassword2 = String(formData.get("newPassword2") ?? "");
+
+    if (!(await authenticate(current.username, currentPassword))) {
+      redirect(`/${locale}/settings?error=bad_current_password`);
+    }
+
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      redirect(`/${locale}/settings?error=${encodeURIComponent(pwError)}`);
+    }
+
+    if (newPassword !== newPassword2) {
+      redirect(`/${locale}/settings?error=passwords_mismatch`);
+    }
+
+    await updateUserPassword({ username: current.username, newPassword });
+
+    // Revoke other sessions (current stays valid).
+    await deleteOtherSessionsForUser({
+      username: current.username,
+      keepSessionId: sid,
+    });
+
+    redirect(`/${locale}/settings?pw=ok`);
   }
 
   return (
@@ -119,6 +189,35 @@ export default async function SettingsPage({
           </Card>
 
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("password.title")}</CardTitle>
+                <CardDescription>{t("password.subtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {passwordOk ? (
+                  <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
+                    {t("password.ok")}
+                  </div>
+                ) : null}
+
+                {pageError ? (
+                  <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                    {t("password.error", { error: pageError })}
+                  </div>
+                ) : null}
+
+                <ChangePasswordForm
+                  action={changePasswordAction}
+                  title={t("password.hint")}
+                  currentPasswordLabel={t("password.current")}
+                  newPasswordLabel={t("password.new")}
+                  confirmPasswordLabel={t("password.confirm")}
+                  submitLabel={t("password.submit")}
+                />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>{t("sessions.title")}</CardTitle>

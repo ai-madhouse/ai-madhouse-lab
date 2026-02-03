@@ -268,6 +268,16 @@
       "title": "Išvaizda",
       "subtitle": "Rinkitės šviesią, tamsią arba sisteminę temą."
     },
+    "password": {
+      "title": "Slaptažodis",
+      "subtitle": "Atnaujinkite slaptažodį. Kitos sesijos bus atšauktos.",
+      "current": "Dabartinis slaptažodis",
+      "new": "Naujas slaptažodis",
+      "confirm": "Pakartokite naują slaptažodį",
+      "submit": "Keisti slaptažodį",
+      "ok": "Slaptažodis atnaujintas.",
+      "hint": "Reikalavimai tikrinami serveryje."
+    },
     "sessions": {
       "title": "Sesijos",
       "subtitle": "Valdykite, kur šiuo metu prisijungta prie jūsų paskyros.",

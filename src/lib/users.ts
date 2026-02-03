@@ -21,8 +21,16 @@ export function validateUsername(username: string) {
 }
 
 export function validatePassword(password: string) {
-  if (password.length < 10) return "password too short";
+  if (password.length < 12) return "password must be at least 12 characters";
   if (password.length > 200) return "password too long";
+
+  if (!/[A-Z]/.test(password)) return "password must include a capital letter";
+  if (!/[a-z]/.test(password))
+    return "password must include a lowercase letter";
+  if (!/\d/.test(password)) return "password must include a digit";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "password must include a special character";
+
   return null;
 }
 
@@ -70,4 +78,20 @@ export async function verifyCredentials({
   if (!user) return false;
 
   return verifyPassword({ password, stored: user.password_hash });
+}
+
+export async function updateUserPassword({
+  username,
+  newPassword,
+}: {
+  username: string;
+  newPassword: string;
+}) {
+  const db = await getDb();
+  const passwordHash = hashPassword(newPassword);
+
+  await db.execute({
+    sql: "update users set password_hash = ? where username = ?",
+    args: [passwordHash, username],
+  });
 }
