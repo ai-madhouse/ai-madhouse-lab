@@ -9,9 +9,16 @@ function randomBetween(min: number, max: number) {
   return Math.round(min + Math.random() * (max - min));
 }
 
+type PulsePayload = {
+  latency: number;
+  throughput: number;
+  errors: number;
+  confidence: number;
+};
+
 export function PulseBoard() {
   const t = useTranslations("Live");
-  const [pulse, setPulse] = useState({
+  const [pulse, setPulse] = useState<PulsePayload>({
     latency: 128,
     throughput: 940,
     errors: 0.4,
@@ -19,7 +26,13 @@ export function PulseBoard() {
   });
 
   useEffect(() => {
-    const id = setInterval(() => {
+    let closed = false;
+
+    // Prefer server-sent events if available.
+    const es = new EventSource("/api/pulse");
+
+    const fallbackId = setInterval(() => {
+      if (closed) return;
       setPulse((prev) => ({
         latency: randomBetween(110, 180),
         throughput: randomBetween(880, 1040),
@@ -30,7 +43,30 @@ export function PulseBoard() {
         ),
       }));
     }, 2200);
-    return () => clearInterval(id);
+
+    es.addEventListener("pulse", (event) => {
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as PulsePayload;
+        setPulse({
+          latency: data.latency,
+          throughput: data.throughput,
+          errors: data.errors,
+          confidence: data.confidence,
+        });
+      } catch {
+        // ignore
+      }
+    });
+
+    es.onerror = () => {
+      // Keep fallback timer running.
+    };
+
+    return () => {
+      closed = true;
+      clearInterval(fallbackId);
+      es.close();
+    };
   }, []);
 
   return (
