@@ -21,6 +21,7 @@ const iconMap = {
   dashboard: LayoutDashboard,
   settings: Settings,
   live: Activity,
+  about: Sparkles,
 } as const;
 
 export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
@@ -34,6 +35,7 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
     { key: "dashboard", href: `/${locale}/dashboard` },
     { key: "settings", href: `/${locale}/settings` },
     { key: "live", href: `/${locale}/live` },
+    { key: "about", href: `/${locale}/about` },
   ] as const;
 
   return (

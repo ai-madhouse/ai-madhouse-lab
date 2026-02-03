@@ -7,10 +7,12 @@
     "dashboard": "Dashboard",
     "settings": "Settings",
     "live": "Live",
+    "about": "About",
     "homeIcon": "Landing",
     "dashboardIcon": "Dashboard",
     "settingsIcon": "Settings",
     "liveIcon": "Live",
+    "aboutIcon": "About",
     "login": "Sign in",
     "loginIcon": "Sign in",
     "logout": "Sign out",
@@ -271,6 +273,25 @@
       "subtitle": "Why this exists",
       "pointOne": "Use this view in a workshop to explain how telemetry would look once wired to real streams.",
       "pointTwo": "The UI updates on a short timer so teams can practice reading signal spikes."
+    }
+  },
+  "About": {
+    "badge": "Project",
+    "title": "About this demo",
+    "subtitle": "A Bun-first Next.js starter with i18n, theming, tests, and a few pages you can extend.",
+    "cards": {
+      "stack": {
+        "title": "Stack",
+        "pointOne": "Next.js App Router + React 19",
+        "pointTwo": "Bun for install/tests",
+        "pointThree": "next-intl + next-themes + lucide-react"
+      },
+      "rules": {
+        "title": "Rules",
+        "pointOne": "No useMemo/useCallback in app code (React Compiler enabled)",
+        "pointTwo": "Biome + bun test must pass before commits",
+        "pointThree": "Keep docs close to the code"
+      }
     }
   }
 }

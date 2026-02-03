@@ -7,10 +7,12 @@
     "dashboard": "Дашборд",
     "settings": "Настройки",
     "live": "Онлайн",
+    "about": "О проекте",
     "homeIcon": "Главная",
     "dashboardIcon": "Дашборд",
     "settingsIcon": "Настройки",
     "liveIcon": "Онлайн",
+    "aboutIcon": "О проекте",
     "login": "Войти",
     "loginIcon": "Войти",
     "logout": "Выйти",
@@ -271,6 +273,25 @@
       "subtitle": "Зачем это нужно",
       "pointOne": "Используйте этот экран на воркшопах, чтобы показать будущую телеметрию.",
       "pointTwo": "Интерфейс обновляется по таймеру, чтобы тренировать чтение сигналов."
+    }
+  },
+  "About": {
+    "badge": "Проект",
+    "title": "О демо",
+    "subtitle": "Bun-first Next.js стартовый проект с i18n, темами, тестами и несколькими страницами для расширения.",
+    "cards": {
+      "stack": {
+        "title": "Стек",
+        "pointOne": "Next.js App Router + React 19",
+        "pointTwo": "Bun для install/tests",
+        "pointThree": "next-intl + next-themes + lucide-react"
+      },
+      "rules": {
+        "title": "Правила",
+        "pointOne": "Без useMemo/useCallback в коде (React Compiler включен)",
+        "pointTwo": "Biome + bun test должны проходить перед коммитами",
+        "pointThree": "Документация рядом с кодом"
+      }
     }
   }
 }

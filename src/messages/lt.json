@@ -7,10 +7,12 @@
     "dashboard": "Skydelis",
     "settings": "Nustatymai",
     "live": "Tiesiogiai",
+    "about": "Apie",
     "homeIcon": "Pagrindinis",
     "dashboardIcon": "Skydelis",
     "settingsIcon": "Nustatymai",
     "liveIcon": "Tiesiogiai",
+    "aboutIcon": "Apie",
     "login": "Prisijungti",
     "loginIcon": "Prisijungti",
     "logout": "Atsijungti",
@@ -271,6 +273,25 @@
       "subtitle": "Kodėl tai svarbu",
       "pointOne": "Naudokite šį vaizdą dirbtuvėse, kad parodytumėte būsimą telemetriją.",
       "pointTwo": "UI atsinaujina su trumpu intervalu, kad komandos treniruotųsi skaityti signalus."
+    }
+  },
+  "About": {
+    "badge": "Projektas",
+    "title": "Apie šį demo",
+    "subtitle": "Bun-first Next.js pradinis projektas su i18n, temomis, testais ir keliomis puslapiais, kuriuos galite plėsti.",
+    "cards": {
+      "stack": {
+        "title": "Technologijos",
+        "pointOne": "Next.js App Router + React 19",
+        "pointTwo": "Bun diegimui ir testams",
+        "pointThree": "next-intl + next-themes + lucide-react"
+      },
+      "rules": {
+        "title": "Taisyklės",
+        "pointOne": "Be useMemo/useCallback kode (įjungtas React Compiler)",
+        "pointTwo": "Biome + bun test turi praeiti prieš komitus",
+        "pointThree": "Dokumentacija šalia kodo"
+      }
     }
   }
 }
