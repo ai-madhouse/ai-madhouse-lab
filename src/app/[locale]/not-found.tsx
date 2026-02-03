@@ -14,10 +14,12 @@ const outlineLinkClasses =
 export default async function NotFoundPage({
   params,
 }: {
-  params: Promise<{ locale: string }>;
+  params?: Promise<{ locale?: string }>;
 }) {
-  const { locale: rawLocale } = await params;
-  const locale = normalizeLocale(rawLocale);
+  const resolved = params ? await params.catch(() => null) : null;
+  const locale = normalizeLocale(
+    resolved && typeof resolved.locale === "string" ? resolved.locale : null,
+  );
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "NotFound");
 
