@@ -293,5 +293,12 @@
         "pointThree": "Keep docs close to the code"
       }
     }
+  },
+  "NotFound": {
+    "badge": "404",
+    "title": "Page not found",
+    "subtitle": "The page you requested does not exist or was moved.",
+    "backHome": "Return to landing",
+    "backDashboard": "Go to dashboard"
   }
 }

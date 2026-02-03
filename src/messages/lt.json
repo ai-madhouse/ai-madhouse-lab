@@ -293,5 +293,12 @@
         "pointThree": "Dokumentacija šalia kodo"
       }
     }
+  },
+  "NotFound": {
+    "badge": "404",
+    "title": "Puslapis nerastas",
+    "subtitle": "Ieškomas puslapis neegzistuoja arba buvo perkeltas.",
+    "backHome": "Į pradžią",
+    "backDashboard": "Į skydelį"
   }
 }
