@@ -12,7 +12,9 @@
     "settingsIcon": "Settings",
     "liveIcon": "Live",
     "login": "Sign in",
-    "loginIcon": "Sign in"
+    "loginIcon": "Sign in",
+    "logout": "Sign out",
+    "logoutIcon": "Sign out"
   },
   "Theme": {
     "toggle": "Toggle theme",
@@ -34,6 +36,22 @@
   "Footer": {
     "summary": "Built in Bun-first Next.js for clarity and velocity.",
     "version": "Milestone {version}"
+  },
+  "Auth": {
+    "badge": "Secure access",
+    "title": "Welcome back",
+    "subtitle": "Enter the lab with credentials issued for this demo environment.",
+    "hint": "Default credentials: operator / madhouse (override via DEMO_USER and DEMO_PASS).",
+    "form": {
+      "title": "Operator login",
+      "subtitle": "Credentials are validated on the server before unlocking the dashboard.",
+      "error": "Those credentials do not match. Try again.",
+      "username": "Username",
+      "usernamePlaceholder": "operator",
+      "password": "Password",
+      "passwordPlaceholder": "madhouse",
+      "submit": "Enter the lab"
+    }
   },
   "Landing": {
     "badge": "Creative Ops • Labs",

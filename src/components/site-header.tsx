@@ -4,11 +4,12 @@ import {
   Activity,
   LayoutDashboard,
   LogIn,
+  LogOut,
   Settings,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -22,8 +23,9 @@ const iconMap = {
   live: Activity,
 } as const;
 
-export function SiteHeader() {
+export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("Nav");
 
@@ -74,9 +76,20 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />
-          <Button variant="outline" size="sm" className="gap-2">
-            <LogIn className="h-4 w-4" aria-label={t("loginIcon")} />
-            {t("login")}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() =>
+              router.push(`/${locale}/${isAuthed ? "logout" : "login"}`)
+            }
+          >
+            {isAuthed ? (
+              <LogOut className="h-4 w-4" aria-label={t("logoutIcon")} />
+            ) : (
+              <LogIn className="h-4 w-4" aria-label={t("loginIcon")} />
+            )}
+            {isAuthed ? t("logout") : t("login")}
           </Button>
         </div>
       </div>

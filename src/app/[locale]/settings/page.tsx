@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { createTranslator } from "@/lib/translator";
 
@@ -24,10 +25,11 @@ export default async function SettingsPage({
   const locale = normalizeLocale(params.locale);
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Settings");
+  const isAuthed = isAuthenticated();
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <SiteHeader isAuthed={isAuthed} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
         <section className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">

@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { createTranslator } from "@/lib/translator";
 
@@ -22,10 +23,11 @@ export default async function LandingPage({
   const locale = normalizeLocale(params.locale);
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Landing");
+  const isAuthed = isAuthenticated();
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <SiteHeader isAuthed={isAuthed} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-12">
         <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-6">

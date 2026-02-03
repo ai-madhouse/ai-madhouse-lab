@@ -12,7 +12,9 @@
     "settingsIcon": "Настройки",
     "liveIcon": "Онлайн",
     "login": "Войти",
-    "loginIcon": "Войти"
+    "loginIcon": "Войти",
+    "logout": "Выйти",
+    "logoutIcon": "Выйти"
   },
   "Theme": {
     "toggle": "Переключить тему",
@@ -34,6 +36,22 @@
   "Footer": {
     "summary": "Собрано на Bun-first Next.js для ясности и скорости.",
     "version": "Этап {version}"
+  },
+  "Auth": {
+    "badge": "Безопасный доступ",
+    "title": "С возвращением",
+    "subtitle": "Введите учетные данные, выданные для этой демо-среды.",
+    "hint": "Данные по умолчанию: operator / madhouse (можно переопределить DEMO_USER и DEMO_PASS).",
+    "form": {
+      "title": "Вход оператора",
+      "subtitle": "Данные проверяются на сервере перед доступом к дашборду.",
+      "error": "Неверные учетные данные. Попробуйте снова.",
+      "username": "Имя пользователя",
+      "usernamePlaceholder": "operator",
+      "password": "Пароль",
+      "passwordPlaceholder": "madhouse",
+      "submit": "Войти в лабораторию"
+    }
   },
   "Landing": {
     "badge": "Креативные операции • Лаборатория",

@@ -12,7 +12,9 @@
     "settingsIcon": "Nustatymai",
     "liveIcon": "Tiesiogiai",
     "login": "Prisijungti",
-    "loginIcon": "Prisijungti"
+    "loginIcon": "Prisijungti",
+    "logout": "Atsijungti",
+    "logoutIcon": "Atsijungti"
   },
   "Theme": {
     "toggle": "Perjungti temą",
@@ -34,6 +36,22 @@
   "Footer": {
     "summary": "Sukurta su Bun-first Next.js aiškumui ir greičiui.",
     "version": "Etapas {version}"
+  },
+  "Auth": {
+    "badge": "Saugus prisijungimas",
+    "title": "Sveiki sugrįžę",
+    "subtitle": "Įveskite šiai demonstracinei aplinkai suteiktus duomenis.",
+    "hint": "Numatytieji duomenys: operator / madhouse (galima pakeisti per DEMO_USER ir DEMO_PASS).",
+    "form": {
+      "title": "Operatoriaus prisijungimas",
+      "subtitle": "Duomenys patvirtinami serveryje prieš atveriant skydelį.",
+      "error": "Neteisingi prisijungimo duomenys. Bandykite dar kartą.",
+      "username": "Vartotojo vardas",
+      "usernamePlaceholder": "operator",
+      "password": "Slaptažodis",
+      "passwordPlaceholder": "madhouse",
+      "submit": "Įeiti į laboratoriją"
+    }
   },
   "Landing": {
     "badge": "Kūrybinės operacijos • Laboratorija",
