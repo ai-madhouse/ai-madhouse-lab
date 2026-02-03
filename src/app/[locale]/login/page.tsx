@@ -17,8 +17,8 @@ import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { createTranslator } from "@/lib/translator";
 
 type LoginPageProps = {
-  params: { locale: string };
-  searchParams?: { error?: string; next?: string };
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ error?: string; next?: string }>;
 };
 
 async function loginAction(formData: FormData) {
@@ -32,7 +32,7 @@ async function loginAction(formData: FormData) {
     redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
   }
 
-  setAuthCookie();
+  await setAuthCookie();
   redirect(nextPath);
 }
 
@@ -40,11 +40,13 @@ export default async function LoginPage({
   params,
   searchParams,
 }: LoginPageProps) {
-  const locale = normalizeLocale(params.locale);
+  const { locale: rawLocale } = await params;
+  const locale = normalizeLocale(rawLocale);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Auth");
-  const isAuthed = isAuthenticated();
-  const hasError = searchParams?.error === "1";
+  const isAuthed = await isAuthenticated();
+  const hasError = resolvedSearchParams?.error === "1";
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,7 +78,7 @@ export default async function LoginPage({
                 <input
                   type="hidden"
                   name="next"
-                  value={searchParams?.next ?? `/${locale}/dashboard`}
+                  value={resolvedSearchParams?.next ?? `/${locale}/dashboard`}
                 />
                 <div className="space-y-2">
                   <Label htmlFor="username">{t("form.username")}</Label>

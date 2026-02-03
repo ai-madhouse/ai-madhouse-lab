@@ -11,9 +11,10 @@ export function authenticate(username: string, password: string) {
   return username === expectedUser && password === expectedPassword;
 }
 
-export function setAuthCookie() {
+export async function setAuthCookie() {
   const secure = process.env.NODE_ENV === "production";
-  cookies().set(authCookieName, "1", {
+  const cookieStore = await cookies();
+  cookieStore.set(authCookieName, "1", {
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -21,6 +22,7 @@ export function setAuthCookie() {
   });
 }
 
-export function isAuthenticated() {
-  return cookies().get(authCookieName)?.value === "1";
+export async function isAuthenticated() {
+  const cookieStore = await cookies();
+  return cookieStore.get(authCookieName)?.value === "1";
 }

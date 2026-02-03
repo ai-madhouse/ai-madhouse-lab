@@ -20,12 +20,13 @@ export const metadata: Metadata = {
   description: "A multi-page Next.js experience focused on craft and clarity.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = cookies().get("NEXT_LOCALE")?.value ?? "en";
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "en";
 
   return (
     <html lang={locale} suppressHydrationWarning>

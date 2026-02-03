@@ -11,9 +11,10 @@ export default async function LocaleLayout({
   params,
 }: {
   children: ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const normalizedLocale = normalizeLocale(params.locale);
+  const { locale } = await params;
+  const normalizedLocale = normalizeLocale(locale);
   const messages = await getMessages(normalizedLocale);
 
   return (

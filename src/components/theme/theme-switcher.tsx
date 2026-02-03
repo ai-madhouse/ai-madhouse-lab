@@ -14,7 +14,7 @@ const options = [
 export function ThemeSwitcher() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const t = useTranslations("Theme");
-  const resolvedLabel = t(resolvedTheme);
+  const resolvedLabel = t(resolvedTheme ?? "light");
 
   return (
     <div className="grid grid-cols-3 gap-2">

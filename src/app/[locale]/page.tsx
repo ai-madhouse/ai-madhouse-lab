@@ -18,12 +18,13 @@ import { createTranslator } from "@/lib/translator";
 export default async function LandingPage({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const locale = normalizeLocale(params.locale);
+  const { locale: rawLocale } = await params;
+  const locale = normalizeLocale(rawLocale);
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Landing");
-  const isAuthed = isAuthenticated();
+  const isAuthed = await isAuthenticated();
 
   return (
     <div className="min-h-screen bg-background">

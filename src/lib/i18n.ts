@@ -8,7 +8,9 @@ const messages = {
 } satisfies Record<Locale, () => Promise<Record<string, unknown>>>;
 
 export async function getMessages(locale: Locale) {
-  return messages[locale]();
+  return (await messages[
+    locale
+  ]()) as unknown as import("@/lib/translator").Messages;
 }
 
 export function isLocale(value: string): value is Locale {

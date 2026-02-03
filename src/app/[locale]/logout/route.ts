@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { authCookieName } from "@/lib/auth";
 import { normalizeLocale } from "@/lib/i18n";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { locale: string } },
+  request: NextRequest,
+  context: { params: Promise<{ locale: string }> },
 ) {
-  const locale = normalizeLocale(params.locale);
+  const { locale: rawLocale } = await context.params;
+  const locale = normalizeLocale(rawLocale);
+
   const response = NextResponse.redirect(
     new URL(`/${locale}/login`, request.url),
   );

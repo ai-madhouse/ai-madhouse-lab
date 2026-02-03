@@ -1,4 +1,5 @@
-export type Messages = Record<string, string | Messages>;
+export type MessageValue = string | { [key: string]: MessageValue };
+export type Messages = Record<string, MessageValue>;
 
 function resolvePath(messages: Messages, key: string): string {
   const parts = key.split(".");
