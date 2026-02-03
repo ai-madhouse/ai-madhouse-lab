@@ -2,21 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  createWrappedDek,
-  decryptJson,
-  encryptJson,
-  importDek,
-  unwrapDek,
-  type WrappedKey,
-} from "@/lib/crypto/webcrypto";
+import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
+import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import { describeUserAgent } from "@/lib/user-agent";
-
-type KeyRecord = WrappedKey & {
-  username: string;
-  created_at: string;
-};
 
 type SessionRow = {
   id: string;
@@ -31,58 +19,11 @@ type SessionMeta = {
   userAgent: string;
 };
 
-// removed
-async function fetchCsrfToken() {
-  const res = await fetch("/api/csrf", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; token: string }
-    | { ok: false; error?: string }
-    | null;
+// csrf token is fetched by E2EEDekUnlockCard and provided via onUnlocked
 
-  if (res.ok && json && "ok" in json && json.ok) return json.token;
-  throw new Error((json && "error" in json && json.error) || "csrf failed");
-}
+// (moved into E2EEDekUnlockCard)
 
-async function fetchKeyRecord() {
-  const res = await fetch("/api/crypto/key", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; key: KeyRecord }
-    | { ok: false; error?: string }
-    | null;
-
-  if (res.ok && json && "ok" in json && json.ok) return json.key;
-  if (res.status === 404) return null;
-
-  throw new Error((json && "error" in json && json.error) || "key failed");
-}
-
-async function createKeyRecord({
-  csrfToken,
-  wrapped,
-}: {
-  csrfToken: string;
-  wrapped: WrappedKey;
-}) {
-  const res = await fetch("/api/crypto/key", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-csrf-token": csrfToken,
-    },
-    body: JSON.stringify(wrapped),
-  });
-
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error(
-      (json && "error" in json && json.error) || "key create failed",
-    );
-  }
-}
+// (moved into E2EEDekUnlockCard)
 
 async function fetchSessions() {
   const res = await fetch("/api/sessions", { cache: "no-store" });
@@ -150,12 +91,7 @@ async function upsertSessionMeta({
   }
 }
 
-function promptPassphrase(message: string) {
-  const value = window.prompt(message);
-  const trimmed = (value ?? "").trim();
-  if (!trimmed) return null;
-  return trimmed;
-}
+// (replaced with proper UI in E2EEDekUnlockCard)
 
 // describeUserAgent moved to @/lib/user-agent
 export function SessionsListE2EE({
@@ -163,7 +99,6 @@ export function SessionsListE2EE({
 }: {
   currentSessionId: string | null;
 }) {
-  const [csrfToken, setCsrfToken] = useState<string>("");
   const [dekKey, setDekKey] = useState<CryptoKey | null>(null);
 
   const [rows, setRows] = useState<SessionRow[]>([]);
@@ -177,9 +112,6 @@ export function SessionsListE2EE({
       setError(null);
       setLoading(true);
       try {
-        const token = await fetchCsrfToken();
-        if (!cancelled) setCsrfToken(token);
-
         const sessions = await fetchSessions();
         if (!cancelled) setRows(sessions);
       } catch (err) {
@@ -200,42 +132,20 @@ export function SessionsListE2EE({
     };
   }, []);
 
-  async function unlock() {
+  async function handleUnlocked(result: {
+    csrfToken: string;
+    dekKey: CryptoKey;
+  }) {
     setError(null);
+    setDekKey(result.dekKey);
 
     try {
-      const token = csrfToken || (await fetchCsrfToken());
-      setCsrfToken(token);
-
-      let keyRecord = await fetchKeyRecord();
-      if (!keyRecord) {
-        const passphrase = promptPassphrase(
-          "Set an E2EE passphrase to encrypt session details.",
-        );
-        if (!passphrase) throw new Error("passphrase required");
-
-        const created = await createWrappedDek(passphrase);
-        await createKeyRecord({ csrfToken: token, wrapped: created.wrapped });
-        keyRecord = await fetchKeyRecord();
-      }
-
-      if (!keyRecord) throw new Error("missing key record");
-
-      const passphrase = promptPassphrase(
-        "Enter your E2EE passphrase to view session details.",
-      );
-      if (!passphrase) throw new Error("passphrase required");
-
-      const dekRaw = await unwrapDek({ passphrase, wrapped: keyRecord });
-      const key = await importDek(dekRaw);
-      setDekKey(key);
-
       // Ensure current session meta exists.
       const me = await fetchMe();
       const meta: SessionMeta = { ip: me.ip, userAgent: navigator.userAgent };
-      const payload = await encryptJson({ key, value: meta });
+      const payload = await encryptJson({ key: result.dekKey, value: meta });
       await upsertSessionMeta({
-        csrfToken: token,
+        csrfToken: result.csrfToken,
         sessionId: me.sessionId,
         payload,
       });
@@ -249,15 +159,17 @@ export function SessionsListE2EE({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={unlock}>
-          Unlock session details
-        </Button>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : null}
-      </div>
+      {!dekKey ? (
+        <E2EEDekUnlockCard
+          label="Unlock session details"
+          description="Session device details are end-to-end encrypted. Unlock to view browser/OS/IP and to encrypt your current session metadata."
+          onUnlocked={handleUnlocked}
+        />
+      ) : null}
 
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <div className="space-y-2">

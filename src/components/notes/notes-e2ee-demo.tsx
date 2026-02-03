@@ -2,17 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createWrappedDek,
-  decryptJson,
-  encryptJson,
-  importDek,
-  unwrapDek,
-  type WrappedKey,
-} from "@/lib/crypto/webcrypto";
+import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import {
   applyNotesEvents,
   type NoteSnapshot,
@@ -20,11 +14,6 @@ import {
   type NotesEventKind,
 } from "@/lib/notes-e2ee/model";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
-
-type KeyRecord = WrappedKey & {
-  username: string;
-  created_at: string;
-};
 
 type NotesHistoryRow = {
   id: string;
@@ -45,57 +34,11 @@ function safeParseJson<T>(value: string | null): T | null {
   }
 }
 
-async function fetchCsrfToken() {
-  const res = await fetch("/api/csrf", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; token: string }
-    | { ok: false; error?: string }
-    | null;
+// (moved into E2EEDekUnlockCard)
 
-  if (res.ok && json && "ok" in json && json.ok) return json.token;
-  throw new Error((json && "error" in json && json.error) || "csrf failed");
-}
+// (moved into E2EEDekUnlockCard)
 
-async function fetchKeyRecord() {
-  const res = await fetch("/api/crypto/key", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; key: KeyRecord }
-    | { ok: false; error?: string }
-    | null;
-
-  if (res.ok && json && "ok" in json && json.ok) return json.key;
-  if (res.status === 404) return null;
-
-  throw new Error((json && "error" in json && json.error) || "key failed");
-}
-
-async function createKeyRecord({
-  csrfToken,
-  wrapped,
-}: {
-  csrfToken: string;
-  wrapped: WrappedKey;
-}) {
-  const res = await fetch("/api/crypto/key", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-csrf-token": csrfToken,
-    },
-    body: JSON.stringify(wrapped),
-  });
-
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error(
-      (json && "error" in json && json.error) || "key create failed",
-    );
-  }
-}
+// (moved into E2EEDekUnlockCard)
 
 async function fetchHistory() {
   const res = await fetch("/api/notes-history", { cache: "no-store" });
@@ -159,12 +102,7 @@ async function postHistoryEvent({
   return json.id;
 }
 
-function promptPassphrase(message: string) {
-  const value = window.prompt(message);
-  const trimmed = (value ?? "").trim();
-  if (!trimmed) return null;
-  return trimmed;
-}
+// (replaced with proper UI in E2EEDekUnlockCard)
 
 async function decryptHistory({
   key,
@@ -225,7 +163,7 @@ export function NotesE2EEDemo() {
     null,
   );
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
@@ -234,24 +172,20 @@ export function NotesE2EEDemo() {
   const undoRef = useRef<null | (() => void)>(null);
   const redoRef = useRef<null | (() => void)>(null);
 
-  const csrfTokenRef = useRef<string>("");
-  const dekKeyRef = useRef<CryptoKey | null>(null);
-
   const refreshRef = useRef<null | (() => Promise<void>)>(null);
 
   useEffect(() => {
-    csrfTokenRef.current = csrfToken;
-    dekKeyRef.current = dekKey;
-
     refreshRef.current = async () => {
-      const key = dekKeyRef.current;
-      if (!key) return;
+      if (!dekKey) return;
 
       setError(null);
       setLoading(true);
       try {
         const history = await fetchHistory();
-        const { decrypted, state } = await decryptHistory({ key, history });
+        const { decrypted, state } = await decryptHistory({
+          key: dekKey,
+          history,
+        });
 
         setEvents(decrypted);
         setNotes(state.notes);
@@ -265,74 +199,36 @@ export function NotesE2EEDemo() {
         setLoading(false);
       }
     };
-  });
+  }, [dekKey]);
 
-  useEffect(() => {
-    let cancelled = false;
+  async function handleUnlocked(result: {
+    csrfToken: string;
+    dekKey: CryptoKey;
+  }) {
+    setCsrfToken(result.csrfToken);
+    setDekKey(result.dekKey);
 
-    async function run() {
-      setError(null);
-      setLoading(true);
+    setError(null);
+    setLoading(true);
+    try {
+      const history = await fetchHistory();
+      const { decrypted, state } = await decryptHistory({
+        key: result.dekKey,
+        history,
+      });
 
-      try {
-        const token = await fetchCsrfToken();
-        if (cancelled) return;
-        setCsrfToken(token);
-
-        let keyRecord = await fetchKeyRecord();
-
-        if (!keyRecord) {
-          const passphrase = promptPassphrase(
-            "Set an E2EE passphrase for Notes (you will need it on every device).",
-          );
-          if (!passphrase) throw new Error("passphrase required");
-
-          const created = await createWrappedDek(passphrase);
-          await createKeyRecord({ csrfToken: token, wrapped: created.wrapped });
-
-          keyRecord = await fetchKeyRecord();
-        }
-
-        if (!keyRecord) throw new Error("missing key record");
-
-        const passphrase = promptPassphrase(
-          "Enter your E2EE passphrase to unlock Notes.",
-        );
-        if (!passphrase) throw new Error("passphrase required");
-
-        const dekRaw = await unwrapDek({ passphrase, wrapped: keyRecord });
-        const key = await importDek(dekRaw);
-
-        if (cancelled) return;
-        setDekKey(key);
-
-        const history = await fetchHistory();
-        if (cancelled) return;
-
-        const { decrypted, state } = await decryptHistory({ key, history });
-        if (cancelled) return;
-
-        setEvents(decrypted);
-        setNotes(state.notes);
-        setCanUndo(state.canUndo);
-        setCanRedo(state.canRedo);
-        setUndoTargetEventId(state.undoTargetEventId);
-        setRedoTargetEventId(state.redoTargetEventId);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "failed to init");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      setEvents(decrypted);
+      setNotes(state.notes);
+      setCanUndo(state.canUndo);
+      setCanRedo(state.canRedo);
+      setUndoTargetEventId(state.undoTargetEventId);
+      setRedoTargetEventId(state.redoTargetEventId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "failed to init");
+    } finally {
+      setLoading(false);
     }
-
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }
 
   useEffect(() => {
     undoRef.current = () => {
@@ -543,6 +439,13 @@ export function NotesE2EEDemo() {
 
   return (
     <div className="space-y-6">
+      {!dekKey ? (
+        <E2EEDekUnlockCard
+          label="Unlock Notes"
+          description="Notes are end-to-end encrypted. Set a passphrase once, then unlock on each device."
+          onUnlocked={handleUnlocked}
+        />
+      ) : null}
       <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
         <div className="space-y-1">
           <p className="text-sm font-semibold">Create a note (E2EE)</p>
