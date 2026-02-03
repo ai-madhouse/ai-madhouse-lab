@@ -24,5 +24,5 @@
 
 - Bun-first workflow for install, dev, and tests.
 - Biome linting/formatting baked into scripts.
-- Middleware-driven locale and auth gating.
+- Proxy-driven locale and auth gating (`src/proxy.ts`, Next.js 16 Proxy).
 - Optional server-sent events endpoint at `GET /api/pulse` (used by the Live page).

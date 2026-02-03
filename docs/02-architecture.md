@@ -23,7 +23,7 @@ The app uses the Next.js App Router with locale-prefixed routes. Server componen
 - `src/app/[locale]/login/page.tsx`: basic auth login
 - `src/app/[locale]/logout/route.ts`: clears auth cookie
 
-The locale prefix is enforced in `src/middleware.ts` and defaults to `/en` when missing.
+The locale prefix is enforced in `src/proxy.ts` (Next.js Proxy) and defaults to `/en` when missing.
 
 ## Internationalization
 
@@ -42,7 +42,7 @@ The locale prefix is enforced in `src/middleware.ts` and defaults to `/en` when 
 
 - Credentials are checked in `src/lib/auth.ts`.
 - A signed cookie gates access to protected routes (`/dashboard`, `/settings`, `/live`).
-- `src/middleware.ts` enforces auth and redirects to `/login` when needed.
+- `src/proxy.ts` enforces auth and redirects to `/login` when needed.
 
 ## UI System
 

@@ -15,7 +15,37 @@
 ## Setup
 
 1. Install dependencies: `bun install`
-2. Run the dev server: `bun dev`
+2. Create a local env file (optional but recommended): `.env.local`
+3. Run the web app and realtime server (two terminals)
+
+### Example `.env.local`
+
+```bash
+# Dev-only secrets
+AUTH_SECRET=dev-secret-change-me-please-123456
+REALTIME_SECRET=dev-realtime-secret-change-me-please-123456
+
+# Optional
+DB_PATH=data/app.db
+PORT=3000
+REALTIME_PORT=8787
+```
+
+### Run web + realtime
+
+Terminal A (Next.js):
+
+```bash
+bun dev
+# or: PORT=3000 bun dev
+```
+
+Terminal B (realtime websockets):
+
+```bash
+bun run realtime
+# honors REALTIME_PORT, REALTIME_SECRET, DB_PATH
+```
 
 ## Commands
 
