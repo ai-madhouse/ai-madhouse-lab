@@ -35,10 +35,14 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
 
   const navItems = [
     { key: "home", href: `/${locale}` },
-    { key: "dashboard", href: `/${locale}/dashboard` },
-    { key: "settings", href: `/${locale}/settings` },
-    { key: "live", href: `/${locale}/live` },
-    { key: "notes", href: `/${locale}/notes` },
+    ...(isAuthed
+      ? ([
+          { key: "dashboard", href: `/${locale}/dashboard` },
+          { key: "settings", href: `/${locale}/settings` },
+          { key: "live", href: `/${locale}/live` },
+          { key: "notes", href: `/${locale}/notes` },
+        ] as const)
+      : ([] as const)),
     { key: "about", href: `/${locale}/about` },
   ] as const;
 
