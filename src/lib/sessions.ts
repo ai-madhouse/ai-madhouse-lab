@@ -21,10 +21,15 @@ export async function createSession({
   const id = randomId();
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
 
+  // Session details (ip/UA) are stored in encrypted form in sessions_meta.
+  // We intentionally do not persist these fields in plaintext.
   await db.execute({
     sql: "insert into sessions(id, username, expires_at, ip, user_agent) values(?,?,?,?,?)",
-    args: [id, username, expiresAt, ip ?? null, userAgent ?? null],
+    args: [id, username, expiresAt, null, null],
   });
+
+  void ip;
+  void userAgent;
 
   return { id, username, expiresAt };
 }
@@ -66,7 +71,7 @@ export async function deleteSession(sessionId: string) {
 export async function listSessionsForUser(username: string) {
   const db = await getDb();
   const res = await db.execute({
-    sql: "select id, username, created_at, expires_at, ip, user_agent from sessions where username = ? order by created_at desc",
+    sql: "select id, username, created_at, expires_at from sessions where username = ? order by created_at desc",
     args: [username],
   });
 
@@ -75,8 +80,6 @@ export async function listSessionsForUser(username: string) {
     username: string;
     created_at: string;
     expires_at: string;
-    ip?: string | null;
-    user_agent?: string | null;
   }>;
 }
 

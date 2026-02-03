@@ -1,7 +1,7 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/app/[locale]/settings/change-password-form";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { SessionsListE2EE } from "@/components/settings/sessions-list-e2ee";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
 import {
   authenticate,
   clearAuthCookie,
@@ -26,7 +25,6 @@ import {
 } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { consumeRateLimit } from "@/lib/rate-limit";
-import { getClientIp } from "@/lib/request";
 import {
   deleteOtherSessionsForUser,
   deleteSessionsForUser,
@@ -34,7 +32,6 @@ import {
   listSessionsForUser,
 } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
-import { describeUserAgent } from "@/lib/user-agent";
 import { updateUserPassword, validatePassword } from "@/lib/users";
 
 export default async function SettingsPage({
@@ -110,10 +107,8 @@ export default async function SettingsPage({
       redirect(`/${locale}/settings?error=csrf`);
     }
 
-    const hdrs = await headers();
-    const ip = getClientIp(hdrs);
     const limiter = consumeRateLimit({
-      key: `pw-change:${current.id}:${ip}`,
+      key: `pw-change:${current.username}`,
       limit: 10,
       windowSeconds: 60,
     });
@@ -228,37 +223,7 @@ export default async function SettingsPage({
                   {t("sessions.active", { count: String(sessions.length) })}
                 </p>
 
-                <div className="space-y-2">
-                  {sessions.map((s) => {
-                    const ua = describeUserAgent(s.user_agent);
-                    const ip = s.ip || t("sessions.unknownIp");
-                    const current = s.id === sessionId;
-
-                    return (
-                      <div
-                        key={s.id}
-                        className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background p-3"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-medium">
-                            {ua.browser} • {ua.os} • {ip}
-                          </p>
-                          {current ? (
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                              {t("sessions.current")}
-                            </p>
-                          ) : null}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("sessions.createdAt")}:{" "}
-                          {new Date(s.created_at).toLocaleString()} •{" "}
-                          {t("sessions.expiresAt")}:{" "}
-                          {new Date(s.expires_at).toLocaleString()}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
+                <SessionsListE2EE currentSessionId={sessionId ?? null} />
                 <div className="flex flex-wrap gap-2">
                   <form action={revokeOtherSessionsAction}>
                     <Button

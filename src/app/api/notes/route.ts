@@ -9,7 +9,6 @@ import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { publishRealtimeEvent } from "@/lib/realtime-client";
-import { getClientIp } from "@/lib/request";
 import { getSession } from "@/lib/sessions";
 
 type NoteRow = {
@@ -51,9 +50,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: false, error: "csrf" }, { status: 403 });
   }
 
-  const ip = getClientIp(request.headers);
   const limiter = consumeRateLimit({
-    key: `notes-write:${session.id}:${ip}`,
+    key: `notes-write:${session.username}`,
     limit: 60,
     windowSeconds: 60,
   });

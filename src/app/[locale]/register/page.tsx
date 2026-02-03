@@ -56,8 +56,10 @@ async function registerAction(formData: FormData) {
   const hdrs = await headers();
   const ip = getClientIp(hdrs);
 
+  const username = normalizeUsername(usernameRaw);
+
   const limiter = consumeRateLimit({
-    key: `register:${ip}`,
+    key: `register:${username || "unknown"}`,
     limit: 10,
     windowSeconds: 60,
   });
@@ -73,8 +75,6 @@ async function registerAction(formData: FormData) {
       `/${locale}/register?error=csrf&next=${encodeURIComponent(nextPath)}`,
     );
   }
-
-  const username = normalizeUsername(usernameRaw);
 
   const usernameError = validateUsername(username);
   if (usernameError) {

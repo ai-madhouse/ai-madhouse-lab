@@ -42,11 +42,11 @@ async function loginAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const csrfToken = String(formData.get("csrfToken") ?? "");
 
-  // Rate limit attempts per IP.
   const hdrs = await headers();
   const ip = getClientIp(hdrs);
+
   const limiter = consumeRateLimit({
-    key: `login:${ip}`,
+    key: `login:${username.trim().toLowerCase() || "unknown"}`,
     limit: 10,
     windowSeconds: 60,
   });

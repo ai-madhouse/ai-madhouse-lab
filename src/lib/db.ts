@@ -46,8 +46,25 @@ async function migrate(client: Client) {
     // ignore
   }
 
+  // If older builds stored ip/UA in plaintext, wipe them.
+  try {
+    await client.execute(
+      "update sessions set ip = null, user_agent = null where ip is not null or user_agent is not null",
+    );
+  } catch {
+    // ignore
+  }
+
   await client.execute(
     "CREATE TABLE IF NOT EXISTS user_keys (username TEXT PRIMARY KEY, kdf_salt TEXT NOT NULL, wrapped_key_iv TEXT NOT NULL, wrapped_key_ciphertext TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+  );
+
+  await client.execute(
+    "CREATE TABLE IF NOT EXISTS sessions_meta (session_id TEXT PRIMARY KEY, username TEXT NOT NULL, payload_iv TEXT NOT NULL, payload_ciphertext TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+  );
+
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS sessions_meta_user_time ON sessions_meta(username, created_at)",
   );
 
   await client.execute(

@@ -9,7 +9,6 @@ import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { publishRealtimeEvent } from "@/lib/realtime-client";
-import { getClientIp } from "@/lib/request";
 import { getSession } from "@/lib/sessions";
 
 type EventKind = "create" | "update" | "delete" | "undo" | "redo";
@@ -47,9 +46,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: false, error: "csrf" }, { status: 403 });
   }
 
-  const ip = getClientIp(request.headers);
   const limiter = consumeRateLimit({
-    key: `notes-history-write:${session.username}:${ip}`,
+    key: `notes-history-write:${session.username}`,
     limit: 240,
     windowSeconds: 60,
   });

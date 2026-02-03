@@ -6,7 +6,6 @@ import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rate-limit";
-import { getClientIp } from "@/lib/request";
 import { getSession } from "@/lib/sessions";
 
 async function requireSession(request: NextRequest) {
@@ -56,9 +55,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: false, error: "csrf" }, { status: 403 });
   }
 
-  const ip = getClientIp(request.headers);
   const limiter = consumeRateLimit({
-    key: `crypto-key:${session.username}:${ip}`,
+    key: `crypto-key:${session.username}`,
     limit: 30,
     windowSeconds: 60,
   });
