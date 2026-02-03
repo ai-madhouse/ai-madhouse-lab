@@ -142,6 +142,9 @@ export default async function LoginPage({
                     id="username"
                     name="username"
                     placeholder={t("form.usernamePlaceholder")}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     required
                   />
                 </div>
@@ -152,6 +155,7 @@ export default async function LoginPage({
                     name="password"
                     type="password"
                     placeholder={t("form.passwordPlaceholder")}
+                    autoComplete="current-password"
                     required
                   />
                 </div>

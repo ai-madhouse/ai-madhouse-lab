@@ -186,6 +186,8 @@ export default async function RegisterPage({
                     id="username"
                     name="username"
                     autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     required
                   />
                 </div>

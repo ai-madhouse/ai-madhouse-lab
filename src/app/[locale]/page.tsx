@@ -1,8 +1,9 @@
 import { ArrowRight, LineChart, Rocket, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,14 +41,30 @@ export default async function LandingPage({
               {t("subtitle")}
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button className="gap-2">
+              <Link
+                href={
+                  isAuthed
+                    ? `/${locale}/dashboard`
+                    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/dashboard`)}`
+                }
+                className={buttonClassName({ className: "gap-2" })}
+              >
                 {t("ctaPrimary")}
                 <ArrowRight
                   className="h-4 w-4"
                   aria-label={t("ctaPrimaryIcon")}
                 />
-              </Button>
-              <Button variant="outline">{t("ctaSecondary")}</Button>
+              </Link>
+              <Link
+                href={
+                  isAuthed
+                    ? `/${locale}/settings`
+                    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/settings`)}`
+                }
+                className={buttonClassName({ variant: "outline" })}
+              >
+                {t("ctaSecondary")}
+              </Link>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {[
