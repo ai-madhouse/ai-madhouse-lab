@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
+import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   type NoteSnapshot,
   type NotesAction,
@@ -448,11 +447,10 @@ export function NotesDemo() {
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Title"
           />
-          <Textarea
+          <NoteBodyEditor
             value={body}
-            onChange={(event) => setBody(event.target.value)}
-            placeholder="Body"
-            rows={4}
+            onChange={setBody}
+            placeholder="Body (Markdown)"
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={createNote} disabled={!title.trim() || !csrfToken}>
@@ -513,21 +511,22 @@ export function NotesDemo() {
                   )
                 }
               />
-              <Textarea
+              <NoteBodyEditor
                 value={note.body}
-                onChange={(event) =>
+                onChange={(next) =>
                   setNotes((prev) =>
                     prev.map((entry) =>
-                      entry.id === note.id
-                        ? { ...entry, body: event.target.value }
-                        : entry,
+                      entry.id === note.id ? { ...entry, body: next } : entry,
                     ),
                   )
                 }
-                rows={4}
+                onSave={() => {
+                  void saveNote(note);
+                }}
+                placeholder="Body (Markdown)"
+                disabled={!csrfToken}
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={() => saveNote(note)}>Save</Button>
                 <Button variant="outline" onClick={() => removeNote(note)}>
                   Delete
                 </Button>
