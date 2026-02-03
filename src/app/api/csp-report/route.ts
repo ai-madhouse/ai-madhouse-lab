@@ -12,6 +12,35 @@ function getClientIp(request: Request): string {
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
+// In production we intentionally drop reports on the floor.
+// In E2E_TEST mode we keep a tiny in-memory ring buffer for assertions.
+const e2eBuffer: {
+  at: number;
+  reports: ReturnType<typeof normalizeCspReports>;
+}[] = [];
+
+function pushE2E(reports: ReturnType<typeof normalizeCspReports>) {
+  if (process.env.E2E_TEST !== "1") return;
+  e2eBuffer.push({ at: Date.now(), reports });
+  if (e2eBuffer.length > 50) e2eBuffer.splice(0, e2eBuffer.length - 50);
+}
+
+export async function GET() {
+  if (process.env.E2E_TEST !== "1") {
+    return Response.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
+  const last = e2eBuffer.at(-1) ?? null;
+  return Response.json(
+    {
+      ok: true,
+      count: e2eBuffer.length,
+      last,
+    },
+    { status: 200 },
+  );
+}
+
 export async function POST(request: Request) {
   // Always respond quickly; do not reflect input.
   const len = Number(request.headers.get("content-length") ?? "0");
@@ -46,9 +75,8 @@ export async function POST(request: Request) {
     });
   }
 
-  // Normalize + redact. Default behavior: drop on the floor.
-  // In staging you can log this, or enqueue to a TTL sink.
-  void normalizeCspReports(payload);
+  const normalized = normalizeCspReports(payload);
+  pushE2E(normalized);
 
   return new Response(null, {
     status: 204,

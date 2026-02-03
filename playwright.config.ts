@@ -12,10 +12,17 @@ export default defineConfig({
     headless: true,
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    launchOptions: {
+      // Try to ensure Reporting API is enabled in headless.
+      args: [
+        "--enable-features=Reporting",
+        "--enable-blink-features=Reporting",
+      ],
+    },
   },
   webServer: {
     // `next start` requires a build. Run `bun run build` before `bun run e2e`.
-    command: `PORT=${PORT} NODE_ENV=production AUTH_SECRET=playwright-test-secret bun run start -- -p ${PORT}`,
+    command: `PORT=${PORT} NODE_ENV=production E2E_TEST=1 AUTH_SECRET=playwright-test-secret bun run start -- -p ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     timeout: 120_000,
