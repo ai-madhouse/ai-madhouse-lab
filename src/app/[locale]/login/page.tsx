@@ -67,6 +67,20 @@ async function loginAction(formData: FormData) {
   }
 
   const session = await createSession({ username });
+
+  const userAgent = (await headers()).get("user-agent") ?? "";
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      event: "session_created",
+      username,
+      sessionId: session.id,
+      expiresAt: session.expiresAt,
+      ip,
+      userAgent,
+    }),
+  );
+
   await setAuthCookie(session.id);
   redirect(nextPath);
 }
