@@ -11,6 +11,7 @@ import {
   popLast,
   pushUndo,
 } from "@/lib/notes-history";
+import { getRealtimeWsUrl } from "@/lib/realtime-url";
 
 type Note = NoteSnapshot;
 
@@ -132,6 +133,32 @@ export function NotesDemo() {
       JSON.stringify(redoStack),
     );
   }, [redoStack, undoStack]);
+
+  useEffect(() => {
+    const url = getRealtimeWsUrl();
+    if (!url) return;
+
+    const ws = new WebSocket(url);
+
+    ws.onmessage = async (event) => {
+      const data = safeParseJson<{ type?: string }>(String(event.data));
+      if (!data || data.type !== "notes:changed") return;
+
+      try {
+        const next = await fetchNotes();
+        setNotes(next);
+        setLastSaved(buildLastSaved(next));
+        setUndoStack([]);
+        setRedoStack([]);
+      } catch {
+        // ignore
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   async function apiCreate(note: Note) {
     const res = await fetch("/api/notes", {

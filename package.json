@@ -9,9 +9,11 @@
     "lint": "biome check",
     "format": "biome format --write",
     "test": "bun test",
-    "check": "bunx biome check . && bun test && bun run build"
+    "check": "bunx biome check . && bun test && bun run build",
+    "realtime": "bun run realtime/server.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "lucide-react": "latest",
     "next": "16.1.6",
     "next-intl": "latest",

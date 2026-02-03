@@ -3,11 +3,12 @@ export const runtime = "nodejs";
 import { randomUUID } from "node:crypto";
 
 import type { NextRequest } from "next/server";
-
+import type { SessionRow } from "@/app/api/notes/types";
 import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { publishRealtimeEvent } from "@/lib/realtime-client";
 import { getClientIp } from "@/lib/request";
 import { getSession } from "@/lib/sessions";
 
@@ -22,7 +23,7 @@ async function requireSession(request: NextRequest) {
   const rawCookie = request.cookies.get(authCookieName)?.value;
   const sessionId = decodeAndVerifySessionCookie(rawCookie);
   if (!sessionId) return null;
-  return await getSession(sessionId);
+  return (await getSession(sessionId)) as SessionRow & { id: string };
 }
 
 export async function GET(request: NextRequest) {
@@ -118,8 +119,12 @@ export async function POST(request: NextRequest) {
     args: [id],
   });
 
-  return Response.json(
-    { ok: true, note: created.rows[0] as unknown as NoteRow },
-    { status: 201 },
-  );
+  const note = created.rows[0] as unknown as NoteRow;
+
+  await publishRealtimeEvent({
+    username: session.username,
+    event: { type: "notes:changed", op: "create", note },
+  });
+
+  return Response.json({ ok: true, note }, { status: 201 });
 }
