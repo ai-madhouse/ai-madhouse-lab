@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
 import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -84,6 +85,7 @@ export default async function LoginPage({
 
   return (
     <div className="min-h-screen bg-background">
+      <ClearNotesHistoryOnMount enabled={!isAuthed} />
       <SiteHeader isAuthed={isAuthed} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">

@@ -85,9 +85,18 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() =>
-              router.push(`/${locale}/${isAuthed ? "logout" : "login"}`)
-            }
+            onClick={() => {
+              if (isAuthed) {
+                try {
+                  window.localStorage.removeItem("madhouse-notes-undo");
+                  window.localStorage.removeItem("madhouse-notes-redo");
+                } catch {
+                  // ignore
+                }
+              }
+
+              router.push(`/${locale}/${isAuthed ? "logout" : "login"}`);
+            }}
           >
             {isAuthed ? (
               <LogOut className="h-4 w-4" aria-label={t("logoutIcon")} />
