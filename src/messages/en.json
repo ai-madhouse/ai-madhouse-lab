@@ -288,7 +288,7 @@
       },
       "rules": {
         "title": "Rules",
-        "pointOne": "No useMemo/useCallback in app code (React Compiler enabled)",
+        "pointOne": "No manual memoization hooks in app code (React Compiler enabled)",
         "pointTwo": "Biome + bun test must pass before commits",
         "pointThree": "Keep docs close to the code"
       }

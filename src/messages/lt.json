@@ -288,7 +288,7 @@
       },
       "rules": {
         "title": "Taisyklės",
-        "pointOne": "Be useMemo/useCallback kode (įjungtas React Compiler)",
+        "pointOne": "Be rankinių memoizacijos hook'ų kode (įjungtas React Compiler)",
         "pointTwo": "Biome + bun test turi praeiti prieš komitus",
         "pointThree": "Dokumentacija šalia kodo"
       }
