@@ -11,7 +11,7 @@
 - **Landing**: high-touch hero, stats, and system narrative.
 - **Dashboard**: operational metrics, activity feed, and next-step focus.
 - **Settings**: profile inputs, theme controls, and locale switcher.
-- **Live**: simulated telemetry board for demos and walkthroughs.
+- **Live**: telemetry board for demos and walkthroughs (client fallback + optional SSE stream).
 - **Login**: credentials gate with server-side validation and feedback.
 
 ## Global UX
@@ -25,3 +25,4 @@
 - Bun-first workflow for install, dev, and tests.
 - Biome linting/formatting baked into scripts.
 - Middleware-driven locale and auth gating.
+- Optional server-sent events endpoint at `GET /api/pulse` (used by the Live page).
