@@ -1,4 +1,6 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +14,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authenticate, isAuthenticated, setAuthCookie } from "@/lib/auth";
+import {
+  authenticate,
+  isAuthenticated,
+  setAuthCookie,
+  verifyCsrfToken,
+} from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/redirects";
+import { getClientIp } from "@/lib/request";
 import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 
@@ -29,6 +38,28 @@ async function loginAction(formData: FormData) {
   const nextPath = safeNextPath(locale, String(formData.get("next") ?? ""));
   const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
+  const csrfToken = String(formData.get("csrfToken") ?? "");
+
+  // Rate limit attempts per IP.
+  const hdrs = await headers();
+  const ip = getClientIp(hdrs);
+  const limiter = consumeRateLimit({
+    key: `login:${ip}`,
+    limit: 10,
+    windowSeconds: 60,
+  });
+
+  if (!limiter.ok) {
+    redirect(
+      `/${locale}/login?error=rate&next=${encodeURIComponent(nextPath)}`,
+    );
+  }
+
+  if (!(await verifyCsrfToken(csrfToken))) {
+    redirect(
+      `/${locale}/login?error=csrf&next=${encodeURIComponent(nextPath)}`,
+    );
+  }
 
   if (!authenticate(username, password)) {
     redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
@@ -77,6 +108,7 @@ export default async function LoginPage({
                 </div>
               ) : null}
               <form action={loginAction} className="space-y-4">
+                <CsrfTokenField />
                 <input type="hidden" name="locale" value={locale} />
                 <input
                   type="hidden"

@@ -1,6 +1,13 @@
 export const runtime = "nodejs";
 
+import type { NextRequest } from "next/server";
+
+import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
+import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request";
+import { getSession } from "@/lib/sessions";
 
 type NoteRow = {
   id: string;
@@ -9,10 +16,22 @@ type NoteRow = {
   created_at: string;
 };
 
+async function requireSession(request: NextRequest) {
+  const rawCookie = request.cookies.get(authCookieName)?.value;
+  const sessionId = decodeAndVerifySessionCookie(rawCookie);
+  if (!sessionId) return null;
+  return await getSession(sessionId);
+}
+
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await requireSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const db = await getDb();
 
@@ -30,9 +49,30 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await requireSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const token = request.headers.get("x-csrf-token") ?? "";
+  if (!(await verifyCsrfToken(token))) {
+    return Response.json({ ok: false, error: "csrf" }, { status: 403 });
+  }
+
+  const ip = getClientIp(request.headers);
+  const limiter = consumeRateLimit({
+    key: `notes-write:${session.id}:${ip}`,
+    limit: 120,
+    windowSeconds: 60,
+  });
+
+  if (!limiter.ok) {
+    return Response.json({ ok: false, error: "rate" }, { status: 429 });
+  }
+
   const { id } = await params;
 
   const body = (await request.json().catch(() => null)) as {
@@ -70,9 +110,30 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = await requireSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const token = request.headers.get("x-csrf-token") ?? "";
+  if (!(await verifyCsrfToken(token))) {
+    return Response.json({ ok: false, error: "csrf" }, { status: 403 });
+  }
+
+  const ip = getClientIp(request.headers);
+  const limiter = consumeRateLimit({
+    key: `notes-write:${session.id}:${ip}`,
+    limit: 120,
+    windowSeconds: 60,
+  });
+
+  if (!limiter.ok) {
+    return Response.json({ ok: false, error: "rate" }, { status: 429 });
+  }
+
   const { id } = await params;
   const db = await getDb();
   await db.execute({ sql: "delete from notes where id = ?", args: [id] });

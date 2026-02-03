@@ -92,3 +92,9 @@ export async function isAuthenticated() {
   const session = await getSession(sessionId);
   return session !== null;
 }
+
+export async function verifyCsrfToken(tokenFromRequest: string) {
+  // Lazy import to avoid circular deps in app builds.
+  const mod = (await import("@/lib/csrf")) as typeof import("@/lib/csrf");
+  return mod.verifyCsrfToken(tokenFromRequest);
+}

@@ -21,6 +21,7 @@ async function fetchNotes() {
 
 export function NotesDemo() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [csrfToken, setCsrfToken] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +48,15 @@ export function NotesDemo() {
       setError(null);
       setLoading(true);
       try {
-        const next = await fetchNotes();
+        const [csrfRes, next] = await Promise.all([
+          fetch("/api/csrf", { cache: "no-store" }),
+          fetchNotes(),
+        ]);
+        const csrfJson = (await csrfRes.json().catch(() => null)) as {
+          ok: true;
+          token: string;
+        } | null;
+        if (!cancelled && csrfJson?.ok) setCsrfToken(csrfJson.token);
         if (!cancelled) setNotes(next);
       } catch (err) {
         if (!cancelled) {
@@ -69,7 +78,10 @@ export function NotesDemo() {
     setError(null);
     const res = await fetch("/api/notes", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrfToken,
+      },
       body: JSON.stringify({ title, body }),
     });
 
@@ -88,7 +100,10 @@ export function NotesDemo() {
     setError(null);
     const res = await fetch(`/api/notes/${note.id}`, {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrfToken,
+      },
       body: JSON.stringify({ title: note.title, body: note.body }),
     });
 
@@ -103,7 +118,12 @@ export function NotesDemo() {
 
   async function deleteNote(id: string) {
     setError(null);
-    const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/notes/${id}`, {
+      method: "DELETE",
+      headers: {
+        "x-csrf-token": csrfToken,
+      },
+    });
 
     if (!res.ok) {
       const json = (await res.json().catch(() => null)) as { error?: string };
@@ -137,7 +157,7 @@ export function NotesDemo() {
             rows={4}
           />
           <div className="flex items-center gap-2">
-            <Button onClick={createNote} disabled={!title.trim()}>
+            <Button onClick={createNote} disabled={!title.trim() || !csrfToken}>
               Create
             </Button>
             <Button variant="outline" onClick={refresh} disabled={loading}>

@@ -2,7 +2,14 @@ export const runtime = "nodejs";
 
 import { randomUUID } from "node:crypto";
 
+import type { NextRequest } from "next/server";
+
+import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
+import { verifyCsrfToken } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request";
+import { getSession } from "@/lib/sessions";
 
 type NoteRow = {
   id: string;
@@ -11,7 +18,19 @@ type NoteRow = {
   created_at: string;
 };
 
-export async function GET() {
+async function requireSession(request: NextRequest) {
+  const rawCookie = request.cookies.get(authCookieName)?.value;
+  const sessionId = decodeAndVerifySessionCookie(rawCookie);
+  if (!sessionId) return null;
+  return await getSession(sessionId);
+}
+
+export async function GET(request: NextRequest) {
+  const session = await requireSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
   const db = await getDb();
   const res = await db.execute(
     "select id, title, body, created_at from notes order by created_at desc limit 50",
@@ -20,7 +39,28 @@ export async function GET() {
   return Response.json({ ok: true, notes: res.rows as unknown as NoteRow[] });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const session = await requireSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const token = request.headers.get("x-csrf-token") ?? "";
+  if (!(await verifyCsrfToken(token))) {
+    return Response.json({ ok: false, error: "csrf" }, { status: 403 });
+  }
+
+  const ip = getClientIp(request.headers);
+  const limiter = consumeRateLimit({
+    key: `notes-write:${session.id}:${ip}`,
+    limit: 60,
+    windowSeconds: 60,
+  });
+
+  if (!limiter.ok) {
+    return Response.json({ ok: false, error: "rate" }, { status: 429 });
+  }
+
   const body = (await request.json().catch(() => null)) as {
     title?: unknown;
     body?: unknown;
