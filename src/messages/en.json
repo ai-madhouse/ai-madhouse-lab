@@ -305,7 +305,8 @@
     "e2ee": {
       "loading": "Loading…",
       "actions": {
-        "createAndUnlock": "Create & unlock"
+        "createAndUnlock": "Create & unlock",
+        "unlock": "Unlock"
       },
       "placeholders": {
         "setupPassphrase": "Set an E2EE passphrase (min 12 chars)",

@@ -305,7 +305,8 @@
     "e2ee": {
       "loading": "Загрузка…",
       "actions": {
-        "createAndUnlock": "Создать и разблокировать"
+        "createAndUnlock": "Создать и разблокировать",
+        "unlock": "Разблокировать"
       },
       "placeholders": {
         "setupPassphrase": "Задайте парольную фразу E2EE (мин. 12 символов)",

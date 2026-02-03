@@ -305,7 +305,8 @@
     "e2ee": {
       "loading": "Kraunama…",
       "actions": {
-        "createAndUnlock": "Sukurti ir atrakinti"
+        "createAndUnlock": "Sukurti ir atrakinti",
+        "unlock": "Atrakinti"
       },
       "placeholders": {
         "setupPassphrase": "Nustatykite E2EE slaptafrazę (min. 12 simbolių)",
