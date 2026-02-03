@@ -15,6 +15,10 @@ function buildCsp({ nonce }: { nonce: string }) {
   // to framework scripts/bundles/styles during dynamic SSR.
   //
   // We intentionally avoid 'unsafe-inline' / 'unsafe-eval' in production.
+  //
+  // Reporting:
+  // - Prefer Reporting-Endpoints + `report-to`.
+  // - Keep `report-uri` as a practical fallback for coverage.
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -31,6 +35,9 @@ function buildCsp({ nonce }: { nonce: string }) {
     // By default we assume same-origin websockets via reverse proxy.
     // If realtime runs on a different origin, add it explicitly.
     "connect-src 'self'",
+    // Reporting wiring (endpoint name "csp" -> /api/csp-report via Reporting-Endpoints header)
+    "report-to csp",
+    "report-uri /api/csp-report",
   ].join("; ");
 }
 
@@ -53,6 +60,9 @@ function applySecurityHeaders(
   if (process.env.NODE_ENV === "production") {
     const effectiveNonce = opts?.nonce ?? createNonce();
     const csp = opts?.csp ?? buildCsp({ nonce: effectiveNonce });
+
+    // Map endpoint-name -> URL for Reporting API.
+    response.headers.set("Reporting-Endpoints", 'csp="/api/csp-report"');
 
     response.headers.set("Content-Security-Policy", csp);
     response.headers.set(
