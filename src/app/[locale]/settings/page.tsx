@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -13,8 +15,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { isAuthenticated } from "@/lib/auth";
+import {
+  clearAuthCookie,
+  getSignedSessionIdFromCookies,
+  isAuthenticated,
+} from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
+import {
+  deleteOtherSessionsForUser,
+  deleteSessionsForUser,
+  getSession,
+  listSessionsForUser,
+} from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 
 export default async function SettingsPage({
@@ -27,6 +39,45 @@ export default async function SettingsPage({
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Settings");
   const isAuthed = await isAuthenticated();
+
+  const sessionId = await getSignedSessionIdFromCookies();
+  const session = sessionId ? await getSession(sessionId) : null;
+  const sessions = session ? await listSessionsForUser(session.username) : [];
+
+  async function revokeOtherSessionsAction() {
+    "use server";
+
+    const sid = await getSignedSessionIdFromCookies();
+    if (!sid) redirect(`/${locale}/login`);
+
+    const current = await getSession(sid);
+    if (!current) {
+      await clearAuthCookie();
+      redirect(`/${locale}/login`);
+    }
+
+    await deleteOtherSessionsForUser({
+      username: current.username,
+      keepSessionId: sid,
+    });
+
+    redirect(`/${locale}/settings`);
+  }
+
+  async function signOutEverywhereAction() {
+    "use server";
+
+    const sid = await getSignedSessionIdFromCookies();
+    if (sid) {
+      const current = await getSession(sid);
+      if (current) {
+        await deleteSessionsForUser(current.username);
+      }
+    }
+
+    await clearAuthCookie();
+    redirect(`/${locale}/login`);
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,6 +118,41 @@ export default async function SettingsPage({
           </Card>
 
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("sessions.title")}</CardTitle>
+                <CardDescription>{t("sessions.subtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {t("sessions.active", { count: String(sessions.length) })}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <form action={revokeOtherSessionsAction}>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={!isAuthed}
+                    >
+                      {t("sessions.revokeOthers")}
+                    </Button>
+                  </form>
+                  <form action={signOutEverywhereAction}>
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={!isAuthed}
+                    >
+                      {t("sessions.signOutEverywhere")}
+                    </Button>
+                  </form>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("sessions.note")}
+                </p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>{t("appearance.title")}</CardTitle>

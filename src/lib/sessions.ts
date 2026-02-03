@@ -52,3 +52,39 @@ export async function deleteSession(sessionId: string) {
     args: [sessionId],
   });
 }
+
+export async function listSessionsForUser(username: string) {
+  const db = await getDb();
+  const res = await db.execute({
+    sql: "select id, username, expires_at from sessions where username = ? order by expires_at desc",
+    args: [username],
+  });
+
+  return res.rows as unknown as Array<{
+    id: string;
+    username: string;
+    expires_at: string;
+  }>;
+}
+
+export async function deleteSessionsForUser(username: string) {
+  const db = await getDb();
+  await db.execute({
+    sql: "delete from sessions where username = ?",
+    args: [username],
+  });
+}
+
+export async function deleteOtherSessionsForUser({
+  username,
+  keepSessionId,
+}: {
+  username: string;
+  keepSessionId: string;
+}) {
+  const db = await getDb();
+  await db.execute({
+    sql: "delete from sessions where username = ? and id <> ?",
+    args: [username, keepSessionId],
+  });
+}

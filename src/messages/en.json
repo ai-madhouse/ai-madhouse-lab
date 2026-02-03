@@ -247,6 +247,14 @@
       "title": "Appearance",
       "subtitle": "Switch between light, dark, or system themes."
     },
+    "sessions": {
+      "title": "Sessions",
+      "subtitle": "Manage where your account is currently signed in.",
+      "active": "Active sessions: {count}",
+      "revokeOthers": "Revoke other sessions",
+      "signOutEverywhere": "Sign out everywhere",
+      "note": "Revoking sessions removes them from the server. The next request from that device will be forced to re-auth."
+    },
     "language": {
       "title": "Language & region",
       "subtitle": "Pick the locale you want to review or demo.",

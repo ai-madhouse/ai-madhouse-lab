@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-
 import { type Client, createClient } from "@libsql/client";
+import type { ServerWebSocket } from "bun";
 
 type SessionRow = {
   id: string;
@@ -91,15 +91,35 @@ async function getSession(sessionId: string): Promise<SessionRow | null> {
   return row;
 }
 
-const socketsByUser = new Map<string, Set<WebSocket>>();
+type Ws = ServerWebSocket<{ username: string; sessionId: string }>;
 
-function addSocket(username: string, ws: WebSocket) {
-  const set = socketsByUser.get(username) ?? new Set<WebSocket>();
+const socketsByUser = new Map<string, Set<Ws>>();
+
+const sessionCheckIntervalMs = 30_000;
+
+setInterval(async () => {
+  // Best-effort: close sockets whose session has been revoked/expired.
+  for (const set of socketsByUser.values()) {
+    for (const ws of set) {
+      try {
+        const session = await getSession(ws.data.sessionId);
+        if (!session) {
+          ws.close();
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+}, sessionCheckIntervalMs);
+
+function addSocket(username: string, ws: Ws) {
+  const set = socketsByUser.get(username) ?? new Set<Ws>();
   set.add(ws);
   socketsByUser.set(username, set);
 }
 
-function removeSocket(username: string, ws: WebSocket) {
+function removeSocket(username: string, ws: Ws) {
   const set = socketsByUser.get(username);
   if (!set) return;
   set.delete(ws);
@@ -126,7 +146,7 @@ function json(status: number, body: unknown) {
   });
 }
 
-Bun.serve<{ username: string }>({
+Bun.serve<{ username: string; sessionId: string }>({
   port: REALTIME_PORT,
   fetch: async (req, server) => {
     const url = new URL(req.url);
@@ -145,7 +165,7 @@ Bun.serve<{ username: string }>({
       if (!session) return json(401, { ok: false, error: "unauthorized" });
 
       const upgraded = server.upgrade(req, {
-        data: { username: session.username },
+        data: { username: session.username, sessionId },
       });
       return upgraded
         ? new Response(null, { status: 101 })

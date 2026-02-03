@@ -247,6 +247,14 @@
       "title": "Išvaizda",
       "subtitle": "Rinkitės šviesią, tamsią arba sisteminę temą."
     },
+    "sessions": {
+      "title": "Sesijos",
+      "subtitle": "Valdykite, kur šiuo metu prisijungta prie jūsų paskyros.",
+      "active": "Aktyvios sesijos: {count}",
+      "revokeOthers": "Atšaukti kitas sesijas",
+      "signOutEverywhere": "Atsijungti visur",
+      "note": "Atšaukus sesijas jos pašalinamos serveryje. Kitas užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
+    },
     "language": {
       "title": "Kalba ir regionas",
       "subtitle": "Pasirinkite lokalę peržiūroms arba demo.",
