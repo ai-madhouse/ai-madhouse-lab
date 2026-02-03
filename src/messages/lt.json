@@ -1,6 +1,258 @@
 {
+  "Nav": {
+    "eyebrow": "Madhouse Lab",
+    "brand": "Madhouse Lab",
+    "brandIcon": "Madhouse Lab ženklas",
+    "home": "Pagrindinis",
+    "dashboard": "Skydelis",
+    "settings": "Nustatymai",
+    "live": "Tiesiogiai",
+    "homeIcon": "Pagrindinis",
+    "dashboardIcon": "Skydelis",
+    "settingsIcon": "Nustatymai",
+    "liveIcon": "Tiesiogiai",
+    "login": "Prisijungti",
+    "loginIcon": "Prisijungti"
+  },
+  "Theme": {
+    "toggle": "Perjungti temą",
+    "light": "Šviesi",
+    "dark": "Tamsi",
+    "system": "Sistema",
+    "resolved": "Sistema pasirinko: {theme}.",
+    "lightIcon": "Šviesi tema",
+    "darkIcon": "Tamsi tema",
+    "systemIcon": "Sisteminė tema"
+  },
+  "Locale": {
+    "label": "Kalba",
+    "icon": "Kalba",
+    "en": "Anglų",
+    "ru": "Rusų",
+    "lt": "Lietuvių"
+  },
+  "Footer": {
+    "summary": "Sukurta su Bun-first Next.js aiškumui ir greičiui.",
+    "version": "Etapas {version}"
+  },
   "Landing": {
-    "title": "Madhouse Lab",
-    "subtitle": "Kuriame pagrindą kitam etapui."
+    "badge": "Kūrybinės operacijos • Laboratorija",
+    "title": "Ramybė AI sistemų chaose.",
+    "subtitle": "Madhouse Lab — daugialypė patirtis, kur susitinka preciziškas UI, lokalizacija ir inžinerinė drausmė.",
+    "ctaPrimary": "Atverti skydelį",
+    "ctaPrimaryIcon": "Atverti",
+    "ctaSecondary": "Derinti nustatymus",
+    "stats": {
+      "latency": {
+        "label": "Vėlinimo biudžetas",
+        "value": "140 ms"
+      },
+      "uptime": {
+        "label": "Patikimumas",
+        "value": "99.98%"
+      },
+      "experiments": {
+        "label": "Aktyvūs eksperimentai",
+        "value": "24"
+      }
+    },
+    "heroCard": {
+      "title": "Operacijų skydas",
+      "subtitle": "Trumpa suvestinė apie tai, kas vyksta dabar.",
+      "signal": {
+        "eyebrow": "Signalai",
+        "title": "Adaptyvi telemetrija",
+        "description": "Fiksuojame realaus laiko signalus visame stoge."
+      },
+      "guardrails": {
+        "eyebrow": "Apsaugos",
+        "title": "Nešališkas QA",
+        "description": "Kiekvienas atsakymas pereina struktūrinį vertinimą."
+      },
+      "playbooks": {
+        "eyebrow": "Pagrindai",
+        "title": "Incidentų choreografija",
+        "description": "Parengti scenarijai padeda komandai išlikti ramiems."
+      }
+    },
+    "features": {
+      "eyebrow": "Ką pristatome",
+      "title": "Dizainas, inžinerija ir pasitikėjimas viename ritme.",
+      "subtitle": "Sujungiame sąsajos meistrystę su operaciniu griežtumu, kad kiekvienas eksperimentas turėtų kontekstą ir atsakomybę.",
+      "cards": {
+        "experience": {
+          "icon": "Patirtis",
+          "title": "Patirtimi grįstos kelionės",
+          "description": "Apgalvoti modeliai veda komandas nuo tyrimo iki poveikio."
+        },
+        "engineering": {
+          "icon": "Inžinerija",
+          "title": "Inžinerinė drausmė",
+          "description": "Kiekvienas leidimas turi testus, formatavimą ir dokumentaciją."
+        },
+        "security": {
+          "icon": "Saugumas",
+          "title": "Pasitikėjimo signalai",
+          "description": "Apsaugos ir scenarijai saugo kritinius procesus."
+        }
+      }
+    },
+    "timeline": {
+      "title": "Skrydžio planas",
+      "subtitle": "Trys žingsniai, laikantys produktą realybėje.",
+      "discover": {
+        "eyebrow": "Atrasti",
+        "title": "Signalų žemėlapis",
+        "description": "Nusibraižome svarbiausius signalus dar prieš kuriant."
+      },
+      "shape": {
+        "eyebrow": "Formuoti",
+        "title": "Patirties choreografija",
+        "description": "Prototipuojame sąveikas su tikrais duomenimis ir ribiniais atvejais."
+      },
+      "ship": {
+        "eyebrow": "Išleisti",
+        "title": "Pamatuoti paleidimai",
+        "description": "Paleidžiame su apsaugomis, komunikacija ir sėkmės metrikomis."
+      }
+    },
+    "signal": {
+      "title": "Signalų suvestinė",
+      "subtitle": "Valdymo kambarys, sutrauktas savaitiniams susitikimams.",
+      "drift": {
+        "title": "Dreifo aptikimas",
+        "description": "Savaitiniai modelių pokyčiai pažymimi peržiūrai."
+      },
+      "guard": {
+        "title": "Apsaugų aprėptis",
+        "description": "Kiekvienai užklausų grupei priskirtas savininkas ir atsarginis planas."
+      },
+      "launch": {
+        "title": "Paleidimo parengtis",
+        "description": "Kita banga paruošta su auditu ir atsitraukimo planu."
+      },
+      "footer": "Duomenys renkami beveik realiu laiku ir apibendrinami vadovybei."
+    }
+  },
+  "Dashboard": {
+    "eyebrow": "Valdymo centras",
+    "title": "Komandinis skydelis",
+    "subtitle": "AI programos pulsas su tinkamu aiškumu.",
+    "metrics": {
+      "experiments": {
+        "label": "Aktyvūs eksperimentai",
+        "value": "24",
+        "note": "5 produktų komandose",
+        "icon": "Eksperimentai"
+      },
+      "health": {
+        "label": "Paslaugos sveikata",
+        "value": "Žalia",
+        "note": "Šią savaitę incidentų nėra",
+        "icon": "Sveikata"
+      },
+      "coverage": {
+        "label": "Signalų aprėptis",
+        "value": "92%",
+        "note": "8% daugiau nei praėjusiame sprinte",
+        "icon": "Aprėptis"
+      },
+      "guardrails": {
+        "label": "Apsaugos",
+        "value": "14",
+        "note": "3 peržiūroje",
+        "icon": "Apsaugos"
+      }
+    },
+    "activity": {
+      "title": "Veiklos srautas",
+      "subtitle": "Naujausi operaciniai signalai iš laboratorijos.",
+      "items": {
+        "batch": {
+          "title": "Paketinis vertinimas baigtas",
+          "description": "Naujas tono rinkinys viršijo kokybės ribą."
+        },
+        "alert": {
+          "title": "Vėlinimo perspėjimas išspręstas",
+          "description": "Piko metu įjungtas atsarginis modelis."
+        },
+        "review": {
+          "title": "Paleidimo peržiūra suplanuota",
+          "description": "Komanda Delta patvirtino kontroliuojamą paleidimą."
+        },
+        "handoff": {
+          "title": "Operacijų perdavimas paruoštas",
+          "description": "Kita grupė gauna atnaujintus scenarijus ir QA."
+        }
+      }
+    },
+    "ops": {
+      "title": "Operacijų ritmas",
+      "subtitle": "Ką komanda daro toliau.",
+      "readiness": {
+        "eyebrow": "Parengtis",
+        "title": "Užbaigti kokybės vartus",
+        "description": "Diegiame naujas dialogų patikimumo heuristikas."
+      },
+      "handover": {
+        "eyebrow": "Perdavimas",
+        "title": "Apmokyti budinčią komandą",
+        "description": "Vykdome pratybas kritiniams scenarijams."
+      },
+      "next": {
+        "eyebrow": "Toliau",
+        "title": "Prototipuoti daugiakalbį UX",
+        "description": "Plečiame lokalizaciją į tris naujas rinkas."
+      }
+    }
+  },
+  "Settings": {
+    "eyebrow": "Valdymo kambarys",
+    "title": "Nustatymai",
+    "subtitle": "Derinkite patirtį, atnaujinkite profilį ir laikykite globalius leidimus viename ritme.",
+    "profile": {
+      "title": "Profilis",
+      "subtitle": "Duokite komandai reikalingą kontekstą.",
+      "name": "Rodomas vardas",
+      "namePlaceholder": "Avery Chen",
+      "role": "Vaidmuo",
+      "rolePlaceholder": "Patirties vadovas",
+      "focus": "Fokusas",
+      "focusPlaceholder": "Vedu kitą leidimą į saugius ir žmogiškus scenarijus.",
+      "save": "Išsaugoti profilį"
+    },
+    "appearance": {
+      "title": "Išvaizda",
+      "subtitle": "Rinkitės šviesią, tamsią arba sisteminę temą."
+    },
+    "language": {
+      "title": "Kalba ir regionas",
+      "subtitle": "Pasirinkite lokalę peržiūroms arba demo.",
+      "note": "Lokalės keitimas atnaujina navigaciją, turinį ir gaires."
+    }
+  },
+  "Live": {
+    "eyebrow": "Tiesioginės operacijos",
+    "title": "Gyvas pulsas",
+    "subtitle": "Lengvas telemetrijos simuliatorius demonstracijoms ir apžvalgoms.",
+    "boardTitle": "Pulso lenta",
+    "icon": "Veikla",
+    "metrics": {
+      "latency": "Vėlinimo poslinkis",
+      "throughput": "Pralaidumas",
+      "errors": "Klaidų dalis",
+      "confidence": "Pasitikėjimas"
+    },
+    "units": {
+      "ms": "ms",
+      "perSecond": "/s",
+      "percent": "%"
+    },
+    "notes": {
+      "title": "Pastabos",
+      "subtitle": "Kodėl tai svarbu",
+      "pointOne": "Naudokite šį vaizdą dirbtuvėse, kad parodytumėte būsimą telemetriją.",
+      "pointTwo": "UI atsinaujina su trumpu intervalu, kad komandos treniruotųsi skaityti signalus."
+    }
   }
 }

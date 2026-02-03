@@ -1,6 +1,258 @@
 {
+  "Nav": {
+    "eyebrow": "Madhouse Lab",
+    "brand": "Madhouse Lab",
+    "brandIcon": "Madhouse Lab mark",
+    "home": "Landing",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "live": "Live",
+    "homeIcon": "Landing",
+    "dashboardIcon": "Dashboard",
+    "settingsIcon": "Settings",
+    "liveIcon": "Live",
+    "login": "Sign in",
+    "loginIcon": "Sign in"
+  },
+  "Theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "resolved": "System resolves to {theme}.",
+    "lightIcon": "Light mode",
+    "darkIcon": "Dark mode",
+    "systemIcon": "System theme"
+  },
+  "Locale": {
+    "label": "Language",
+    "icon": "Language",
+    "en": "English",
+    "ru": "Russian",
+    "lt": "Lithuanian"
+  },
+  "Footer": {
+    "summary": "Built in Bun-first Next.js for clarity and velocity.",
+    "version": "Milestone {version}"
+  },
   "Landing": {
-    "title": "Madhouse Lab",
-    "subtitle": "Building the foundation for the next iteration."
+    "badge": "Creative Ops • Labs",
+    "title": "Designing calm in the chaos of AI systems.",
+    "subtitle": "Madhouse Lab is a multi-page experience that proves you can ship crisp UI, globalized copy, and tight engineering discipline together.",
+    "ctaPrimary": "Explore the dashboard",
+    "ctaPrimaryIcon": "Explore",
+    "ctaSecondary": "Tune the settings",
+    "stats": {
+      "latency": {
+        "label": "Latency budget",
+        "value": "140 ms"
+      },
+      "uptime": {
+        "label": "Reliability",
+        "value": "99.98%"
+      },
+      "experiments": {
+        "label": "Live experiments",
+        "value": "24"
+      }
+    },
+    "heroCard": {
+      "title": "Ops flightboard",
+      "subtitle": "A quick briefing on what the system is doing right now.",
+      "signal": {
+        "eyebrow": "Signal",
+        "title": "Adaptive telemetry",
+        "description": "Capture real-time signals from every layer of the stack."
+      },
+      "guardrails": {
+        "eyebrow": "Guardrails",
+        "title": "Bias-aware QA",
+        "description": "Run every response through structured evaluations."
+      },
+      "playbooks": {
+        "eyebrow": "Playbooks",
+        "title": "Incident choreography",
+        "description": "Pre-written playbooks keep the team calm during spikes."
+      }
+    },
+    "features": {
+      "eyebrow": "What ships here",
+      "title": "Design, engineering, and trust in lockstep.",
+      "subtitle": "We blend interface craft with operational rigor so every experiment ships with context, ownership, and clarity.",
+      "cards": {
+        "experience": {
+          "icon": "Experience",
+          "title": "Experience-first journeys",
+          "description": "Intentional UI patterns guide teams from exploration to impact."
+        },
+        "engineering": {
+          "icon": "Engineering",
+          "title": "Engineering discipline",
+          "description": "Every release ships with tests, formatting, and structured docs."
+        },
+        "security": {
+          "icon": "Security",
+          "title": "Trust signals",
+          "description": "Guardrails and playbooks keep high-stakes workflows safe."
+        }
+      }
+    },
+    "timeline": {
+      "title": "Flight plan",
+      "subtitle": "The three beats that keep a product aligned with reality.",
+      "discover": {
+        "eyebrow": "Discover",
+        "title": "Signal mapping",
+        "description": "Map the signals that matter before you build anything."
+      },
+      "shape": {
+        "eyebrow": "Shape",
+        "title": "Experience choreography",
+        "description": "Prototype interactions with real data and edge cases."
+      },
+      "ship": {
+        "eyebrow": "Ship",
+        "title": "Measured launches",
+        "description": "Launch with guardrails, comms, and clear success metrics."
+      }
+    },
+    "signal": {
+      "title": "Signal deck",
+      "subtitle": "The control room, condensed for weekly checkpoints.",
+      "drift": {
+        "title": "Drift detection",
+        "description": "Weekly model shifts are flagged for review and retraining."
+      },
+      "guard": {
+        "title": "Guardrail coverage",
+        "description": "Every prompt group has an owned fallback and red team script."
+      },
+      "launch": {
+        "title": "Launch readiness",
+        "description": "Next cohort is staged with holdout audits and exit paths."
+      },
+      "footer": "Everything is sampled in near real time and summarized for leadership."
+    }
+  },
+  "Dashboard": {
+    "eyebrow": "Command center",
+    "title": "Command dashboard",
+    "subtitle": "A pulse check on your AI program with the right amount of clarity.",
+    "metrics": {
+      "experiments": {
+        "label": "Active experiments",
+        "value": "24",
+        "note": "Across 5 product pods",
+        "icon": "Experiments"
+      },
+      "health": {
+        "label": "Service health",
+        "value": "Green",
+        "note": "No incidents this week",
+        "icon": "Health"
+      },
+      "coverage": {
+        "label": "Signal coverage",
+        "value": "92%",
+        "note": "Up 8% from last sprint",
+        "icon": "Coverage"
+      },
+      "guardrails": {
+        "label": "Guardrails",
+        "value": "14",
+        "note": "3 in review",
+        "icon": "Guardrails"
+      }
+    },
+    "activity": {
+      "title": "Activity stream",
+      "subtitle": "Latest operational signals from the lab.",
+      "items": {
+        "batch": {
+          "title": "Batch evaluation complete",
+          "description": "New tone dataset scored above the quality threshold."
+        },
+        "alert": {
+          "title": "Latency alert resolved",
+          "description": "Model fallback engaged during peak traffic window."
+        },
+        "review": {
+          "title": "Launch review scheduled",
+          "description": "Team Delta approved for controlled rollout."
+        },
+        "handoff": {
+          "title": "Ops handoff ready",
+          "description": "Next cohort inherits updated runbooks and QA scripts."
+        }
+      }
+    },
+    "ops": {
+      "title": "Ops rhythm",
+      "subtitle": "What the team is focused on next.",
+      "readiness": {
+        "eyebrow": "Readiness",
+        "title": "Finalize quality gates",
+        "description": "Ship new scoring heuristics for conversational reliability."
+      },
+      "handover": {
+        "eyebrow": "Handover",
+        "title": "Train the on-call cohort",
+        "description": "Run tabletop exercises for key failure scenarios."
+      },
+      "next": {
+        "eyebrow": "Next",
+        "title": "Prototype multi-locale UX",
+        "description": "Expand translated UI coverage to three new markets."
+      }
+    }
+  },
+  "Settings": {
+    "eyebrow": "Control room",
+    "title": "Settings",
+    "subtitle": "Tune the experience, update your profile, and keep global rollouts aligned.",
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Give teammates the context they need to collaborate fast.",
+      "name": "Display name",
+      "namePlaceholder": "Avery Chen",
+      "role": "Role",
+      "rolePlaceholder": "Experience lead",
+      "focus": "Focus statement",
+      "focusPlaceholder": "Guiding the next release into safe, human-first workflows.",
+      "save": "Save profile"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Switch between light, dark, or system themes."
+    },
+    "language": {
+      "title": "Language & region",
+      "subtitle": "Pick the locale you want to review or demo.",
+      "note": "Locale changes update navigation, content, and system guidance."
+    }
+  },
+  "Live": {
+    "eyebrow": "Live ops",
+    "title": "Live pulse",
+    "subtitle": "A lightweight simulation of live telemetry for demos and walkthroughs.",
+    "boardTitle": "Pulse board",
+    "icon": "Activity",
+    "metrics": {
+      "latency": "Latency drift",
+      "throughput": "Throughput",
+      "errors": "Error rate",
+      "confidence": "Confidence"
+    },
+    "units": {
+      "ms": "ms",
+      "perSecond": "/s",
+      "percent": "%"
+    },
+    "notes": {
+      "title": "Notes",
+      "subtitle": "Why this exists",
+      "pointOne": "Use this view in a workshop to explain how telemetry would look once wired to real streams.",
+      "pointTwo": "The UI updates on a short timer so teams can practice reading signal spikes."
+    }
   }
 }
