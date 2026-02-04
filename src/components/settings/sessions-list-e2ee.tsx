@@ -168,6 +168,37 @@ export function SessionsListE2EE({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const sessions = await fetchSessions();
+        if (!cancelled) {
+          setError(null);
+          setRows(sessions);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "sessions_failed");
+        }
+      }
+    }
+
+    function onSessionsChanged() {
+      void refresh();
+    }
+
+    window.addEventListener("madhouse:sessions:changed", onSessionsChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        "madhouse:sessions:changed",
+        onSessionsChanged,
+      );
+    };
+  }, []);
+
   async function handleUnlocked(result: {
     csrfToken: string;
     dekKey: CryptoKey;

@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { clearAuthCookie, getSignedSessionIdFromCookies } from "@/lib/auth";
 import { normalizeLocale } from "@/lib/i18n";
-import { deleteSession } from "@/lib/sessions";
+import { deleteSession, getSession } from "@/lib/sessions";
+import { notifySessionsChanged } from "@/lib/sessions-notify";
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,11 @@ export async function GET(
 
   const sessionId = await getSignedSessionIdFromCookies();
   if (sessionId) {
+    const session = await getSession(sessionId);
     await deleteSession(sessionId);
+    if (session) {
+      await notifySessionsChanged({ username: session.username });
+    }
   }
 
   await clearAuthCookie();

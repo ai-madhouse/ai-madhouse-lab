@@ -32,6 +32,7 @@ import {
   getSession,
   listSessionsForUser,
 } from "@/lib/sessions";
+import { notifySessionsChanged } from "@/lib/sessions-notify";
 import { createTranslator } from "@/lib/translator";
 import { updateUserPassword } from "@/lib/users";
 
@@ -72,6 +73,7 @@ export default async function SettingsPage({
       username: current.username,
       keepSessionId: sid,
     });
+    await notifySessionsChanged({ username: current.username });
 
     redirect(`/${locale}/settings`);
   }
@@ -84,6 +86,7 @@ export default async function SettingsPage({
       const current = await getSession(sid);
       if (current) {
         await deleteSessionsForUser(current.username);
+        await notifySessionsChanged({ username: current.username });
       }
     }
 

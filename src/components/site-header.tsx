@@ -13,9 +13,11 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useRef } from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { getRealtimeWsUrl } from "@/lib/realtime-url";
 import { cn } from "@/lib/utils";
 
 const iconMap = {
@@ -27,11 +29,69 @@ const iconMap = {
   about: Sparkles,
 } as const;
 
+const sessionsChangedDomEventName = "madhouse:sessions:changed";
+
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
 export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("Nav");
+
+  const checkingSessionRef = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthed) return;
+
+    const url = getRealtimeWsUrl();
+    if (!url) return;
+
+    const ws = new WebSocket(url);
+
+    async function checkSessionStillValid() {
+      if (checkingSessionRef.current) return;
+      checkingSessionRef.current = true;
+      try {
+        const res = await fetch("/api/session/me", { cache: "no-store" });
+        if (res.status === 401) {
+          window.location.href = `/${locale}/logout`;
+        }
+      } catch {
+        // ignore
+      } finally {
+        checkingSessionRef.current = false;
+      }
+    }
+
+    ws.onmessage = (event) => {
+      const data = safeParseJson<{ type?: string }>(String(event.data));
+      if (!data || data.type !== "sessions:changed") return;
+
+      try {
+        window.dispatchEvent(new Event(sessionsChangedDomEventName));
+      } catch {
+        // ignore
+      }
+
+      void checkSessionStillValid();
+    };
+
+    return () => {
+      try {
+        ws.close();
+      } catch {
+        // ignore
+      }
+    };
+  }, [isAuthed, locale]);
 
   const navItems = [
     { key: "home", href: `/${locale}` },
