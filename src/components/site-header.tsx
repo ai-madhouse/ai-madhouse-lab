@@ -1,5 +1,6 @@
 "use client";
 
+import { useSetAtom } from "jotai";
 import {
   Activity,
   LayoutDashboard,
@@ -14,9 +15,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
+
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +48,8 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("Nav");
+
+  const setDerivedKekCache = useSetAtom(derivedKekCacheAtom);
 
   const checkingSessionRef = useRef(false);
 
@@ -171,6 +176,9 @@ export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
                 } catch {
                   // ignore
                 }
+
+                // Do not keep derived keys after leaving an authenticated area.
+                setDerivedKekCache({});
               }
 
               router.push(`/${locale}/${isAuthed ? "logout" : "login"}`);
