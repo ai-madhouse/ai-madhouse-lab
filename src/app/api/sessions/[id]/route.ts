@@ -8,7 +8,7 @@ import {
   verifyCsrfToken,
 } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { deleteSession } from "@/lib/sessions";
+import { revokeSessionAndNotify } from "@/lib/sessions-notify";
 
 export async function DELETE(
   request: NextRequest,
@@ -59,6 +59,6 @@ export async function DELETE(
     return Response.json({ ok: false, error: "not found" }, { status: 404 });
   }
 
-  await deleteSession(id);
+  await revokeSessionAndNotify({ username, sessionId: id });
   return Response.json({ ok: true });
 }
