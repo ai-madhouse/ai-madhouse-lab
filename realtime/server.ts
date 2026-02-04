@@ -1,166 +1,26 @@
-import crypto from "node:crypto";
-import { type Client, createClient } from "@libsql/client";
-import type { ServerWebSocket } from "bun";
+import {
+  authCookieName,
+  decodeAndVerifySessionCookie,
+  getCookieValue,
+} from "./auth";
+import { DB_PATH, REALTIME_PORT, REALTIME_SECRET } from "./config";
+import { getRealtimeMetrics } from "./metrics";
+import { json } from "./responses";
+import { startSessionChecker } from "./session-checker";
+import { getSession } from "./sessions";
+import { addSocket, broadcast, removeSocket, socketsByUser } from "./sockets";
+import type { PublishBody, WsData } from "./types";
 
-type SessionRow = {
-  id: string;
-  username: string;
-  expires_at: string;
-};
+startSessionChecker({ socketsByUser, getSession });
 
-type PublishBody = {
-  username: string;
-  event: unknown;
-};
-
-function getEnv(name: string) {
-  return process.env[name]?.trim() || "";
-}
-
-function getAuthSecret() {
-  const secret = getEnv("AUTH_SECRET");
-  if (secret && secret.length >= 16) return secret;
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("AUTH_SECRET must be set in production");
-  }
-
-  return "dev-secret-change-me-please";
-}
-
-function hmac(sessionId: string) {
-  return crypto
-    .createHmac("sha256", getAuthSecret())
-    .update(sessionId)
-    .digest("base64url");
-}
-
-function timingSafeEqualString(a: string, b: string) {
-  const aa = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (aa.length !== bb.length) return false;
-  return crypto.timingSafeEqual(aa, bb);
-}
-
-function decodeAndVerifySessionCookie(value: string | undefined | null) {
-  if (!value) return null;
-  const parts = value.split(".");
-  if (parts.length !== 2) return null;
-  const [sessionId, sig] = parts;
-  if (!sessionId || !sig) return null;
-  const expected = hmac(sessionId);
-  if (!timingSafeEqualString(sig, expected)) return null;
-  return sessionId;
-}
-
-function getCookieValue(cookieHeader: string | null, name: string) {
-  if (!cookieHeader) return null;
-  const parts = cookieHeader.split(";");
-  for (const part of parts) {
-    const [k, ...rest] = part.trim().split("=");
-    if (k === name) return rest.join("=");
-  }
-  return null;
-}
-
-const authCookieName = "madhouse_auth";
-
-const REALTIME_PORT = Number(getEnv("REALTIME_PORT") || "8787");
-const REALTIME_SECRET = getEnv("REALTIME_SECRET") || "dev-realtime-secret";
-const DB_PATH = getEnv("DB_PATH") || "data/app.db";
-
-const db: Client = createClient({ url: `file:${DB_PATH}` });
-
-async function getSession(sessionId: string): Promise<SessionRow | null> {
-  const res = await db.execute({
-    sql: "select id, username, expires_at from sessions where id = ?",
-    args: [sessionId],
-  });
-
-  const row = res.rows[0] as unknown as SessionRow | undefined;
-  if (!row) return null;
-
-  if (new Date(row.expires_at).getTime() <= Date.now()) {
-    await db.execute({
-      sql: "delete from sessions where id = ?",
-      args: [sessionId],
-    });
-    return null;
-  }
-
-  return row;
-}
-
-type Ws = ServerWebSocket<{ username: string; sessionId: string }>;
-
-const socketsByUser = new Map<string, Set<Ws>>();
-
-const sessionCheckIntervalMs = 30_000;
-
-setInterval(async () => {
-  // Best-effort: close sockets whose session has been revoked/expired.
-  for (const set of socketsByUser.values()) {
-    for (const ws of set) {
-      try {
-        const session = await getSession(ws.data.sessionId);
-        if (!session) {
-          ws.close();
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-}, sessionCheckIntervalMs);
-
-function addSocket(username: string, ws: Ws) {
-  const set = socketsByUser.get(username) ?? new Set<Ws>();
-  set.add(ws);
-  socketsByUser.set(username, set);
-}
-
-function removeSocket(username: string, ws: Ws) {
-  const set = socketsByUser.get(username);
-  if (!set) return;
-  set.delete(ws);
-  if (set.size === 0) socketsByUser.delete(username);
-}
-
-function broadcast(username: string, payload: unknown) {
-  const set = socketsByUser.get(username);
-  if (!set) return;
-  const message = JSON.stringify(payload);
-  for (const ws of set) {
-    try {
-      ws.send(message);
-    } catch {
-      // ignore
-    }
-  }
-}
-
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
-
-Bun.serve<{ username: string; sessionId: string }>({
+Bun.serve<WsData>({
   port: REALTIME_PORT,
   fetch: async (req, server) => {
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
       // Minimal introspection for dashboards.
-      let connectionsTotal = 0;
-      for (const set of socketsByUser.values()) connectionsTotal += set.size;
-
-      return json(200, {
-        ok: true,
-        connectionsTotal,
-        usersConnected: socketsByUser.size,
-      });
+      return json(200, { ok: true, ...getRealtimeMetrics(socketsByUser) });
     }
 
     if (url.pathname === "/ws") {
