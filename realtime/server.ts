@@ -1,3 +1,7 @@
+import crypto from "node:crypto";
+
+import { createClient } from "@libsql/client";
+
 import {
   authCookieName,
   decodeAndVerifySessionCookie,
@@ -5,13 +9,60 @@ import {
 } from "./auth";
 import { DB_PATH, REALTIME_PORT, REALTIME_SECRET } from "./config";
 import { getRealtimeMetrics } from "./metrics";
+import {
+  countRealtimeConnections,
+  ensureRealtimeConnectionsTable,
+  pruneRealtimeConnections,
+  touchRealtimeConnection,
+} from "./realtime-connections";
 import { json } from "./responses";
 import { startSessionChecker } from "./session-checker";
 import { getSession } from "./sessions";
 import { addSocket, broadcast, removeSocket, socketsByUser } from "./sockets";
 import type { PublishBody, WsData } from "./types";
 
-startSessionChecker({ socketsByUser, getSession });
+const db = createClient({ url: `file:${DB_PATH}` });
+
+// Best-effort: make sure the tracking table exists.
+void ensureRealtimeConnectionsTable(db).catch(() => null);
+
+const sessionCheckIntervalMs = 30_000;
+const connectionStaleSeconds = Math.ceil((sessionCheckIntervalMs / 1000) * 4);
+
+startSessionChecker({
+  socketsByUser,
+  getSession,
+  intervalMs: sessionCheckIntervalMs,
+});
+
+let sweepRunning = false;
+setInterval(() => {
+  if (sweepRunning) return;
+  sweepRunning = true;
+
+  void (async () => {
+    try {
+      // Best-effort: refresh last_seen for active sockets.
+      for (const set of socketsByUser.values()) {
+        for (const ws of set) {
+          try {
+            await touchRealtimeConnection(db, ws.data.connectionId);
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      await pruneRealtimeConnections(db, connectionStaleSeconds);
+    } finally {
+      sweepRunning = false;
+    }
+  })();
+}, sessionCheckIntervalMs);
+
+function randomConnectionId() {
+  return crypto.randomBytes(24).toString("base64url");
+}
 
 Bun.serve<WsData>({
   port: REALTIME_PORT,
@@ -19,8 +70,24 @@ Bun.serve<WsData>({
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
-      // Minimal introspection for dashboards.
-      return json(200, { ok: true, ...getRealtimeMetrics(socketsByUser) });
+      const local = getRealtimeMetrics(socketsByUser);
+
+      const dbStats = await countRealtimeConnections(
+        db,
+        connectionStaleSeconds,
+      ).catch(() => null);
+
+      // Prefer the higher number to handle multi-process / load-balanced health checks.
+      const connectionsTotal = Math.max(
+        local.connectionsTotal,
+        dbStats?.connectionsTotal ?? 0,
+      );
+      const usersConnected = Math.max(
+        local.usersConnected,
+        dbStats?.usersConnected ?? 0,
+      );
+
+      return json(200, { ok: true, connectionsTotal, usersConnected });
     }
 
     if (url.pathname === "/ws") {
@@ -33,8 +100,13 @@ Bun.serve<WsData>({
       if (!session) return json(401, { ok: false, error: "unauthorized" });
 
       const upgraded = server.upgrade(req, {
-        data: { username: session.username, sessionId },
+        data: {
+          username: session.username,
+          sessionId,
+          connectionId: randomConnectionId(),
+        },
       });
+
       return upgraded
         ? new Response(null, { status: 101 })
         : json(400, { ok: false, error: "upgrade failed" });
@@ -59,10 +131,12 @@ Bun.serve<WsData>({
   websocket: {
     open: (ws) => {
       addSocket(ws.data.username, ws);
+      void touchRealtimeConnection(db, ws.data.connectionId).catch(() => null);
       ws.send(JSON.stringify({ type: "hello" }));
     },
     close: (ws) => {
       removeSocket(ws.data.username, ws);
+      void touchRealtimeConnection(db, ws.data.connectionId).catch(() => null);
     },
     message: (_ws, _msg) => {
       // no-op (client is read-only)

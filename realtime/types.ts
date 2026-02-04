@@ -11,5 +11,9 @@ export type PublishBody = {
   event: unknown;
 };
 
-export type WsData = { username: string; sessionId: string };
+export type WsData = {
+  username: string;
+  sessionId: string;
+  connectionId: string;
+};
 export type Ws = ServerWebSocket<WsData>;
