@@ -32,9 +32,10 @@ export type WrappedKey = {
 export async function createWrappedDek(passphrase: string): Promise<{
   wrapped: WrappedKey;
   dekRaw: Uint8Array;
+  kek: CryptoKey;
 }> {
   const salt = randomBytes(16);
-  const kek = await deriveKek(passphrase, salt);
+  const kek = await deriveKekFromSaltBytes(passphrase, salt);
   const dekRaw = randomBytes(32);
 
   const iv = randomBytes(12);
@@ -53,10 +54,11 @@ export async function createWrappedDek(passphrase: string): Promise<{
       wrapped_key_ciphertext: bytesToBase64(ciphertext),
     },
     dekRaw,
+    kek,
   };
 }
 
-async function deriveKek(passphrase: string, salt: Uint8Array) {
+async function deriveKekFromSaltBytes(passphrase: string, salt: Uint8Array) {
   const baseKey = await crypto.subtle.importKey(
     "raw",
     toArrayBuffer(textToBytes(passphrase)),
@@ -79,6 +81,36 @@ async function deriveKek(passphrase: string, salt: Uint8Array) {
   );
 }
 
+export async function deriveKekFromPassphrase({
+  passphrase,
+  kdf_salt,
+}: {
+  passphrase: string;
+  kdf_salt: string;
+}) {
+  const salt = base64ToBytes(kdf_salt);
+  return await deriveKekFromSaltBytes(passphrase, salt);
+}
+
+export async function unwrapDekWithKek({
+  kek,
+  wrapped,
+}: {
+  kek: CryptoKey;
+  wrapped: WrappedKey;
+}) {
+  const iv = base64ToBytes(wrapped.wrapped_key_iv);
+  const ciphertext = base64ToBytes(wrapped.wrapped_key_ciphertext);
+
+  return new Uint8Array(
+    await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      kek,
+      toArrayBuffer(ciphertext),
+    ),
+  );
+}
+
 export async function unwrapDek({
   passphrase,
   wrapped,
@@ -86,20 +118,11 @@ export async function unwrapDek({
   passphrase: string;
   wrapped: WrappedKey;
 }) {
-  const salt = base64ToBytes(wrapped.kdf_salt);
-  const iv = base64ToBytes(wrapped.wrapped_key_iv);
-  const ciphertext = base64ToBytes(wrapped.wrapped_key_ciphertext);
-
-  const kek = await deriveKek(passphrase, salt);
-  const raw = new Uint8Array(
-    await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv },
-      kek,
-      toArrayBuffer(ciphertext),
-    ),
-  );
-
-  return raw;
+  const kek = await deriveKekFromPassphrase({
+    passphrase,
+    kdf_salt: wrapped.kdf_salt,
+  });
+  return await unwrapDekWithKek({ kek, wrapped });
 }
 
 export async function importDek(dekRaw: Uint8Array) {

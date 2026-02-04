@@ -1,14 +1,17 @@
 "use client";
 
+import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import {
   createWrappedDek,
+  deriveKekFromPassphrase,
   importDek,
-  unwrapDek,
+  unwrapDekWithKek,
   type WrappedKey,
 } from "@/lib/crypto/webcrypto";
 
@@ -110,6 +113,11 @@ export function E2EEDekUnlockCard({
 
   const [unlockPassphrase, setUnlockPassphrase] = useState("");
 
+  const derivedKekCache = useAtomValue(derivedKekCacheAtom);
+  const setDerivedKekCache = useSetAtom(derivedKekCacheAtom);
+
+  const autoUnlockAttemptedForRef = useRef<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -139,6 +147,57 @@ export function E2EEDekUnlockCard({
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (loading || busy) return;
+      if (!keyRecord) return;
+      if (!csrfToken) return;
+
+      const entry = derivedKekCache[keyRecord.username];
+      if (!entry || entry.kdf_salt !== keyRecord.kdf_salt) return;
+
+      const attemptKey = `${keyRecord.username}:${keyRecord.kdf_salt}`;
+      if (autoUnlockAttemptedForRef.current === attemptKey) return;
+      autoUnlockAttemptedForRef.current = attemptKey;
+
+      setBusy(true);
+      try {
+        const dekRaw = await unwrapDekWithKek({
+          kek: entry.kek,
+          wrapped: keyRecord,
+        });
+        const dekKey = await importDek(dekRaw);
+        await onUnlocked({ csrfToken, dekKey });
+      } catch {
+        setDerivedKekCache((prev) => {
+          const current = prev[keyRecord.username];
+          if (!current || current.kdf_salt !== keyRecord.kdf_salt) return prev;
+          const next = { ...prev };
+          delete next[keyRecord.username];
+          return next;
+        });
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    }
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loading,
+    busy,
+    keyRecord,
+    csrfToken,
+    derivedKekCache,
+    onUnlocked,
+    setDerivedKekCache,
+  ]);
 
   async function createAndUnlock() {
     if (busy) return;
@@ -171,7 +230,26 @@ export function E2EEDekUnlockCard({
       if (!record) throw new Error("missing key record");
       setKeyRecord(record);
 
-      const dekRaw = await unwrapDek({ passphrase, wrapped: record });
+      const kek =
+        record.kdf_salt === created.wrapped.kdf_salt
+          ? created.kek
+          : await deriveKekFromPassphrase({
+              passphrase,
+              kdf_salt: record.kdf_salt,
+            });
+
+      setDerivedKekCache((prev) => ({
+        ...prev,
+        [record.username]: { kdf_salt: record.kdf_salt, kek },
+      }));
+
+      const dekRaw =
+        record.kdf_salt === created.wrapped.kdf_salt &&
+        record.wrapped_key_iv === created.wrapped.wrapped_key_iv &&
+        record.wrapped_key_ciphertext === created.wrapped.wrapped_key_ciphertext
+          ? created.dekRaw
+          : await unwrapDekWithKek({ kek, wrapped: record });
+
       const dekKey = await importDek(dekRaw);
 
       setSetupPassphrase("");
@@ -207,8 +285,18 @@ export function E2EEDekUnlockCard({
       if (!record) throw new Error("missing key record");
       setKeyRecord(record);
 
-      const dekRaw = await unwrapDek({ passphrase, wrapped: record });
+      const kek = await deriveKekFromPassphrase({
+        passphrase,
+        kdf_salt: record.kdf_salt,
+      });
+
+      const dekRaw = await unwrapDekWithKek({ kek, wrapped: record });
       const dekKey = await importDek(dekRaw);
+
+      setDerivedKekCache((prev) => ({
+        ...prev,
+        [record.username]: { kdf_salt: record.kdf_salt, kek },
+      }));
 
       setUnlockPassphrase("");
       await onUnlocked({ csrfToken: token, dekKey });

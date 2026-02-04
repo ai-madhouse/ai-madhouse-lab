@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { ClearDerivedKekCacheOnMount } from "@/components/auth/clear-derived-kek-cache-on-mount";
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
 import { RegisterForm } from "@/components/auth/register-form";
 import { SiteFooter } from "@/components/site-footer";
@@ -117,6 +118,7 @@ export default async function RegisterPage({
 
   return (
     <div className="min-h-screen bg-background">
+      <ClearDerivedKekCacheOnMount enabled={!isAuthed} />
       <ClearNotesHistoryOnMount enabled={!isAuthed} />
       <SiteHeader isAuthed={isAuthed} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
