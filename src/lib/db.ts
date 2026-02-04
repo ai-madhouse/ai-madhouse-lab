@@ -68,6 +68,18 @@ async function migrate(client: Client) {
   );
 
   await client.execute(
+    "CREATE TABLE IF NOT EXISTS realtime_connections (id TEXT PRIMARY KEY, username TEXT NOT NULL, connected_at TEXT NOT NULL DEFAULT (datetime('now')), last_seen_at TEXT NOT NULL DEFAULT (datetime('now')))",
+  );
+
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS realtime_connections_user_seen ON realtime_connections(username, last_seen_at)",
+  );
+
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS realtime_connections_seen ON realtime_connections(last_seen_at)",
+  );
+
+  await client.execute(
     "CREATE TABLE IF NOT EXISTS notes_events (id TEXT PRIMARY KEY, username TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), kind TEXT NOT NULL, note_id TEXT NOT NULL, target_event_id TEXT, payload_iv TEXT, payload_ciphertext TEXT)",
   );
 
