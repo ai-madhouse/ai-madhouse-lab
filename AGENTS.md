@@ -17,6 +17,38 @@ If you are an agent: follow this file *exactly*.
 
 ---
 
+## Next.js + TypeScript “skills” (how to be effective in this repo)
+
+### App Router + i18n (project-specific)
+- UI routes live under `src/app/[locale]/...` (locale is required for pages).
+- When adding user-visible copy, update **all locales** in `src/messages/*.json` (don’t leave only `en`).
+- Prefer **not** adding new nav links unless the task explicitly asks (avoids translation churn).
+
+### Server-first by default
+- Components are **Server Components by default**.
+- Add `'use client'` only when you need hooks, event handlers, or browser APIs.
+- Push the client boundary down: keep pages/layouts server when possible; isolate interactive leaf components.
+
+### TypeScript rules (keep it strict)
+- Avoid `any`.
+- Avoid `as` casts unless you also add a runtime check/type guard.
+- Validate untrusted inputs (forms, route handlers) with `zod` (already a dependency).
+
+### Follow existing house patterns
+- Styling: Tailwind v4 tokens live in `src/app/globals.css` (`@theme inline`). Prefer tokens over magic numbers.
+- UI primitives: add/adjust components under `src/components/ui/`.
+  - accept `className`
+  - use `cn()` from `src/lib/utils`
+  - use `forwardRef` when wrapping native elements
+
+### Testing/build gotchas
+- Keep Playwright specs as `e2e/*.spec.ts`. **Do not rename/move** them into `tests/`.
+  - `bun test` is intentionally scoped to `tests/` (via `bunfig.toml` / `package.json`) to avoid executing Playwright specs.
+- Running tests/build may dirty `data/app.db` (tracked). **Do not commit it**:
+  - before committing: `git restore data/app.db`
+
+---
+
 ## Hard guardrails (non‑negotiable)
 
 ### 1) Worktree-only (no collisions)
@@ -73,6 +105,9 @@ bun test
 bun run build
 ```
 
+Convenience:
+- `bun run check` runs lint + unit tests + build.
+
 E2E is normally run by the maintainer on host. If you are asked to run it, see the collision-safe section below.
 
 ---
@@ -124,6 +159,8 @@ PW_PORT=<free-port> bunx playwright test --output test-results/<attempt-id>
 Preferred: **one shippable commit** per task.
 
 However, some Codex sandboxes cannot write the linked worktree gitdir (symptom: `index.lock permission denied`).
+
+Also: running tests/build may modify `data/app.db` (tracked). Make sure it is not part of your commit (`git restore data/app.db`).
 
 If `git commit` fails due to sandbox filesystem restrictions:
 - **Do not** hack around it.
