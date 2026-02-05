@@ -103,7 +103,7 @@ export function NoteBodyEditor({
     ...DEFAULT_NOTES_EDITOR_SHORTCUTS,
   }));
 
-  const hasSelection = selection.end > selection.start;
+  const _hasSelection = selection.end > selection.start;
 
   const boldShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.bold);
   const italicShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.italic);
