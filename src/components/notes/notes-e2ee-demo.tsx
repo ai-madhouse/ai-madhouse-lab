@@ -1088,7 +1088,12 @@ export function NotesE2EEDemo() {
             void commitDelete(viewingNote.id);
           }}
         />
-      </ModalDialog>eCard({
+      </ModalDialog>
+    </div>
+  );
+}
+
+function SortableNoteCard({
   note,
   pinned,
   section,
