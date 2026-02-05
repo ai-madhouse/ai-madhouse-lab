@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 function isMac() {
   if (typeof navigator === "undefined") return false;
@@ -183,103 +184,121 @@ export function NoteBodyEditor({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Bold (Ctrl/Cmd+B)"
-          onClick={() =>
-            applyEdit((text, start, end) => wrap(text, start, end, "**"))
-          }
-        >
-          <Bold className="h-4 w-4" aria-label="Bold" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Italic (Ctrl/Cmd+I)"
-          onClick={() =>
-            applyEdit((text, start, end) => wrap(text, start, end, "*"))
-          }
-        >
-          <Italic className="h-4 w-4" aria-label="Italic" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Inline code"
-          onClick={() =>
-            applyEdit((text, start, end) => wrap(text, start, end, "`"))
-          }
-        >
-          <Code className="h-4 w-4" aria-label="Code" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Link (Ctrl/Cmd+K)"
-          onClick={() =>
-            applyEdit((text, start, end) => {
-              const selected = text.slice(start, end) || "link";
-              const open = "[";
-              const mid = "](";
-              const close = ")";
-              const next = `${text.slice(0, start)}${open}${selected}${mid}https://example.com${close}${text.slice(end)}`;
+        <Tooltip content="Bold (Ctrl/Cmd+B)">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Bold"
+            onClick={() =>
+              applyEdit((text, start, end) => wrap(text, start, end, "**"))
+            }
+          >
+            <Bold className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Italic (Ctrl/Cmd+I)">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Italic"
+            onClick={() =>
+              applyEdit((text, start, end) => wrap(text, start, end, "*"))
+            }
+          >
+            <Italic className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Inline code">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Inline code"
+            onClick={() =>
+              applyEdit((text, start, end) => wrap(text, start, end, "`"))
+            }
+          >
+            <Code className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Link (Ctrl/Cmd+K)">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Link"
+            onClick={() =>
+              applyEdit((text, start, end) => {
+                const selected = text.slice(start, end) || "link";
+                const open = "[";
+                const mid = "](";
+                const close = ")";
+                const next = `${text.slice(0, start)}${open}${selected}${mid}https://example.com${close}${text.slice(end)}`;
 
-              const urlStart =
-                start + open.length + selected.length + mid.length;
-              const urlEnd = urlStart + "https://example.com".length;
-              return { next, range: { start: urlStart, end: urlEnd } };
-            })
-          }
-        >
-          <Link2 className="h-4 w-4" aria-label="Link" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Quote"
-          onClick={() =>
-            applyEdit((text, start, end) => prefixLines(text, start, end, "> "))
-          }
-        >
-          <Quote className="h-4 w-4" aria-label="Quote" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Bullet list"
-          onClick={() =>
-            applyEdit((text, start, end) => prefixLines(text, start, end, "- "))
-          }
-        >
-          <List className="h-4 w-4" aria-label="Bullets" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          title="Numbered list"
-          onClick={() =>
-            applyEdit((text, start, end) =>
-              prefixLines(text, start, end, "1. "),
-            )
-          }
-        >
-          <ListOrdered className="h-4 w-4" aria-label="Numbered" />
-        </Button>
+                const urlStart =
+                  start + open.length + selected.length + mid.length;
+                const urlEnd = urlStart + "https://example.com".length;
+                return { next, range: { start: urlStart, end: urlEnd } };
+              })
+            }
+          >
+            <Link2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Quote">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Quote"
+            onClick={() =>
+              applyEdit((text, start, end) =>
+                prefixLines(text, start, end, "> "),
+              )
+            }
+          >
+            <Quote className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Bullet list">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Bullet list"
+            onClick={() =>
+              applyEdit((text, start, end) =>
+                prefixLines(text, start, end, "- "),
+              )
+            }
+          >
+            <List className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Numbered list">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            aria-label="Numbered list"
+            onClick={() =>
+              applyEdit((text, start, end) =>
+                prefixLines(text, start, end, "1. "),
+              )
+            }
+          >
+            <ListOrdered className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </Tooltip>
 
         {onSave ? (
           <Button
