@@ -302,6 +302,31 @@
         "metaFailed": "Nepavyko išsaugoti sesijos detalių."
       }
     },
+    "shortcuts": {
+      "title": "Spartieji klavišai",
+      "subtitle": "Tinkinkite spartiuosius klavišus Notes redaktoriuje. Išsaugoma lokaliai šioje naršyklėje.",
+      "placeholder": "Paspauskite spartųjį klavišą…",
+      "reset": "Atstatyti numatytuosius",
+      "actions": {
+        "save": "Išsaugoti",
+        "bold": "Paryškinti",
+        "italic": "Kursyvas",
+        "link": "Įterpti nuorodą"
+      },
+      "actionHelp": {
+        "save": "Išsaugoti pastabą (kai prieinama).",
+        "bold": "Apgaubti pažymėjimą **paryškintai**.",
+        "italic": "Apgaubti pažymėjimą *kursyvu*.",
+        "link": "Įterpti Markdown nuorodą."
+      },
+      "errors": {
+        "empty": "Spartusis klavišas negali būti tuščias.",
+        "missing_mod": "Naudokite Ctrl/Cmd + klavišą.",
+        "reserved": "Šis derinys rezervuotas naršyklėje.",
+        "duplicate": "Šis derinys jau naudojamas kitam veiksmui.",
+        "invalid": "Naudokite Ctrl/Cmd + raidę (A–Z) arba skaičių."
+      }
+    },
     "language": {
       "title": "Kalba ir regionas",
       "subtitle": "Pasirinkite lokalę peržiūroms arba demo.",
