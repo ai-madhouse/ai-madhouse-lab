@@ -19,8 +19,8 @@ import {
   DEFAULT_NOTES_EDITOR_SHORTCUTS,
   formatNotesEditorShortcutForUi,
   NOTES_EDITOR_SHORTCUTS_STORAGE_KEY,
-  readNotesEditorShortcutMapFromLocalStorage,
   type NotesEditorShortcutMap,
+  readNotesEditorShortcutMapFromLocalStorage,
 } from "@/lib/notes-editor-shortcuts";
 
 function isMac() {
