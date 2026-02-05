@@ -22,7 +22,7 @@
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
-  --radius: 1rem;
+  --radius-inner: 0.175rem;
 }
 
 .dark {
@@ -48,6 +48,8 @@
 }
 
 @theme inline {
+  --spacing: 0.22rem;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -67,7 +69,12 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --radius-lg: var(--radius);
+
+  --radius-sm: var(--radius-inner);
+  --radius-md: var(--radius-inner);
+  --radius-lg: calc(var(--radius-inner) + var(--spacing));
+  --radius-xl: calc(var(--radius-inner) + var(--spacing));
+  --radius-2xl: calc(var(--radius-inner) + var(--spacing));
 }
 
 @layer base {
