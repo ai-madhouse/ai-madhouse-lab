@@ -6,9 +6,11 @@ import { useEffect, useId, useRef, useState } from "react";
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip } from "@/components/ui/tooltip";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import {
   applyNotesEvents,
@@ -268,6 +270,8 @@ export function NotesE2EEDemo() {
   const [editingBody, setEditingBody] = useState("");
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
 
   function openViewingNote(noteId: string) {
     setConfirmingDelete(false);
@@ -593,12 +597,23 @@ export function NotesE2EEDemo() {
   }
 
   async function commitDelete(noteId: string) {
-    const ok = await deleteNote(noteId);
-    if (!ok) return;
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleting(true);
 
-    setPinnedNoteIds((prev) => prev.filter((id) => id !== noteId));
-    closeViewingNote();
+    const ok = await deleteNote(noteId);
+    if (ok) {
+      setPinnedNoteIds((prev) => prev.filter((id) => id !== noteId));
+      closeViewingNote();
+    }
+
+    deletingRef.current = false;
+    setDeleting(false);
   }
+
+  const deleteDialogNoteTitle = viewingNote
+    ? viewingNote.title.trim() || "Untitled"
+    : "Untitled";
 
   return (
     <div className="space-y-6">
@@ -740,15 +755,17 @@ export function NotesE2EEDemo() {
                   {formatCreatedAt(viewingNote.created_at)}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 w-9 p-0"
-                onClick={closeViewingNote}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Close</span>
-              </Button>
+              <Tooltip content="Close">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  onClick={closeViewingNote}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </Tooltip>
             </div>
 
             <div className="space-y-5 p-6">
@@ -780,38 +797,12 @@ export function NotesE2EEDemo() {
                   variant="destructive"
                   size="sm"
                   onClick={() => setConfirmingDelete(true)}
-                  disabled={confirmingDelete}
+                  disabled={confirmingDelete || deleting}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                   Delete
                 </Button>
               </div>
-
-              {confirmingDelete ? (
-                <div className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
-                  <p className="text-sm">
-                    Delete this note? This cannot be undone.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        void commitDelete(viewingNote.id);
-                      }}
-                    >
-                      Confirm delete
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setConfirmingDelete(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
 
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
@@ -845,6 +836,30 @@ export function NotesE2EEDemo() {
         )}
       </ModalDialog>
 
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title="Delete note?"
+        description={
+          <>
+            Delete “{deleteDialogNoteTitle}”? This cannot be undone.
+            {deleting ? (
+              <span className="mt-2 block text-sm text-muted-foreground">
+                Deleting…
+              </span>
+            ) : null}
+          </>
+        }
+        confirmLabel="Delete"
+        cancelDisabled={deleting}
+        confirmDisabled={deleting || !viewingNote}
+        onConfirm={() => {
+          if (!viewingNote) return;
+          setConfirmingDelete(false);
+          void commitDelete(viewingNote.id);
+        }}
+      />
+
       <ModalDialog
         open={editingNote !== null}
         onOpenChange={(open) => {
@@ -864,15 +879,17 @@ export function NotesE2EEDemo() {
                   {formatCreatedAt(editingNote.created_at)}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 w-9 p-0"
-                onClick={cancelEditing}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Close</span>
-              </Button>
+              <Tooltip content="Close">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  onClick={cancelEditing}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </Tooltip>
             </div>
 
             <div className="space-y-4 p-6">

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   type NoteSnapshot,
@@ -65,6 +66,10 @@ export function NotesDemo() {
   const [lastSaved, setLastSaved] = useState<Record<string, Note>>({});
   const [undoStack, setUndoStack] = useState<NotesAction[]>([]);
   const [redoStack, setRedoStack] = useState<NotesAction[]>([]);
+
+  const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
 
   const undoRef = useRef<null | (() => void)>(null);
   const redoRef = useRef<null | (() => void)>(null);
@@ -288,7 +293,7 @@ export function NotesDemo() {
     setError(null);
     if (!csrfToken) {
       setError("missing csrf token");
-      return;
+      return false;
     }
 
     try {
@@ -301,8 +306,22 @@ export function NotesDemo() {
       });
       setUndoStack((prev) => pushUndo(prev, { kind: "delete", note }));
       setRedoStack([]);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to delete note");
+      return false;
+    }
+  }
+
+  async function commitDelete(note: Note) {
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleting(true);
+    try {
+      await removeNote(note);
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
     }
   }
 
@@ -431,6 +450,10 @@ export function NotesDemo() {
     };
   }, []);
 
+  const deleteDialogNoteTitle = deleteTarget
+    ? deleteTarget.title.trim() || "Untitled"
+    : "Untitled";
+
   return (
     <div className="space-y-6">
       <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
@@ -527,7 +550,11 @@ export function NotesDemo() {
                 disabled={!csrfToken}
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" onClick={() => removeNote(note)}>
+                <Button
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => setDeleteTarget(note)}
+                >
                   Delete
                 </Button>
                 <p className="text-xs text-muted-foreground">
@@ -538,6 +565,23 @@ export function NotesDemo() {
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete note?"
+        description={`Delete “${deleteDialogNoteTitle}”? This cannot be undone.`}
+        confirmLabel="Delete"
+        confirmDisabled={deleting || deleteTarget === null}
+        cancelDisabled={deleting}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          setDeleteTarget(null);
+          void commitDelete(deleteTarget);
+        }}
+      />
     </div>
   );
 }
