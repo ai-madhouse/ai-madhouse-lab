@@ -10,7 +10,7 @@ import {
   Quote,
   Save,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -86,6 +86,14 @@ export function NoteBodyEditor({
   disabled?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
+  const selectionFirstActionRef = useRef<HTMLButtonElement | null>(null);
+  const [selection, setSelection] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 0,
+  });
+  const [isEditorActive, setIsEditorActive] = useState(false);
+
+  const hasSelection = selection.end > selection.start;
 
   useEffect(() => {
     const el = ref.current;
@@ -93,6 +101,22 @@ export function NoteBodyEditor({
     el.style.height = "0px";
     el.style.height = `${el.scrollHeight}px`;
   });
+
+  function syncSelectionFromDom() {
+    const el = ref.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? start;
+    setSelection((prev) =>
+      prev.start === start && prev.end === end ? prev : { start, end },
+    );
+  }
+
+  function onEditorBlur(event: React.FocusEvent<HTMLElement>) {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    setIsEditorActive(false);
+  }
 
   function applyEdit(
     fn: (
@@ -107,8 +131,12 @@ export function NoteBodyEditor({
     const el = ref.current;
     if (!el) return;
 
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? start;
+    const startFromDom = el.selectionStart ?? 0;
+    const endFromDom = el.selectionEnd ?? startFromDom;
+
+    const domHasSelection = startFromDom !== endFromDom;
+    const start = domHasSelection ? startFromDom : selection.start;
+    const end = domHasSelection ? endFromDom : selection.end;
 
     const result = fn(value, start, end);
     onChange(result.next);
@@ -120,11 +148,36 @@ export function NoteBodyEditor({
       const e = clamp(result.range.end, 0, node.value.length);
       node.focus();
       node.setSelectionRange(s, e);
+      setSelection((prev) =>
+        prev.start === s && prev.end === e ? prev : { start: s, end: e },
+      );
     });
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (disabled) return;
+
+    if (
+      event.key === "ContextMenu" ||
+      event.key === "Menu" ||
+      (event.key === "F10" && event.shiftKey)
+    ) {
+      const el = ref.current;
+      if (!el) return;
+      const start = el.selectionStart ?? 0;
+      const end = el.selectionEnd ?? start;
+      if (start === end) return;
+
+      event.preventDefault();
+      setSelection((prev) =>
+        prev.start === start && prev.end === end ? prev : { start, end },
+      );
+
+      schedule(() => {
+        selectionFirstActionRef.current?.focus();
+      });
+      return;
+    }
 
     const metaOrCtrl = isMac() ? event.metaKey : event.ctrlKey;
 
@@ -301,15 +354,116 @@ export function NoteBodyEditor({
         </p>
       </div>
 
-      <textarea
-        ref={ref}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        className="min-h-[120px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-6 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      />
+      <fieldset
+        aria-label="Note editor"
+        className="space-y-1 border-0 p-0"
+        onFocus={() => setIsEditorActive(true)}
+        onBlur={onEditorBlur}
+      >
+        {hasSelection && isEditorActive && !disabled ? (
+          <div className="flex justify-end">
+            <div
+              role="toolbar"
+              aria-label="Selection actions"
+              className="inline-flex items-center gap-1 rounded-full border border-input bg-background px-1 py-1 shadow-sm"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                const el = ref.current;
+                if (!el) return;
+                el.focus();
+                el.setSelectionRange(selection.start, selection.end);
+              }}
+            >
+              <Button
+                ref={selectionFirstActionRef}
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                aria-label="Bold"
+                title="Bold (Ctrl/Cmd+B)"
+                onClick={() =>
+                  applyEdit((text, start, end) => wrap(text, start, end, "**"))
+                }
+                className="h-9 w-9 shrink-0 rounded-full p-0"
+              >
+                <Bold className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                aria-label="Italic"
+                title="Italic (Ctrl/Cmd+I)"
+                onClick={() =>
+                  applyEdit((text, start, end) => wrap(text, start, end, "*"))
+                }
+                className="h-9 w-9 shrink-0 rounded-full p-0"
+              >
+                <Italic className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                aria-label="Inline code"
+                title="Inline code"
+                onClick={() =>
+                  applyEdit((text, start, end) => wrap(text, start, end, "`"))
+                }
+                className="h-9 w-9 shrink-0 rounded-full p-0"
+              >
+                <Code className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                aria-label="Link"
+                title="Link (Ctrl/Cmd+K)"
+                onClick={() =>
+                  applyEdit((text, start, end) => {
+                    const selected = text.slice(start, end) || "link";
+                    const open = "[";
+                    const mid = "](";
+                    const close = ")";
+                    const next = `${text.slice(0, start)}${open}${selected}${mid}https://example.com${close}${text.slice(end)}`;
+
+                    const urlStart =
+                      start + open.length + selected.length + mid.length;
+                    const urlEnd = urlStart + "https://example.com".length;
+                    return { next, range: { start: urlStart, end: urlEnd } };
+                  })
+                }
+                className="h-9 w-9 shrink-0 rounded-full p-0"
+              >
+                <Link2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <textarea
+          ref={ref}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={onKeyDown}
+          onSelect={syncSelectionFromDom}
+          onKeyUp={syncSelectionFromDom}
+          onMouseUp={syncSelectionFromDom}
+          onFocus={syncSelectionFromDom}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="min-h-[120px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-6 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+      </fieldset>
     </div>
   );
 }
