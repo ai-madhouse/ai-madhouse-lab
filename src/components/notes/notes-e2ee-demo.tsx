@@ -1,7 +1,30 @@
 "use client";
 
-import { Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
@@ -12,6 +35,12 @@ import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
+import {
+  arrayMove,
+  mergeNoteOrderIds,
+  type NotesBoardOrder,
+  toUniqueStringArray,
+} from "@/lib/notes-board-order";
 import {
   applyNotesEvents,
   type NoteSnapshot,
@@ -40,6 +69,35 @@ function safeParseJson<T>(value: string | null): T | null {
 }
 
 const NOTES_PINS_STORAGE_KEY = "madhouse-notes-pins";
+const NOTES_ORDER_STORAGE_KEY = "madhouse-notes-order";
+
+type NotesBoardSection = "pinned" | "other";
+
+function readNotesOrderFromStorage(): NotesBoardOrder {
+  if (typeof window === "undefined") return { pinned: [], other: [] };
+
+  const stored = safeParseJson<unknown>(
+    window.localStorage.getItem(NOTES_ORDER_STORAGE_KEY),
+  );
+
+  if (!stored) return { pinned: [], other: [] };
+
+  // Legacy shape: a single array was treated as "other".
+  if (Array.isArray(stored)) {
+    return { pinned: [], other: toUniqueStringArray(stored) };
+  }
+
+  if (typeof stored !== "object") return { pinned: [], other: [] };
+
+  const pinned = toUniqueStringArray(
+    (stored as { pinned?: unknown }).pinned ?? [],
+  );
+  const other = toUniqueStringArray(
+    (stored as { other?: unknown }).other ?? [],
+  );
+
+  return { pinned, other };
+}
 
 function readPinnedNoteIdsFromStorage(): string[] {
   if (typeof window === "undefined") return [];
@@ -207,6 +265,12 @@ export function NotesE2EEDemo() {
   const pinnedNoteIdSet = new Set(pinnedNoteIds);
   const pinnedStorageReadyRef = useRef(false);
 
+  const [notesOrder, setNotesOrder] = useState<NotesBoardOrder>({
+    pinned: [],
+    other: [],
+  });
+  const notesOrderStorageReadyRef = useRef(false);
+
   const undoRef = useRef<null | (() => void)>(null);
   const redoRef = useRef<null | (() => void)>(null);
 
@@ -214,6 +278,10 @@ export function NotesE2EEDemo() {
 
   useEffect(() => {
     setPinnedNoteIds(readPinnedNoteIdsFromStorage());
+  }, []);
+
+  useEffect(() => {
+    setNotesOrder(readNotesOrderFromStorage());
   }, []);
 
   useEffect(() => {
@@ -232,6 +300,22 @@ export function NotesE2EEDemo() {
     }
   }, [pinnedNoteIds]);
 
+  useEffect(() => {
+    if (!notesOrderStorageReadyRef.current) {
+      notesOrderStorageReadyRef.current = true;
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        NOTES_ORDER_STORAGE_KEY,
+        JSON.stringify(notesOrder),
+      );
+    } catch {
+      // ignore
+    }
+  }, [notesOrder]);
+
   function isPinned(noteId: string) {
     return pinnedNoteIdSet.has(noteId);
   }
@@ -245,15 +329,75 @@ export function NotesE2EEDemo() {
     });
   }
 
+  const notesById = new Map<string, NoteSnapshot>();
+  const pinnedNoteIdsInDefaultOrder: string[] = [];
+  const otherNoteIdsInDefaultOrder: string[] = [];
+
+  for (const note of notes) {
+    notesById.set(note.id, note);
+
+    if (pinnedNoteIdSet.has(note.id)) {
+      pinnedNoteIdsInDefaultOrder.push(note.id);
+      continue;
+    }
+
+    otherNoteIdsInDefaultOrder.push(note.id);
+  }
+
+  const pinnedNoteOrderIds = mergeNoteOrderIds(
+    notesOrder.pinned,
+    pinnedNoteIdsInDefaultOrder,
+  );
+  const otherNoteOrderIds = mergeNoteOrderIds(
+    notesOrder.other,
+    otherNoteIdsInDefaultOrder,
+  );
+
   const pinnedNotes: NoteSnapshot[] = [];
   const otherNotes: NoteSnapshot[] = [];
 
-  for (const note of notes) {
-    if (pinnedNoteIdSet.has(note.id)) {
-      pinnedNotes.push(note);
-    } else {
-      otherNotes.push(note);
-    }
+  for (const noteId of pinnedNoteOrderIds) {
+    const note = notesById.get(noteId);
+    if (!note) continue;
+    pinnedNotes.push(note);
+  }
+
+  for (const noteId of otherNoteOrderIds) {
+    const note = notesById.get(noteId);
+    if (!note) continue;
+    otherNotes.push(note);
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeSection = active.data.current?.section;
+    const overSection = over.data.current?.section;
+
+    if (activeSection !== overSection) return;
+    if (activeSection !== "pinned" && activeSection !== "other") return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    if (activeId === overId) return;
+
+    const currentIds =
+      activeSection === "pinned" ? pinnedNoteOrderIds : otherNoteOrderIds;
+    const oldIndex = currentIds.indexOf(activeId);
+    const newIndex = currentIds.indexOf(overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const nextIds = arrayMove(currentIds, oldIndex, newIndex);
+    setNotesOrder((prev) => ({ ...prev, [activeSection]: nextIds }));
   }
 
   const viewDialogTitleId = useId();
@@ -693,47 +837,71 @@ export function NotesE2EEDemo() {
           <p className="text-sm text-muted-foreground">No notes yet.</p>
         ) : null}
 
-        {pinnedNotes.length > 0 ? (
-          <section className="space-y-3" aria-labelledby="notes-pinned-heading">
-            <h3
-              id="notes-pinned-heading"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          {pinnedNotes.length > 0 ? (
+            <section
+              className="space-y-3"
+              aria-labelledby="notes-pinned-heading"
             >
-              Pinned
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pinnedNotes.map((note) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  pinned
-                  onOpen={() => openViewingNote(note.id)}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
+              <h3
+                id="notes-pinned-heading"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+              >
+                Pinned
+              </h3>
+              <SortableContext
+                items={pinnedNoteOrderIds}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {pinnedNotes.map((note) => (
+                    <SortableNoteCard
+                      key={note.id}
+                      note={note}
+                      pinned
+                      section="pinned"
+                      onOpen={() => openViewingNote(note.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </section>
+          ) : null}
 
-        {otherNotes.length > 0 ? (
-          <section className="space-y-3" aria-labelledby="notes-other-heading">
-            <h3
-              id="notes-other-heading"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+          {otherNotes.length > 0 ? (
+            <section
+              className="space-y-3"
+              aria-labelledby="notes-other-heading"
             >
-              {pinnedNotes.length > 0 ? "Others" : "All notes"}
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {otherNotes.map((note) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  pinned={false}
-                  onOpen={() => openViewingNote(note.id)}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
+              <h3
+                id="notes-other-heading"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+              >
+                {pinnedNotes.length > 0 ? "Others" : "All notes"}
+              </h3>
+              <SortableContext
+                items={otherNoteOrderIds}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {otherNotes.map((note) => (
+                    <SortableNoteCard
+                      key={note.id}
+                      note={note}
+                      pinned={false}
+                      section="other"
+                      onOpen={() => openViewingNote(note.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </section>
+          ) : null}
+        </DndContext>
       </div>
 
       <ModalDialog
@@ -939,20 +1107,90 @@ export function NotesE2EEDemo() {
   );
 }
 
-function NoteCard({
+function SortableNoteCard({
   note,
   pinned,
+  section,
   onOpen,
 }: {
   note: NoteSnapshot;
   pinned: boolean;
+  section: NotesBoardSection;
   onOpen: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: note.id,
+    data: { section },
+  });
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <NoteCard
+      note={note}
+      pinned={pinned}
+      onOpen={onOpen}
+      isDragging={isDragging}
+      outerRef={setNodeRef}
+      style={style}
+      dragHandle={
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 touch-none cursor-grab items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:text-foreground active:cursor-grabbing"
+          aria-label="Reorder note"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
+        </button>
+      }
+    />
+  );
+}
+
+function NoteCard({
+  note,
+  pinned,
+  onOpen,
+  dragHandle,
+  isDragging = false,
+  outerRef,
+  style,
+}: {
+  note: NoteSnapshot;
+  pinned: boolean;
+  onOpen: () => void;
+  dragHandle?: ReactNode;
+  isDragging?: boolean;
+  outerRef?: (node: HTMLDivElement | null) => void;
+  style?: CSSProperties;
 }) {
   const title = note.title.trim() || "Untitled";
   const preview = buildBodyPreview(note.body);
 
   return (
-    <div className="group relative space-y-3 rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div
+      ref={outerRef}
+      style={style}
+      className={`group relative space-y-3 rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isDragging ? "opacity-60" : ""}`}
+    >
+      {dragHandle}
       <button
         type="button"
         aria-label={`Open note: ${title}`}
