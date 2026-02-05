@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModalDialog } from "@/components/ui/modal-dialog";
+import { Separator } from "@/components/ui/separator";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import {
   applyNotesEvents,
@@ -32,6 +35,35 @@ function safeParseJson<T>(value: string | null): T | null {
   } catch {
     return null;
   }
+}
+
+const NOTES_PINS_STORAGE_KEY = "madhouse-notes-pins";
+
+function readPinnedNoteIdsFromStorage(): string[] {
+  if (typeof window === "undefined") return [];
+
+  const stored = safeParseJson<unknown>(
+    window.localStorage.getItem(NOTES_PINS_STORAGE_KEY),
+  );
+
+  if (!Array.isArray(stored)) return [];
+
+  const ids = stored.filter((value) => typeof value === "string");
+  return Array.from(new Set(ids));
+}
+
+function formatCreatedAt(iso: string) {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+}
+
+function buildBodyPreview(body: string, maxLength = 240) {
+  const text = body.trim();
+  if (!text) return "";
+
+  const singleLine = text.replace(/\s+/g, " ");
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, maxLength).trimEnd()}…`;
 }
 
 // (moved into E2EEDekUnlockCard)
@@ -169,10 +201,83 @@ export function NotesE2EEDemo() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
+  const [pinnedNoteIds, setPinnedNoteIds] = useState<string[]>([]);
+  const pinnedNoteIdSet = new Set(pinnedNoteIds);
+  const pinnedStorageReadyRef = useRef(false);
+
   const undoRef = useRef<null | (() => void)>(null);
   const redoRef = useRef<null | (() => void)>(null);
 
   const refreshRef = useRef<null | (() => Promise<void>)>(null);
+
+  useEffect(() => {
+    setPinnedNoteIds(readPinnedNoteIdsFromStorage());
+  }, []);
+
+  useEffect(() => {
+    if (!pinnedStorageReadyRef.current) {
+      pinnedStorageReadyRef.current = true;
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        NOTES_PINS_STORAGE_KEY,
+        JSON.stringify(pinnedNoteIds),
+      );
+    } catch {
+      // ignore
+    }
+  }, [pinnedNoteIds]);
+
+  function isPinned(noteId: string) {
+    return pinnedNoteIdSet.has(noteId);
+  }
+
+  function togglePinned(noteId: string) {
+    setPinnedNoteIds((prev) => {
+      if (prev.includes(noteId)) {
+        return prev.filter((id) => id !== noteId);
+      }
+      return [noteId, ...prev];
+    });
+  }
+
+  const pinnedNotes: NoteSnapshot[] = [];
+  const otherNotes: NoteSnapshot[] = [];
+
+  for (const note of notes) {
+    if (pinnedNoteIdSet.has(note.id)) {
+      pinnedNotes.push(note);
+    } else {
+      otherNotes.push(note);
+    }
+  }
+
+  const viewDialogTitleId = useId();
+  const editDialogTitleId = useId();
+
+  const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
+  const viewingNote =
+    viewingNoteId === null
+      ? null
+      : (notes.find((note) => note.id === viewingNoteId) ?? null);
+
+  const [editingNote, setEditingNote] = useState<NoteSnapshot | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingBody, setEditingBody] = useState("");
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  function openViewingNote(noteId: string) {
+    setConfirmingDelete(false);
+    setViewingNoteId(noteId);
+  }
+
+  function closeViewingNote() {
+    setConfirmingDelete(false);
+    setViewingNoteId(null);
+  }
 
   useEffect(() => {
     refreshRef.current = async () => {
@@ -348,11 +453,11 @@ export function NotesE2EEDemo() {
     setError(null);
     if (!csrfToken) {
       setError("missing csrf token");
-      return;
+      return false;
     }
     if (!dekKey) {
       setError("notes are locked");
-      return;
+      return false;
     }
 
     try {
@@ -365,8 +470,10 @@ export function NotesE2EEDemo() {
       });
 
       await refreshRef.current?.();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to save");
+      return false;
     }
   }
 
@@ -374,14 +481,16 @@ export function NotesE2EEDemo() {
     setError(null);
     if (!csrfToken) {
       setError("missing csrf token");
-      return;
+      return false;
     }
 
     try {
       await postHistoryEvent({ csrfToken, kind: "delete", noteId });
       await refreshRef.current?.();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to delete");
+      return false;
     }
   }
 
@@ -446,6 +555,49 @@ export function NotesE2EEDemo() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "redo failed");
     }
+  }
+
+  useEffect(() => {
+    if (!viewingNoteId) return;
+    if (viewingNote) return;
+    if (loading) return;
+    setConfirmingDelete(false);
+    setViewingNoteId(null);
+  }, [loading, viewingNote, viewingNoteId]);
+
+  function startEditing(note: NoteSnapshot) {
+    setEditingNote(note);
+    setEditingTitle(note.title);
+    setEditingBody(note.body);
+  }
+
+  function cancelEditing() {
+    if (!editingNote) return;
+    setEditingNote(null);
+    openViewingNote(editingNote.id);
+  }
+
+  async function commitEditing() {
+    if (!editingNote) return;
+
+    const ok = await saveNote({
+      ...editingNote,
+      title: editingTitle,
+      body: editingBody,
+    });
+
+    if (!ok) return;
+
+    setEditingNote(null);
+    openViewingNote(editingNote.id);
+  }
+
+  async function commitDelete(noteId: string) {
+    const ok = await deleteNote(noteId);
+    if (!ok) return;
+
+    setPinnedNoteIds((prev) => prev.filter((id) => id !== noteId));
+    closeViewingNote();
   }
 
   return (
@@ -514,7 +666,7 @@ export function NotesE2EEDemo() {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Notes</h2>
           {loading ? (
@@ -526,51 +678,300 @@ export function NotesE2EEDemo() {
           <p className="text-sm text-muted-foreground">No notes yet.</p>
         ) : null}
 
-        <div className="grid gap-4">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className="space-y-3 rounded-2xl border border-border/60 bg-card p-5"
+        {pinnedNotes.length > 0 ? (
+          <section className="space-y-3" aria-labelledby="notes-pinned-heading">
+            <h3
+              id="notes-pinned-heading"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
             >
+              Pinned
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {pinnedNotes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  pinned
+                  onOpen={() => openViewingNote(note.id)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {otherNotes.length > 0 ? (
+          <section className="space-y-3" aria-labelledby="notes-other-heading">
+            <h3
+              id="notes-other-heading"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+            >
+              {pinnedNotes.length > 0 ? "Others" : "All notes"}
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {otherNotes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  pinned={false}
+                  onOpen={() => openViewingNote(note.id)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
+
+      <ModalDialog
+        open={viewingNoteId !== null}
+        onOpenChange={(open) => {
+          if (!open) closeViewingNote();
+        }}
+        labelledBy={viewDialogTitleId}
+        className="w-[min(96vw,56rem)]"
+      >
+        {viewingNote ? (
+          <div className="divide-y divide-border/70">
+            <div className="flex items-start justify-between gap-4 p-6">
+              <div className="space-y-1">
+                <h2 id={viewDialogTitleId} className="text-lg font-semibold">
+                  {viewingNote.title.trim() || "Untitled"}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {formatCreatedAt(viewingNote.created_at)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={closeViewingNote}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            <div className="space-y-5 p-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    closeViewingNote();
+                    startEditing(viewingNote);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" aria-hidden="true" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => togglePinned(viewingNote.id)}
+                >
+                  {isPinned(viewingNote.id) ? (
+                    <PinOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Pin className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {isPinned(viewingNote.id) ? "Unpin" : "Pin"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={confirmingDelete}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  Delete
+                </Button>
+              </div>
+
+              {confirmingDelete ? (
+                <div className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+                  <p className="text-sm">
+                    Delete this note? This cannot be undone.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        void commitDelete(viewingNote.id);
+                      }}
+                    >
+                      Confirm delete
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmingDelete(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Body</h3>
+                <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-background p-4">
+                  {viewingNote.body.trim() ? (
+                    <p className="whitespace-pre-wrap text-sm leading-6">
+                      {viewingNote.body}
+                    </p>
+                  ) : (
+                    <p className="text-sm italic text-muted-foreground">
+                      Empty note.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-6">
+            <h2 id={viewDialogTitleId} className="text-lg font-semibold">
+              Note
+            </h2>
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </div>
+        )}
+      </ModalDialog>
+
+      <ModalDialog
+        open={editingNote !== null}
+        onOpenChange={(open) => {
+          if (!open) cancelEditing();
+        }}
+        labelledBy={editDialogTitleId}
+        className="w-[min(96vw,56rem)]"
+      >
+        {editingNote ? (
+          <div className="divide-y divide-border/70">
+            <div className="flex items-start justify-between gap-4 p-6">
+              <div className="space-y-1">
+                <h2 id={editDialogTitleId} className="text-lg font-semibold">
+                  Edit note
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {formatCreatedAt(editingNote.created_at)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={cancelEditing}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            <div className="space-y-4 p-6">
               <Input
-                value={note.title}
-                onChange={(event) =>
-                  setNotes((prev) =>
-                    prev.map((entry) =>
-                      entry.id === note.id
-                        ? { ...entry, title: event.target.value }
-                        : entry,
-                    ),
-                  )
-                }
+                value={editingTitle}
+                onChange={(event) => setEditingTitle(event.target.value)}
+                placeholder="Title"
+                disabled={!dekKey}
               />
               <NoteBodyEditor
-                value={note.body}
-                onChange={(next) =>
-                  setNotes((prev) =>
-                    prev.map((entry) =>
-                      entry.id === note.id ? { ...entry, body: next } : entry,
-                    ),
-                  )
-                }
+                value={editingBody}
+                onChange={setEditingBody}
                 onSave={() => {
-                  void saveNote(note);
+                  void commitEditing();
                 }}
                 placeholder="Body (Markdown)"
                 disabled={!dekKey}
               />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" onClick={() => deleteNote(note.id)}>
-                  Delete
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button variant="outline" onClick={cancelEditing}>
+                  Cancel
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(note.created_at).toLocaleString()}
-                </p>
+                <Button
+                  onClick={() => {
+                    void commitEditing();
+                  }}
+                  disabled={!dekKey}
+                >
+                  Save
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-6">
+            <h2 id={editDialogTitleId} className="text-lg font-semibold">
+              Edit note
+            </h2>
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </div>
+        )}
+      </ModalDialog>
+    </div>
+  );
+}
+
+function NoteCard({
+  note,
+  pinned,
+  onOpen,
+}: {
+  note: NoteSnapshot;
+  pinned: boolean;
+  onOpen: () => void;
+}) {
+  const title = note.title.trim() || "Untitled";
+  const preview = buildBodyPreview(note.body);
+
+  return (
+    <div className="group relative space-y-3 rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <button
+        type="button"
+        aria-label={`Open note: ${title}`}
+        onClick={onOpen}
+        className="absolute inset-0 z-10 cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      />
+      <div className="relative flex items-start justify-between gap-3">
+        <input
+          value={note.title}
+          placeholder="Untitled"
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none h-auto w-full truncate rounded-none border-0 bg-transparent p-0 text-base font-semibold leading-6 text-foreground shadow-none outline-none"
+        />
+        {pinned ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-2 py-1 text-xs font-medium text-muted-foreground">
+            <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+            Pinned
+          </span>
+        ) : null}
       </div>
+
+      {preview ? (
+        <p className="relative text-sm leading-6 text-muted-foreground">
+          {preview}
+        </p>
+      ) : (
+        <p className="relative text-sm italic text-muted-foreground">
+          Empty note.
+        </p>
+      )}
+
+      <p className="relative text-xs text-muted-foreground">
+        {formatCreatedAt(note.created_at)}
+      </p>
     </div>
   );
 }
