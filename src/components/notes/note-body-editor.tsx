@@ -388,11 +388,7 @@ export function NoteBodyEditor({
         <p className="text-xs text-muted-foreground">{tipLabel}</p>
       </div>
 
-      <fieldset
-        aria-label="Note editor"
-        className="space-y-1 border-0 p-0"
-      >
-
+      <fieldset aria-label="Note editor" className="space-y-1 border-0 p-0">
         <textarea
           ref={ref}
           value={value}
