@@ -266,7 +266,8 @@
       "confirm": "Confirm new password",
       "submit": "Change password",
       "ok": "Password updated.",
-      "hint": "Requirements are enforced server-side."
+      "hint": "Requirements are enforced server-side.",
+      "error": "Couldn't update password: {error}."
     },
     "sessions": {
       "title": "Sessions",
@@ -278,6 +279,12 @@
       "unknownIp": "unknown IP",
       "revokeOthers": "Revoke other sessions",
       "signOutEverywhere": "Sign out everywhere",
+      "signOutEverywhereDialog": {
+        "title": "Sign out everywhere?",
+        "description": "This revokes all active sessions on every device, including this one.",
+        "cancel": "Cancel",
+        "confirm": "Sign out everywhere"
+      },
       "note": "Revoking sessions removes them from the server. The next request from that device will be forced to re-auth."
     },
     "sessionsList": {

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/app/[locale]/settings/change-password-form";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SessionsListE2EE } from "@/components/settings/sessions-list-e2ee";
+import { SignOutEverywhereDialog } from "@/components/settings/sign-out-everywhere-dialog";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   authenticate,
@@ -41,7 +43,7 @@ export default async function SettingsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ error?: string; pw?: string }>;
+  searchParams?: Promise<{ error?: string; pw?: string; tab?: string }>;
 }) {
   const { locale: rawLocale } = await params;
   const locale = normalizeLocale(rawLocale);
@@ -52,6 +54,7 @@ export default async function SettingsPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const pageError = resolvedSearchParams?.error;
   const passwordOk = resolvedSearchParams?.pw === "ok";
+  const selectedTab = normalizeSettingsTab(resolvedSearchParams?.tab);
 
   const sessionId = await getSignedSessionIdFromCookies();
   const session = sessionId ? await getSession(sessionId) : null;
@@ -75,10 +78,10 @@ export default async function SettingsPage({
     });
     await notifySessionsChanged({ username: current.username });
 
-    redirect(`/${locale}/settings`);
+    redirect(`/${locale}/settings?tab=sessions`);
   }
 
-  async function signOutEverywhereAction() {
+  async function signOutEverywhereAction(_formData: FormData) {
     "use server";
 
     const sid = await getSignedSessionIdFromCookies();
@@ -108,7 +111,7 @@ export default async function SettingsPage({
 
     const csrfToken = String(formData.get("csrfToken") ?? "");
     if (!(await verifyCsrfToken(csrfToken))) {
-      redirect(`/${locale}/settings?error=csrf`);
+      redirect(`/${locale}/settings?tab=password&error=csrf`);
     }
 
     const limiter = consumeRateLimit({
@@ -118,7 +121,7 @@ export default async function SettingsPage({
     });
 
     if (!limiter.ok) {
-      redirect(`/${locale}/settings?error=rate`);
+      redirect(`/${locale}/settings?tab=password&error=rate`);
     }
 
     const parsed = changePasswordFormSchema.safeParse({
@@ -130,13 +133,15 @@ export default async function SettingsPage({
 
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? "invalid";
-      redirect(`/${locale}/settings?error=${encodeURIComponent(msg)}`);
+      redirect(
+        `/${locale}/settings?tab=password&error=${encodeURIComponent(msg)}`,
+      );
     }
 
     const { currentPassword, newPassword } = parsed.data;
 
     if (!(await authenticate(current.username, currentPassword))) {
-      redirect(`/${locale}/settings?error=bad_current_password`);
+      redirect(`/${locale}/settings?tab=password&error=bad_current_password`);
     }
 
     await updateUserPassword({ username: current.username, newPassword });
@@ -147,7 +152,7 @@ export default async function SettingsPage({
       keepSessionId: sid,
     });
 
-    redirect(`/${locale}/settings?pw=ok`);
+    redirect(`/${locale}/settings?tab=password&pw=ok`);
   }
 
   return (
@@ -158,7 +163,12 @@ export default async function SettingsPage({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t("eyebrow")}
           </p>
-          <h1 className="text-3xl font-semibold md:text-4xl">{t("title")}</h1>
+          <h1
+            id="settings-title"
+            className="text-3xl font-semibold md:text-4xl"
+          >
+            {t("title")}
+          </h1>
           <p className="max-w-2xl text-muted-foreground">{t("subtitle")}</p>
         </section>
 
@@ -188,99 +198,154 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("password.title")}</CardTitle>
-                <CardDescription>{t("password.subtitle")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {passwordOk ? (
-                  <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
-                    {t("password.ok")}
-                  </div>
-                ) : null}
+          <Tabs
+            labelledBy="settings-title"
+            defaultValue={selectedTab}
+            items={[
+              {
+                value: "password",
+                label: t("password.title"),
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t("password.title")}</CardTitle>
+                      <CardDescription>
+                        {t("password.subtitle")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {passwordOk ? (
+                        <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
+                          {t("password.ok")}
+                        </div>
+                      ) : null}
 
-                {pageError ? (
-                  <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                    {t("password.error", { error: pageError })}
-                  </div>
-                ) : null}
+                      {pageError ? (
+                        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                          {t("password.error", { error: pageError })}
+                        </div>
+                      ) : null}
 
-                <ChangePasswordForm
-                  action={changePasswordAction}
-                  title={t("password.hint")}
-                  currentPasswordLabel={t("password.current")}
-                  newPasswordLabel={t("password.new")}
-                  confirmPasswordLabel={t("password.confirm")}
-                  submitLabel={t("password.submit")}
-                />
-              </CardContent>
-            </Card>
+                      <ChangePasswordForm
+                        action={changePasswordAction}
+                        title={t("password.hint")}
+                        currentPasswordLabel={t("password.current")}
+                        newPasswordLabel={t("password.new")}
+                        confirmPasswordLabel={t("password.confirm")}
+                        submitLabel={t("password.submit")}
+                      />
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                value: "sessions",
+                label: t("sessions.title"),
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t("sessions.title")}</CardTitle>
+                      <CardDescription>
+                        {t("sessions.subtitle")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        {t("sessions.active", {
+                          count: String(sessions.length),
+                        })}
+                      </p>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("sessions.title")}</CardTitle>
-                <CardDescription>{t("sessions.subtitle")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {t("sessions.active", { count: String(sessions.length) })}
-                </p>
-
-                <SessionsListE2EE currentSessionId={sessionId ?? null} />
-                <div className="flex flex-wrap gap-2">
-                  <form action={revokeOtherSessionsAction}>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={!isAuthed}
-                    >
-                      {t("sessions.revokeOthers")}
-                    </Button>
-                  </form>
-                  <form action={signOutEverywhereAction}>
-                    <Button
-                      type="submit"
-                      variant="destructive"
-                      disabled={!isAuthed}
-                    >
-                      {t("sessions.signOutEverywhere")}
-                    </Button>
-                  </form>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("sessions.note")}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("appearance.title")}</CardTitle>
-                <CardDescription>{t("appearance.subtitle")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ThemeSwitcher />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("language.title")}</CardTitle>
-                <CardDescription>{t("language.subtitle")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <LocaleSwitcher />
-                <p className="text-sm text-muted-foreground">
-                  {t("language.note")}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                      <SessionsListE2EE currentSessionId={sessionId ?? null} />
+                      <div className="flex flex-wrap gap-2">
+                        <form action={revokeOtherSessionsAction}>
+                          <Button
+                            type="submit"
+                            variant="outline"
+                            disabled={!isAuthed}
+                          >
+                            {t("sessions.revokeOthers")}
+                          </Button>
+                        </form>
+                        <SignOutEverywhereDialog
+                          action={signOutEverywhereAction}
+                          disabled={!isAuthed}
+                          triggerLabel={t("sessions.signOutEverywhere")}
+                          title={t("sessions.signOutEverywhereDialog.title")}
+                          description={t(
+                            "sessions.signOutEverywhereDialog.description",
+                          )}
+                          cancelLabel={t(
+                            "sessions.signOutEverywhereDialog.cancel",
+                          )}
+                          confirmLabel={t(
+                            "sessions.signOutEverywhereDialog.confirm",
+                          )}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("sessions.note")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                value: "appearance",
+                label: t("appearance.title"),
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t("appearance.title")}</CardTitle>
+                      <CardDescription>
+                        {t("appearance.subtitle")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ThemeSwitcher />
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              {
+                value: "language",
+                label: t("language.title"),
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t("language.title")}</CardTitle>
+                      <CardDescription>
+                        {t("language.subtitle")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <LocaleSwitcher />
+                      <p className="text-sm text-muted-foreground">
+                        {t("language.note")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ),
+              },
+            ]}
+          />
         </section>
       </main>
       <SiteFooter />
     </div>
   );
+}
+
+type SettingsTab = "password" | "sessions" | "appearance" | "language";
+
+function normalizeSettingsTab(rawTab: string | undefined): SettingsTab {
+  switch (rawTab) {
+    case "password":
+    case "sessions":
+    case "appearance":
+    case "language":
+      return rawTab;
+    default:
+      return "password";
+  }
 }
