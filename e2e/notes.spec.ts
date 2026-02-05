@@ -69,7 +69,9 @@ async function createNote(page: Page, title: string, body: string) {
 }
 
 async function otherSectionTitles(page: Page) {
-  const section = page.locator('section[aria-labelledby="notes-other-heading"]');
+  const section = page.locator(
+    'section[aria-labelledby="notes-other-heading"]',
+  );
   await expect(section).toBeVisible();
 
   const titles = await section
@@ -157,7 +159,10 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
 
     await editDialog.getByPlaceholder("Title").fill(editedTitle);
     await editDialog.getByPlaceholder(/Body/i).fill(editedBody);
-    await editDialog.getByRole("button", { name: /^Save$/ }).last().click();
+    await editDialog
+      .getByRole("button", { name: /^Save$/ })
+      .last()
+      .click();
 
     const updatedViewDialog = page.getByRole("dialog", { name: editedTitle });
     await expect(updatedViewDialog).toBeVisible();
