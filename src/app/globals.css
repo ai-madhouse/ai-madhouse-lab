@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-sans: ui-sans-serif;
+  --font-mono: ui-monospace;
   --background: 0 0% 100%;
   --foreground: 222.2 47.4% 11.2%;
   --card: 0 0% 100%;
