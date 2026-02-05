@@ -69,7 +69,9 @@ export function ModalDialog({
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
       className={cn(
-        "madhouse-modal-dialog w-[min(96vw,48rem)] overflow-hidden rounded-2xl border border-border/60 bg-card p-0 text-card-foreground shadow-xl focus:outline-none",
+        // Native <dialog> centering is inconsistent once you start styling width/etc.
+        // Force true center positioning.
+        "madhouse-modal-dialog fixed left-1/2 top-1/2 m-0 w-[min(96vw,48rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-border/60 bg-card p-0 text-card-foreground shadow-xl focus:outline-none",
         className,
       )}
       onClick={(event) => {

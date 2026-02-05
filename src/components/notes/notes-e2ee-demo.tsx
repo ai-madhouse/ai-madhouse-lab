@@ -905,14 +905,77 @@ export function NotesE2EEDemo() {
       </div>
 
       <ModalDialog
-        open={viewingNoteId !== null}
+        open={viewingNoteId !== null || editingNote !== null}
         onOpenChange={(open) => {
-          if (!open) closeViewingNote();
+          if (open) return;
+          setConfirmingDelete(false);
+          setEditingNote(null);
+          setViewingNoteId(null);
         }}
-        labelledBy={viewDialogTitleId}
+        labelledBy={editingNote ? editDialogTitleId : viewDialogTitleId}
         className="w-[min(96vw,56rem)]"
       >
-        {viewingNote ? (
+        {editingNote ? (
+          <div className="divide-y divide-border/70">
+            <div className="flex items-start justify-between gap-4 p-6">
+              <div className="space-y-1">
+                <h2 id={editDialogTitleId} className="text-lg font-semibold">
+                  Edit note
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {formatCreatedAt(editingNote.created_at)}
+                </p>
+              </div>
+              <Tooltip content="Close">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  onClick={() => {
+                    setEditingNote(null);
+                  }}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </Tooltip>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <Input
+                value={editingTitle}
+                onChange={(event) => setEditingTitle(event.target.value)}
+                placeholder="Title"
+                disabled={!dekKey}
+              />
+              <NoteBodyEditor
+                value={editingBody}
+                onChange={setEditingBody}
+                onSave={() => {
+                  void commitEditing();
+                }}
+                placeholder="Body (Markdown)"
+                disabled={!dekKey}
+              />
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button variant="outline" onClick={cancelEditing}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    void commitEditing();
+                  }}
+                  disabled={!dekKey}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : viewingNote ? (
           <div className="divide-y divide-border/70">
             <div className="flex items-start justify-between gap-4 p-6">
               <div className="space-y-1">
@@ -942,7 +1005,6 @@ export function NotesE2EEDemo() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    closeViewingNote();
                     startEditing(viewingNote);
                   }}
                 >
@@ -1002,106 +1064,30 @@ export function NotesE2EEDemo() {
             <p className="text-sm text-muted-foreground">Loading…</p>
           </div>
         )}
-      </ModalDialog>
 
-      <ConfirmDialog
-        open={confirmingDelete}
-        onOpenChange={setConfirmingDelete}
-        title="Delete note?"
-        description={
-          <>
-            Delete “{deleteDialogNoteTitle}”? This cannot be undone.
-            {deleting ? (
-              <span className="mt-2 block text-sm text-muted-foreground">
-                Deleting…
-              </span>
-            ) : null}
-          </>
-        }
-        confirmLabel="Delete"
-        cancelDisabled={deleting}
-        confirmDisabled={deleting || !viewingNote}
-        onConfirm={() => {
-          if (!viewingNote) return;
-          setConfirmingDelete(false);
-          void commitDelete(viewingNote.id);
-        }}
-      />
-
-      <ModalDialog
-        open={editingNote !== null}
-        onOpenChange={(open) => {
-          if (!open) cancelEditing();
-        }}
-        labelledBy={editDialogTitleId}
-        className="w-[min(96vw,56rem)]"
-      >
-        {editingNote ? (
-          <div className="divide-y divide-border/70">
-            <div className="flex items-start justify-between gap-4 p-6">
-              <div className="space-y-1">
-                <h2 id={editDialogTitleId} className="text-lg font-semibold">
-                  Edit note
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {formatCreatedAt(editingNote.created_at)}
-                </p>
-              </div>
-              <Tooltip content="Close">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={cancelEditing}
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </Tooltip>
-            </div>
-
-            <div className="space-y-4 p-6">
-              <Input
-                value={editingTitle}
-                onChange={(event) => setEditingTitle(event.target.value)}
-                placeholder="Title"
-                disabled={!dekKey}
-              />
-              <NoteBodyEditor
-                value={editingBody}
-                onChange={setEditingBody}
-                onSave={() => {
-                  void commitEditing();
-                }}
-                placeholder="Body (Markdown)"
-                disabled={!dekKey}
-              />
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
+        <ConfirmDialog
+          open={confirmingDelete}
+          onOpenChange={setConfirmingDelete}
+          title="Delete note?"
+          description={
+            <>
+              Delete “{deleteDialogNoteTitle}”? This cannot be undone.
+              {deleting ? (
+                <span className="mt-2 block text-sm text-muted-foreground">
+                  Deleting…
+                </span>
               ) : null}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="outline" onClick={cancelEditing}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    void commitEditing();
-                  }}
-                  disabled={!dekKey}
-                >
-                  Save
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3 p-6">
-            <h2 id={editDialogTitleId} className="text-lg font-semibold">
-              Edit note
-            </h2>
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          </div>
-        )}
+            </>
+          }
+          confirmLabel="Delete"
+          cancelDisabled={deleting}
+          confirmDisabled={deleting || !viewingNote}
+          onConfirm={() => {
+            if (!viewingNote) return;
+            setConfirmingDelete(false);
+            void commitDelete(viewingNote.id);
+          }}
+        />
       </ModalDialog>
     </div>
   );
@@ -1133,7 +1119,9 @@ function SortableNoteCard({
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    // Avoid “trailing behind the cursor” feeling by disabling transitions during drag.
+    transition: isDragging ? undefined : transition,
+    willChange: "transform",
   };
 
   return (
