@@ -14,6 +14,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
+import {
+  buildNotesEditorShortcutFromKeyEvent,
+  DEFAULT_NOTES_EDITOR_SHORTCUTS,
+  formatNotesEditorShortcutForUi,
+  NOTES_EDITOR_SHORTCUTS_STORAGE_KEY,
+  readNotesEditorShortcutMapFromLocalStorage,
+  type NotesEditorShortcutMap,
+} from "@/lib/notes-editor-shortcuts";
 
 function isMac() {
   if (typeof navigator === "undefined") return false;
@@ -93,8 +101,35 @@ export function NoteBodyEditor({
     end: 0,
   });
   const [isEditorActive, setIsEditorActive] = useState(false);
+  const [shortcuts, setShortcuts] = useState<NotesEditorShortcutMap>(() => ({
+    ...DEFAULT_NOTES_EDITOR_SHORTCUTS,
+  }));
 
   const hasSelection = selection.end > selection.start;
+
+  const boldShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.bold);
+  const italicShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.italic);
+  const linkShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.link);
+  const saveShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.save);
+  const tipLabel = `Tip: Tab indents • ${boldShortcutLabel}/${italicShortcutLabel}/${linkShortcutLabel}${
+    onSave ? ` • ${saveShortcutLabel}` : ""
+  }`;
+
+  useEffect(() => {
+    const stored = readNotesEditorShortcutMapFromLocalStorage();
+    if (stored.ok) setShortcuts(stored.shortcuts);
+  }, []);
+
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== NOTES_EDITOR_SHORTCUTS_STORAGE_KEY) return;
+      const stored = readNotesEditorShortcutMapFromLocalStorage();
+      if (stored.ok) setShortcuts(stored.shortcuts);
+    }
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -180,7 +215,8 @@ export function NoteBodyEditor({
       return;
     }
 
-    const metaOrCtrl = isMac() ? event.metaKey : event.ctrlKey;
+    const mac = isMac();
+    const metaOrCtrl = mac ? event.metaKey : event.ctrlKey;
 
     if (event.key === "Tab") {
       event.preventDefault();
@@ -198,27 +234,39 @@ export function NoteBodyEditor({
 
     if (!metaOrCtrl) return;
 
-    const key = event.key.toLowerCase();
+    const built = buildNotesEditorShortcutFromKeyEvent(
+      {
+        key: event.key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+      },
+      mac,
+    );
+    if (!built.ok) return;
 
-    if (key === "s" && onSave) {
+    const shortcut = built.shortcut;
+
+    if (shortcut === shortcuts.save && onSave) {
       event.preventDefault();
       onSave();
       return;
     }
 
-    if (key === "b") {
+    if (shortcut === shortcuts.bold) {
       event.preventDefault();
       applyEdit((text, start, end) => wrap(text, start, end, "**"));
       return;
     }
 
-    if (key === "i") {
+    if (shortcut === shortcuts.italic) {
       event.preventDefault();
       applyEdit((text, start, end) => wrap(text, start, end, "*"));
       return;
     }
 
-    if (key === "k") {
+    if (shortcut === shortcuts.link) {
       event.preventDefault();
       applyEdit((text, start, end) => {
         const selected = text.slice(start, end) || "link";
@@ -237,7 +285,7 @@ export function NoteBodyEditor({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Tooltip content="Bold (Ctrl/Cmd+B)">
+        <Tooltip content={`Bold (${boldShortcutLabel})`}>
           <Button
             type="button"
             variant="outline"
@@ -251,7 +299,7 @@ export function NoteBodyEditor({
             <Bold className="h-4 w-4" aria-hidden="true" />
           </Button>
         </Tooltip>
-        <Tooltip content="Italic (Ctrl/Cmd+I)">
+        <Tooltip content={`Italic (${italicShortcutLabel})`}>
           <Button
             type="button"
             variant="outline"
@@ -279,7 +327,7 @@ export function NoteBodyEditor({
             <Code className="h-4 w-4" aria-hidden="true" />
           </Button>
         </Tooltip>
-        <Tooltip content="Link (Ctrl/Cmd+K)">
+        <Tooltip content={`Link (${linkShortcutLabel})`}>
           <Button
             type="button"
             variant="outline"
@@ -359,7 +407,7 @@ export function NoteBodyEditor({
             variant="outline"
             size="sm"
             disabled={disabled}
-            title="Save (Ctrl/Cmd+S)"
+            title={`Save (${saveShortcutLabel})`}
             onClick={onSave}
             className="gap-2"
           >
@@ -368,9 +416,7 @@ export function NoteBodyEditor({
           </Button>
         ) : null}
 
-        <p className="text-xs text-muted-foreground">
-          Tip: Tab indents • Ctrl/Cmd+B/I/K • Ctrl/Cmd+S
-        </p>
+        <p className="text-xs text-muted-foreground">{tipLabel}</p>
       </div>
 
       <fieldset
@@ -404,7 +450,7 @@ export function NoteBodyEditor({
                 size="sm"
                 disabled={disabled}
                 aria-label="Bold"
-                title="Bold (Ctrl/Cmd+B)"
+                title={`Bold (${boldShortcutLabel})`}
                 onClick={() =>
                   applyEdit((text, start, end) => wrap(text, start, end, "**"))
                 }
@@ -418,7 +464,7 @@ export function NoteBodyEditor({
                 size="sm"
                 disabled={disabled}
                 aria-label="Italic"
-                title="Italic (Ctrl/Cmd+I)"
+                title={`Italic (${italicShortcutLabel})`}
                 onClick={() =>
                   applyEdit((text, start, end) => wrap(text, start, end, "*"))
                 }
@@ -446,7 +492,7 @@ export function NoteBodyEditor({
                 size="sm"
                 disabled={disabled}
                 aria-label="Link"
-                title="Link (Ctrl/Cmd+K)"
+                title={`Link (${linkShortcutLabel})`}
                 onClick={() =>
                   applyEdit((text, start, end) => {
                     const selected = text.slice(start, end) || "link";

@@ -302,6 +302,31 @@
         "metaFailed": "Failed to save session details."
       }
     },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "subtitle": "Customize shortcuts used in the Notes editor. Stored locally in this browser.",
+      "placeholder": "Press a shortcut…",
+      "reset": "Reset to defaults",
+      "actions": {
+        "save": "Save",
+        "bold": "Bold",
+        "italic": "Italic",
+        "link": "Insert link"
+      },
+      "actionHelp": {
+        "save": "Save the note (when available).",
+        "bold": "Wrap selection in **bold**.",
+        "italic": "Wrap selection in *italic*.",
+        "link": "Insert a Markdown link."
+      },
+      "errors": {
+        "empty": "Shortcuts can’t be empty.",
+        "missing_mod": "Use Ctrl/Cmd + a key.",
+        "reserved": "That shortcut is reserved by the browser.",
+        "duplicate": "That shortcut is already used by another action.",
+        "invalid": "Use Ctrl/Cmd + a letter (A–Z) or digit."
+      }
+    },
     "language": {
       "title": "Language & region",
       "subtitle": "Pick the locale you want to review or demo.",

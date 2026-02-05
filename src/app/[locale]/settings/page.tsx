@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/app/[locale]/settings/change-password-form";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { NotesShortcutsSettings } from "@/components/settings/notes-shortcuts-settings";
 import { SessionsListE2EE } from "@/components/settings/sessions-list-e2ee";
 import { SignOutEverywhereDialog } from "@/components/settings/sign-out-everywhere-dialog";
 import { SiteFooter } from "@/components/site-footer";
@@ -327,6 +328,23 @@ export default async function SettingsPage({
                   </Card>
                 ),
               },
+              {
+                value: "shortcuts",
+                label: t("shortcuts.title"),
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{t("shortcuts.title")}</CardTitle>
+                      <CardDescription>
+                        {t("shortcuts.subtitle")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <NotesShortcutsSettings />
+                    </CardContent>
+                  </Card>
+                ),
+              },
             ]}
           />
         </section>
@@ -336,7 +354,12 @@ export default async function SettingsPage({
   );
 }
 
-type SettingsTab = "password" | "sessions" | "appearance" | "language";
+type SettingsTab =
+  | "password"
+  | "sessions"
+  | "appearance"
+  | "language"
+  | "shortcuts";
 
 function normalizeSettingsTab(rawTab: string | undefined): SettingsTab {
   switch (rawTab) {
@@ -344,6 +367,7 @@ function normalizeSettingsTab(rawTab: string | undefined): SettingsTab {
     case "sessions":
     case "appearance":
     case "language":
+    case "shortcuts":
       return rawTab;
     default:
       return "password";
