@@ -266,7 +266,8 @@
       "confirm": "Pakartokite naują slaptažodį",
       "submit": "Keisti slaptažodį",
       "ok": "Slaptažodis atnaujintas.",
-      "hint": "Reikalavimai tikrinami serveryje."
+      "hint": "Reikalavimai tikrinami serveryje.",
+      "error": "Nepavyko atnaujinti slaptažodžio: {error}."
     },
     "sessions": {
       "title": "Sesijos",
@@ -278,6 +279,12 @@
       "unknownIp": "nežinomas IP",
       "revokeOthers": "Atšaukti kitas sesijas",
       "signOutEverywhere": "Atsijungti visur",
+      "signOutEverywhereDialog": {
+        "title": "Atsijungti visur?",
+        "description": "Tai atšauks visas aktyvias sesijas visuose įrenginiuose, įskaitant šį.",
+        "cancel": "Atšaukti",
+        "confirm": "Atsijungti visur"
+      },
       "note": "Atšaukus sesijas jos pašalinamos serveryje. Kitas užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
     },
     "sessionsList": {
