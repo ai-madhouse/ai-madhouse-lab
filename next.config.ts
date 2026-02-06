@@ -37,6 +37,41 @@ const nextConfig: NextConfig = {
   // Don't leak framework in headers.
   poweredByHeader: false,
 
+  // Avoid bundling native/dynamic-require libsql packages in webpack builds.
+  // (They pull in non-JS assets via require contexts and can break compilation.)
+  serverExternalPackages: ["@libsql/client", "@libsql/hrana-client", "libsql"],
+
+  webpack: (config, context) => {
+    // libsql uses dynamic requires and native bindings. When webpack tries to
+    // statically analyze it, it can crawl entire package trees (README/LICENSE,
+    // `.node` binaries, etc.) and break compilation. Force these packages to be
+    // treated as server externals.
+    if (context.isServer) {
+      const existing = config.externals ?? [];
+      const externals = Array.isArray(existing) ? existing : [existing];
+
+      externals.push(
+        (
+          _context: unknown,
+          request: string | undefined,
+          callback: (error: Error | null, result?: string) => void,
+        ) => {
+          if (
+            typeof request === "string" &&
+            (request === "libsql" || request.startsWith("@libsql/"))
+          ) {
+            return callback(null, `commonjs ${request}`);
+          }
+          callback(null);
+        },
+      );
+
+      config.externals = externals;
+    }
+
+    return config;
+  },
+
   async headers() {
     return [
       {
