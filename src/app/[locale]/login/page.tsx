@@ -7,7 +7,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   authenticate,
   isAuthenticated,
@@ -124,24 +124,22 @@ export default async function LoginPage({
           </div>
 
           <Card>
-            <CardContent className="space-y-4">
-              <LoginForm
-                action={loginAction}
-                locale={locale}
-                nextPath={nextPath}
-                hasError={hasError}
-                errorText={t("form.error")}
-                title={t("form.title")}
-                subtitle={t("form.subtitle")}
-                usernameLabel={t("form.username")}
-                usernamePlaceholder={t("form.usernamePlaceholder")}
-                passwordLabel={t("form.password")}
-                passwordPlaceholder={t("form.passwordPlaceholder")}
-                submitLabel={t("form.submit")}
-                noAccountText={t("form.noAccount")}
-                registerLinkText={t("form.registerLink")}
-              />
-            </CardContent>
+            <LoginForm
+              action={loginAction}
+              locale={locale}
+              nextPath={nextPath}
+              hasError={hasError}
+              errorText={t("form.error")}
+              title={t("form.title")}
+              subtitle={t("form.subtitle")}
+              usernameLabel={t("form.username")}
+              usernamePlaceholder={t("form.usernamePlaceholder")}
+              passwordLabel={t("form.password")}
+              passwordPlaceholder={t("form.passwordPlaceholder")}
+              submitLabel={t("form.submit")}
+              noAccountText={t("form.noAccount")}
+              registerLinkText={t("form.registerLink")}
+            />
           </Card>
         </section>
       </main>

@@ -7,7 +7,7 @@ import { RegisterForm } from "@/components/auth/register-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   clearAuthCookie,
   isAuthenticated,
@@ -135,23 +135,21 @@ export default async function RegisterPage({
           </div>
 
           <Card>
-            <CardContent className="space-y-4">
-              <RegisterForm
-                action={registerAction}
-                locale={locale}
-                nextPath={nextPath}
-                error={err}
-                errorText={t("register.form.error", { error: err ?? "" })}
-                title={t("register.form.title")}
-                subtitle={t("register.form.subtitle")}
-                usernameLabel={t("register.form.username")}
-                passwordLabel={t("register.form.password")}
-                password2Label={t("register.form.password2")}
-                submitLabel={t("register.form.submit")}
-                haveAccountText={t("register.form.haveAccount")}
-                signInText={t("register.form.signIn")}
-              />
-            </CardContent>
+            <RegisterForm
+              action={registerAction}
+              locale={locale}
+              nextPath={nextPath}
+              error={err}
+              errorText={t("register.form.error", { error: err ?? "" })}
+              title={t("register.form.title")}
+              subtitle={t("register.form.subtitle")}
+              usernameLabel={t("register.form.username")}
+              passwordLabel={t("register.form.password")}
+              password2Label={t("register.form.password2")}
+              submitLabel={t("register.form.submit")}
+              haveAccountText={t("register.form.haveAccount")}
+              signInText={t("register.form.signIn")}
+            />
           </Card>
         </section>
       </main>
