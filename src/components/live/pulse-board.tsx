@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeParseJson } from "@/lib/utils";
 
 type PulsePayload =
   | {
@@ -22,15 +23,6 @@ type PulsePayload =
       error?: undefined;
     }
   | { ts: number; error: string };
-
-function safeParseJson<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
 
 function formatWhen(value: string | null) {
   if (!value) return "—";

@@ -48,6 +48,7 @@ import {
   type NotesEventKind,
 } from "@/lib/notes-e2ee/model";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
+import { safeParseJson } from "@/lib/utils";
 
 type NotesHistoryRow = {
   id: string;
@@ -58,15 +59,6 @@ type NotesHistoryRow = {
   payload_iv: string | null;
   payload_ciphertext: string | null;
 };
-
-function safeParseJson<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
 
 const NOTES_PINS_STORAGE_KEY = "madhouse-notes-pins";
 const NOTES_ORDER_STORAGE_KEY = "madhouse-notes-order";
@@ -239,7 +231,7 @@ async function decryptHistory({
   return { decrypted, state };
 }
 
-export function NotesE2EEDemo() {
+export function NotesBoard() {
   const [csrfToken, setCsrfToken] = useState<string>("");
   const [dekKey, setDekKey] = useState<CryptoKey | null>(null);
 
