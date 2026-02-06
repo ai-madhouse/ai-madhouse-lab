@@ -30,8 +30,12 @@ import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog/dialog";
 import { Input } from "@/components/ui/input";
-import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
@@ -904,105 +908,103 @@ export function NotesE2EEDemo() {
         </DndContext>
       </div>
 
-      <ModalDialog
+      <Dialog
         open={viewingNoteId !== null}
         onOpenChange={(open) => {
           if (!open) closeViewingNote();
         }}
-        labelledBy={viewDialogTitleId}
-        className="w-[min(96vw,56rem)]"
       >
-        {viewingNote ? (
-          <div className="divide-y divide-border/70">
-            <div className="flex items-start justify-between gap-4 p-6">
-              <div className="space-y-1">
-                <h2 id={viewDialogTitleId} className="text-lg font-semibold">
-                  {viewingNote.title.trim() || "Untitled"}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {formatCreatedAt(viewingNote.created_at)}
-                </p>
-              </div>
-              <Tooltip content="Close">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={closeViewingNote}
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </Tooltip>
-            </div>
-
-            <div className="space-y-5 p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    closeViewingNote();
-                    startEditing(viewingNote);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" aria-hidden="true" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => togglePinned(viewingNote.id)}
-                >
-                  {isPinned(viewingNote.id) ? (
-                    <PinOff className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Pin className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {isPinned(viewingNote.id) ? "Unpin" : "Pin"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmingDelete(true)}
-                  disabled={confirmingDelete || deleting}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Delete
-                </Button>
+        <DialogContent className="w-[min(96vw,56rem)]">
+          {viewingNote ? (
+            <div className="divide-y divide-border/70">
+              <div className="flex items-start justify-between gap-4 p-6">
+                <div className="space-y-1">
+                  <DialogTitle id={viewDialogTitleId}>
+                    {viewingNote.title.trim() || "Untitled"}
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCreatedAt(viewingNote.created_at)}
+                  </p>
+                </div>
+                <Tooltip content="Close">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    onClick={closeViewingNote}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Close</span>
+                  </Button>
+                </Tooltip>
               </div>
 
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
+              <div className="space-y-5 p-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      closeViewingNote();
+                      startEditing(viewingNote);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => togglePinned(viewingNote.id)}
+                  >
+                    {isPinned(viewingNote.id) ? (
+                      <PinOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Pin className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {isPinned(viewingNote.id) ? "Unpin" : "Pin"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={confirmingDelete || deleting}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    Delete
+                  </Button>
+                </div>
 
-              <Separator />
+                {error ? (
+                  <p className="text-sm text-destructive">{error}</p>
+                ) : null}
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Body</h3>
-                <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-background p-4">
-                  {viewingNote.body.trim() ? (
-                    <p className="whitespace-pre-wrap text-sm leading-6">
-                      {viewingNote.body}
-                    </p>
-                  ) : (
-                    <p className="text-sm italic text-muted-foreground">
-                      Empty note.
-                    </p>
-                  )}
+                <Separator />
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Body</h3>
+                  <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-background p-4">
+                    {viewingNote.body.trim() ? (
+                      <p className="whitespace-pre-wrap text-sm leading-6">
+                        {viewingNote.body}
+                      </p>
+                    ) : (
+                      <p className="text-sm italic text-muted-foreground">
+                        Empty note.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3 p-6">
-            <h2 id={viewDialogTitleId} className="text-lg font-semibold">
-              Note
-            </h2>
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          </div>
-        )}
-      </ModalDialog>
+          ) : (
+            <div className="space-y-3 p-6">
+              <DialogTitle id={viewDialogTitleId}>Note</DialogTitle>
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={confirmingDelete}
@@ -1028,81 +1030,77 @@ export function NotesE2EEDemo() {
         }}
       />
 
-      <ModalDialog
+      <Dialog
         open={editingNote !== null}
         onOpenChange={(open) => {
           if (!open) cancelEditing();
         }}
-        labelledBy={editDialogTitleId}
-        className="w-[min(96vw,56rem)]"
       >
-        {editingNote ? (
-          <div className="divide-y divide-border/70">
-            <div className="flex items-start justify-between gap-4 p-6">
-              <div className="space-y-1">
-                <h2 id={editDialogTitleId} className="text-lg font-semibold">
-                  Edit note
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {formatCreatedAt(editingNote.created_at)}
-                </p>
+        <DialogContent className="w-[min(96vw,56rem)]">
+          {editingNote ? (
+            <div className="divide-y divide-border/70">
+              <div className="flex items-start justify-between gap-4 p-6">
+                <div className="space-y-1">
+                  <DialogTitle id={editDialogTitleId}>Edit note</DialogTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCreatedAt(editingNote.created_at)}
+                  </p>
+                </div>
+                <Tooltip content="Close">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    onClick={cancelEditing}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Close</span>
+                  </Button>
+                </Tooltip>
               </div>
-              <Tooltip content="Close">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={cancelEditing}
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </Tooltip>
-            </div>
 
-            <div className="space-y-4 p-6">
-              <Input
-                value={editingTitle}
-                onChange={(event) => setEditingTitle(event.target.value)}
-                placeholder="Title"
-                disabled={!dekKey}
-              />
-              <NoteBodyEditor
-                value={editingBody}
-                onChange={setEditingBody}
-                onSave={() => {
-                  void commitEditing();
-                }}
-                placeholder="Body (Markdown)"
-                disabled={!dekKey}
-              />
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="outline" onClick={cancelEditing}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
+              <div className="space-y-4 p-6">
+                <Input
+                  value={editingTitle}
+                  onChange={(event) => setEditingTitle(event.target.value)}
+                  placeholder="Title"
+                  disabled={!dekKey}
+                />
+                <NoteBodyEditor
+                  value={editingBody}
+                  onChange={setEditingBody}
+                  onSave={() => {
                     void commitEditing();
                   }}
+                  placeholder="Body (Markdown)"
                   disabled={!dekKey}
-                >
-                  Save
-                </Button>
+                />
+                {error ? (
+                  <p className="text-sm text-destructive">{error}</p>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button variant="outline" onClick={cancelEditing}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      void commitEditing();
+                    }}
+                    disabled={!dekKey}
+                  >
+                    Save
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3 p-6">
-            <h2 id={editDialogTitleId} className="text-lg font-semibold">
-              Edit note
-            </h2>
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          </div>
-        )}
-      </ModalDialog>
+          ) : (
+            <div className="space-y-3 p-6">
+              <DialogTitle id={editDialogTitleId}>Edit note</DialogTitle>
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
