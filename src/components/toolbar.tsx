@@ -108,21 +108,30 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
   ] as const;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
-      <RoiToolbar className="mx-auto max-w-6xl flex-wrap gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
-        <ToolbarGroup className="gap-3">
+    <header
+      className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur"
+      data-layout-root="site-header"
+      data-layout-key="header"
+    >
+      <RoiToolbar className="mx-auto max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
+        <ToolbarGroup className="min-w-0 gap-3" data-layout-key="header-brand">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
             <Sparkles className="h-5 w-5" aria-label={t("brandIcon")} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               {t("eyebrow")}
             </p>
-            <p className="leading-tight text-lg font-semibold">{t("brand")}</p>
+            <p className="truncate leading-tight text-lg font-semibold">
+              {t("brand")}
+            </p>
           </div>
         </ToolbarGroup>
 
-        <ToolbarNav className="order-3 w-full gap-2 md:order-none md:w-auto md:gap-2.5">
+        <ToolbarNav
+          className="order-3 w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:gap-2.5 md:overflow-visible md:pb-0"
+          data-layout-key="header-nav"
+        >
           {navItems.map((item) => {
             const Icon = iconMap[item.key];
             const active = pathname === item.href;
@@ -130,8 +139,9 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
               <NavLinkButton
                 key={item.key}
                 href={item.href}
+                data-layout-key={`nav-${item.key}`}
                 active={active}
-                className="gap-2.5"
+                className="shrink-0 gap-2.5 whitespace-nowrap"
               >
                 <Icon className="h-4 w-4" aria-label={t(`${item.key}Icon`)} />
                 {t(item.key)}
@@ -140,7 +150,10 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
           })}
         </ToolbarNav>
 
-        <ToolbarGroup>
+        <ToolbarGroup
+          className="ml-auto shrink-0 gap-2"
+          data-layout-key="header-actions"
+        >
           <LocaleSwitcher />
           <ThemeToggle />
 
@@ -148,18 +161,20 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="h-9 w-9 justify-center gap-2 p-0 sm:w-32 sm:px-3"
+              data-layout-key="header-register"
               onClick={() => router.push(`/${locale}/register`)}
             >
               <UserPlus className="h-4 w-4" aria-label={t("registerIcon")} />
-              {t("register")}
+              <span className="hidden truncate sm:inline">{t("register")}</span>
             </Button>
           ) : null}
 
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="h-9 w-9 justify-center gap-2 p-0 sm:w-32 sm:px-3"
+            data-layout-key="header-auth"
             onClick={() => {
               if (isAuthed) {
                 try {
@@ -181,7 +196,9 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
             ) : (
               <LogIn className="h-4 w-4" aria-label={t("loginIcon")} />
             )}
-            {isAuthed ? t("logout") : t("login")}
+            <span className="hidden truncate sm:inline">
+              {isAuthed ? t("logout") : t("login")}
+            </span>
           </Button>
         </ToolbarGroup>
       </RoiToolbar>
