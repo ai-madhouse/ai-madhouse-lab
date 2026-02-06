@@ -21,7 +21,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
-import { cn } from "@/lib/utils";
+import { cn, safeParseJson } from "@/lib/utils";
 
 const iconMap = {
   home: Sparkles,
@@ -33,15 +33,6 @@ const iconMap = {
 } as const;
 
 const sessionsChangedDomEventName = "madhouse:sessions:changed";
-
-function safeParseJson<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
 
 export function SiteHeader({ isAuthed = false }: { isAuthed?: boolean }) {
   const pathname = usePathname();

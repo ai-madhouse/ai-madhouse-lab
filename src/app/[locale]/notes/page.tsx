@@ -1,4 +1,4 @@
-import { NotesE2EEDemo } from "@/components/notes/notes-e2ee-demo";
+import { NotesBoard } from "@/components/notes/notes-board";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { isAuthenticated } from "@/lib/auth";
@@ -29,7 +29,7 @@ export default async function NotesPage({
           <p className="max-w-2xl text-muted-foreground">{t("subtitle")}</p>
         </section>
 
-        <NotesE2EEDemo />
+        <NotesBoard />
       </main>
       <SiteFooter />
     </div>

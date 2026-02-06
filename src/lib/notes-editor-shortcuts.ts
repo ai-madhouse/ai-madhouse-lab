@@ -1,3 +1,5 @@
+import { safeParseJson } from "@/lib/utils";
+
 export const NOTES_EDITOR_SHORTCUTS_STORAGE_KEY =
   "madhouse-notes-editor-shortcuts";
 
@@ -229,15 +231,6 @@ export function normalizeNotesEditorShortcutMap(
   return next;
 }
 
-function safeParseJson(value: string | null): unknown {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 export function readNotesEditorShortcutMapFromLocalStorage():
   | { ok: true; shortcuts: NotesEditorShortcutMap }
   | { ok: false; error: "unavailable" } {
@@ -246,7 +239,7 @@ export function readNotesEditorShortcutMapFromLocalStorage():
   }
 
   try {
-    const raw = safeParseJson(
+    const raw = safeParseJson<unknown>(
       window.localStorage.getItem(NOTES_EDITOR_SHORTCUTS_STORAGE_KEY),
     );
     return { ok: true, shortcuts: normalizeNotesEditorShortcutMap(raw) };
