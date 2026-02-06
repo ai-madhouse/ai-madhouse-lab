@@ -29,7 +29,15 @@ import {
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Input } from "@/components/roiui/input";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +56,7 @@ import {
   type NotesEventKind,
 } from "@/lib/notes-e2ee/model";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
-import { safeParseJson } from "@/lib/utils";
+import { cn, safeParseJson } from "@/lib/utils";
 
 type NotesHistoryRow = {
   id: string;
@@ -752,7 +760,7 @@ export function NotesBoard() {
     : "Untitled";
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {!dekKey ? (
         <E2EEDekUnlockCard
           label="Unlock Notes"
@@ -760,16 +768,15 @@ export function NotesBoard() {
           onUnlocked={handleUnlocked}
         />
       ) : null}
-      <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold">Create a note (E2EE)</p>
-          <p className="text-sm text-muted-foreground">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create a note (E2EE)</CardTitle>
+          <CardDescription>
             Notes are end-to-end encrypted and stored as an append-only event
             log.
-          </p>
-        </div>
-
-        <div className="grid gap-3">
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
           <Input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
@@ -814,8 +821,8 @@ export function NotesBoard() {
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -1168,45 +1175,50 @@ function NoteCard({
     <div
       ref={outerRef}
       style={style}
-      className={`group relative space-y-3 rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isDragging ? "opacity-60" : ""}`}
+      className={cn(isDragging ? "opacity-60" : "")}
     >
-      {dragHandle}
-      <button
-        type="button"
-        aria-label={`Open note: ${title}`}
-        onClick={onOpen}
-        className="absolute inset-0 z-10 cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      />
-      <div className="relative flex items-start justify-between gap-3">
-        <input
-          value={note.title}
-          placeholder="Untitled"
-          readOnly
-          tabIndex={-1}
-          aria-hidden="true"
-          className="pointer-events-none h-auto w-full truncate rounded-none border-0 bg-transparent p-0 text-base font-semibold leading-6 text-foreground shadow-none outline-none"
+      <Card className="group relative space-y-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+        {dragHandle}
+        <button
+          type="button"
+          aria-label={`Open note: ${title}`}
+          onClick={onOpen}
+          className="absolute inset-0 z-10 cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
-        {pinned ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-2 py-1 text-xs font-medium text-muted-foreground">
-            <Pin className="h-3.5 w-3.5" aria-hidden="true" />
-            Pinned
-          </span>
-        ) : null}
-      </div>
+        <div className="relative flex items-start justify-between gap-3">
+          <input
+            value={note.title}
+            placeholder="Untitled"
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="pointer-events-none h-auto w-full truncate rounded-none border-0 bg-transparent p-0 text-base font-semibold leading-6 text-foreground shadow-none outline-none"
+          />
+          {pinned ? (
+            <Badge
+              variant="outline"
+              className="gap-1 bg-background text-muted-foreground"
+            >
+              <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+              Pinned
+            </Badge>
+          ) : null}
+        </div>
 
-      {preview ? (
-        <p className="relative text-sm leading-6 text-muted-foreground">
-          {preview}
-        </p>
-      ) : (
-        <p className="relative text-sm italic text-muted-foreground">
-          Empty note.
-        </p>
-      )}
+        {preview ? (
+          <p className="relative text-sm leading-6 text-muted-foreground">
+            {preview}
+          </p>
+        ) : (
+          <p className="relative text-sm italic text-muted-foreground">
+            Empty note.
+          </p>
+        )}
 
-      <p className="relative text-xs text-muted-foreground">
-        {formatCreatedAt(note.created_at)}
-      </p>
+        <p className="relative text-xs text-muted-foreground">
+          {formatCreatedAt(note.created_at)}
+        </p>
+      </Card>
     </div>
   );
 }
