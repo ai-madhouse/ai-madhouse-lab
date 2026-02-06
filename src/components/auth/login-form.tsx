@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { FormError, FormField } from "@/components/ui/form";
 import { loginFormSchema } from "@/lib/schemas/auth";
 
 export function LoginForm({
@@ -56,23 +56,8 @@ export function LoginForm({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {hasError ? (
-          <div
-            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-            role="alert"
-          >
-            {errorText}
-          </div>
-        ) : null}
-
-        {clientError ? (
-          <div
-            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-            role="alert"
-          >
-            {clientError}
-          </div>
-        ) : null}
+        {hasError ? <FormError>{errorText}</FormError> : null}
+        {clientError ? <FormError>{clientError}</FormError> : null}
 
         <form
           action={action}
@@ -102,10 +87,8 @@ export function LoginForm({
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={nextPath} />
 
-          <div className="space-y-2">
-            <Label htmlFor="username">{usernameLabel}</Label>
+          <FormField id="username" label={usernameLabel}>
             <Input
-              id="username"
               name="username"
               placeholder={usernamePlaceholder}
               autoComplete="username"
@@ -113,19 +96,17 @@ export function LoginForm({
               spellCheck={false}
               required
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">{passwordLabel}</Label>
+          <FormField id="password" label={passwordLabel}>
             <Input
-              id="password"
               name="password"
               type="password"
               placeholder={passwordPlaceholder}
               autoComplete="current-password"
               required
             />
-          </div>
+          </FormField>
 
           <Button type="submit" className="w-full">
             {submitLabel}
