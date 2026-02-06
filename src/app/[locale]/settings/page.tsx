@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Tabs } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   authenticate,
@@ -199,154 +199,134 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
 
-          <Tabs
-            labelledBy="settings-title"
-            defaultValue={selectedTab}
-            items={[
-              {
-                value: "password",
-                label: t("password.title"),
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("password.title")}</CardTitle>
-                      <CardDescription>
-                        {t("password.subtitle")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {passwordOk ? (
-                        <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
-                          {t("password.ok")}
-                        </div>
-                      ) : null}
+          <Tabs defaultValue={selectedTab}>
+            <TabsList aria-labelledby="settings-title">
+              <TabsTrigger value="password">{t("password.title")}</TabsTrigger>
+              <TabsTrigger value="sessions">{t("sessions.title")}</TabsTrigger>
+              <TabsTrigger value="appearance">
+                {t("appearance.title")}
+              </TabsTrigger>
+              <TabsTrigger value="language">{t("language.title")}</TabsTrigger>
+              <TabsTrigger value="shortcuts">
+                {t("shortcuts.title")}
+              </TabsTrigger>
+            </TabsList>
 
-                      {pageError ? (
-                        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                          {t("password.error", { error: pageError })}
-                        </div>
-                      ) : null}
+            <TabsContent value="password">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("password.title")}</CardTitle>
+                  <CardDescription>{t("password.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {passwordOk ? (
+                    <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
+                      {t("password.ok")}
+                    </div>
+                  ) : null}
 
-                      <ChangePasswordForm
-                        action={changePasswordAction}
-                        title={t("password.hint")}
-                        currentPasswordLabel={t("password.current")}
-                        newPasswordLabel={t("password.new")}
-                        confirmPasswordLabel={t("password.confirm")}
-                        submitLabel={t("password.submit")}
-                      />
-                    </CardContent>
-                  </Card>
-                ),
-              },
-              {
-                value: "sessions",
-                label: t("sessions.title"),
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("sessions.title")}</CardTitle>
-                      <CardDescription>
-                        {t("sessions.subtitle")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        {t("sessions.active", {
-                          count: String(sessions.length),
-                        })}
-                      </p>
+                  {pageError ? (
+                    <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                      {t("password.error", { error: pageError })}
+                    </div>
+                  ) : null}
 
-                      <SessionsListE2EE currentSessionId={sessionId ?? null} />
-                      <div className="flex flex-wrap gap-2">
-                        <form action={revokeOtherSessionsAction}>
-                          <Button
-                            type="submit"
-                            variant="outline"
-                            disabled={!isAuthed}
-                          >
-                            {t("sessions.revokeOthers")}
-                          </Button>
-                        </form>
-                        <SignOutEverywhereDialog
-                          action={signOutEverywhereAction}
-                          disabled={!isAuthed}
-                          triggerLabel={t("sessions.signOutEverywhere")}
-                          title={t("sessions.signOutEverywhereDialog.title")}
-                          description={t(
-                            "sessions.signOutEverywhereDialog.description",
-                          )}
-                          cancelLabel={t(
-                            "sessions.signOutEverywhereDialog.cancel",
-                          )}
-                          confirmLabel={t(
-                            "sessions.signOutEverywhereDialog.confirm",
-                          )}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t("sessions.note")}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ),
-              },
-              {
-                value: "appearance",
-                label: t("appearance.title"),
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("appearance.title")}</CardTitle>
-                      <CardDescription>
-                        {t("appearance.subtitle")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ThemeSwitcher />
-                    </CardContent>
-                  </Card>
-                ),
-              },
-              {
-                value: "language",
-                label: t("language.title"),
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("language.title")}</CardTitle>
-                      <CardDescription>
-                        {t("language.subtitle")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <LocaleSwitcher />
-                      <p className="text-sm text-muted-foreground">
-                        {t("language.note")}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ),
-              },
-              {
-                value: "shortcuts",
-                label: t("shortcuts.title"),
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("shortcuts.title")}</CardTitle>
-                      <CardDescription>
-                        {t("shortcuts.subtitle")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <NotesShortcutsSettings />
-                    </CardContent>
-                  </Card>
-                ),
-              },
-            ]}
-          />
+                  <ChangePasswordForm
+                    action={changePasswordAction}
+                    title={t("password.hint")}
+                    currentPasswordLabel={t("password.current")}
+                    newPasswordLabel={t("password.new")}
+                    confirmPasswordLabel={t("password.confirm")}
+                    submitLabel={t("password.submit")}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="sessions">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("sessions.title")}</CardTitle>
+                  <CardDescription>{t("sessions.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {t("sessions.active", {
+                      count: String(sessions.length),
+                    })}
+                  </p>
+
+                  <SessionsListE2EE currentSessionId={sessionId ?? null} />
+                  <div className="flex flex-wrap gap-2">
+                    <form action={revokeOtherSessionsAction}>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={!isAuthed}
+                      >
+                        {t("sessions.revokeOthers")}
+                      </Button>
+                    </form>
+                    <SignOutEverywhereDialog
+                      action={signOutEverywhereAction}
+                      disabled={!isAuthed}
+                      triggerLabel={t("sessions.signOutEverywhere")}
+                      title={t("sessions.signOutEverywhereDialog.title")}
+                      description={t(
+                        "sessions.signOutEverywhereDialog.description",
+                      )}
+                      cancelLabel={t("sessions.signOutEverywhereDialog.cancel")}
+                      confirmLabel={t(
+                        "sessions.signOutEverywhereDialog.confirm",
+                      )}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t("sessions.note")}
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="appearance">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("appearance.title")}</CardTitle>
+                  <CardDescription>{t("appearance.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ThemeSwitcher />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="language">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("language.title")}</CardTitle>
+                  <CardDescription>{t("language.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <LocaleSwitcher />
+                  <p className="text-sm text-muted-foreground">
+                    {t("language.note")}
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="shortcuts">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("shortcuts.title")}</CardTitle>
+                  <CardDescription>{t("shortcuts.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <NotesShortcutsSettings />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </section>
       </main>
       <SiteFooter />
