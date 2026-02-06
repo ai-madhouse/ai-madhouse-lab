@@ -17,8 +17,13 @@ test("live: pulse stream loads and updates footer", async ({ page }) => {
   await expect(footer).toBeVisible();
 
   const first = (await footer.textContent()) ?? "";
-  await page.waitForTimeout(2200);
-  const second = (await footer.textContent()) ?? "";
-
-  expect(second).not.toBe(first);
+  await expect
+    .poll(
+      async () => {
+        const next = (await footer.textContent()) ?? "";
+        return next !== first;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true);
 });

@@ -79,7 +79,7 @@ async function otherSectionTitles(page: Page) {
     .evaluateAll((nodes) =>
       nodes
         .map((node) => node.getAttribute("aria-label") || "")
-        .map((label) => label.replace(/^Open note:\\s*/, ""))
+        .map((label) => label.replace(/^Open note:\s*/, ""))
         .filter(Boolean),
     );
 
@@ -126,6 +126,25 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
         name: `Open note: ${noteToMutate}`,
       }),
     ).toBeVisible();
+    const pinnedCard = pinnedSection
+      .getByRole("button", {
+        name: `Open note: ${noteToMutate}`,
+      })
+      .locator("..");
+    const pinnedMarker = pinnedCard.getByRole("img", { name: "Pinned note" });
+    const pinnedMarkerBox = await pinnedMarker.boundingBox();
+    const dragHandleBox = await pinnedCard
+      .getByRole("button", { name: "Reorder note" })
+      .boundingBox();
+
+    expect(pinnedMarkerBox).not.toBeNull();
+    expect(dragHandleBox).not.toBeNull();
+    if (!pinnedMarkerBox || !dragHandleBox) {
+      throw new Error("Expected pinned marker and drag handle bounds");
+    }
+    expect(pinnedMarkerBox.x + pinnedMarkerBox.width).toBeLessThanOrEqual(
+      dragHandleBox.x,
+    );
 
     await pinnedSection
       .getByRole("button", { name: `Open note: ${noteToMutate}` })
@@ -156,6 +175,12 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
 
     const editDialog = page.getByRole("dialog", { name: "Edit note" });
     await expect(editDialog).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+
+    const closeButton = editDialog.getByRole("button", { name: "Close" });
+    await closeButton.hover();
+    await expect(page.getByRole("tooltip", { name: "Close" })).toHaveCount(0);
+    await expect(closeButton).not.toHaveAttribute("aria-describedby", /.+/);
 
     await editDialog.getByPlaceholder("Title").fill(editedTitle);
     await editDialog.getByPlaceholder(/Body/i).fill(editedBody);
@@ -195,7 +220,37 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
     const [first, second] = before;
     const expected = [second, first, ...before.slice(2)];
 
-    await reorderHandleFor(page, first).dragTo(noteCard(page, second));
+    const sourceHandle = reorderHandleFor(page, first);
+    const sourceBounds = await sourceHandle.boundingBox();
+    const targetBounds = await noteCard(page, second).boundingBox();
+    expect(sourceBounds).not.toBeNull();
+    expect(targetBounds).not.toBeNull();
+    if (!sourceBounds || !targetBounds) {
+      throw new Error("Expected drag source and target bounds");
+    }
+
+    const draggedCardWrapper = noteCard(page, first).locator("..");
+    const opacityBefore = await draggedCardWrapper.evaluate(
+      (node) => window.getComputedStyle(node).opacity,
+    );
+
+    await page.mouse.move(
+      sourceBounds.x + sourceBounds.width / 2,
+      sourceBounds.y + sourceBounds.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      targetBounds.x + targetBounds.width / 2,
+      targetBounds.y + targetBounds.height / 2,
+      { steps: 12 },
+    );
+
+    const opacityDuring = await draggedCardWrapper.evaluate(
+      (node) => window.getComputedStyle(node).opacity,
+    );
+    expect(opacityDuring).toBe(opacityBefore);
+
+    await page.mouse.up();
 
     await expect
       .poll(() => otherSectionTitles(page), {

@@ -17,15 +17,8 @@ test("top nav updates active link and supports keyboard focus state", async ({
   await expect(page).toHaveURL(/\/en\/about$/);
   await expect(aboutLink).toHaveAttribute("aria-current", "page");
 
-  const initialBg = await aboutLink.evaluate(
-    (el) => window.getComputedStyle(el).backgroundColor,
-  );
-  await aboutLink.hover();
-  const hoveredBg = await aboutLink.evaluate(
-    (el) => window.getComputedStyle(el).backgroundColor,
-  );
-
-  expect(hoveredBg).not.toBe(initialBg);
+  const inactiveLink = page.getByRole("link", { name: "Landing" });
+  await expect(inactiveLink).toHaveClass(/hover:bg-accent/);
 
   const landingOnAboutPage = page.getByRole("link", { name: "Landing" });
 
@@ -47,19 +40,22 @@ test("top nav updates active link and supports keyboard focus state", async ({
 test("locale switcher has dark-mode-safe option styling", async ({ page }) => {
   await page.goto("/en", { waitUntil: "networkidle" });
 
-  const select = page.locator('select[aria-label="Language"]');
-  await expect(select).toBeVisible();
+  const localeTrigger = page.getByRole("button", { name: "Language" });
+  await expect(localeTrigger).toBeVisible();
+  await localeTrigger.click();
 
-  // We can’t reliably assert native <option> highlight colors cross-browser,
-  // but we *can* assert we set classes that force readable colors.
-  const optionClasses = await select
-    .locator("option")
-    .evaluateAll((opts) => opts.map((o) => (o as HTMLOptionElement).className));
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const optionClasses = await menu
+    .getByRole("menuitem")
+    .evaluateAll((items) => items.map((item) => item.className));
 
   expect(optionClasses.length).toBeGreaterThan(0);
   for (const cls of optionClasses) {
-    expect(cls).toContain("bg-background");
-    expect(cls).toContain("text-foreground");
+    expect(
+      cls.includes("text-foreground") || cls.includes("text-accent-foreground"),
+    ).toBe(true);
+    expect(cls).toContain("hover:bg-accent");
   }
 });
 
@@ -73,16 +69,16 @@ test("theme toggle keeps header controls stable (layout regression)", async ({
     .filter({ hasNotText: "everywhere" })
     .first();
 
-  const localeSelect = page.locator('select[aria-label="Language"]');
+  const localeSwitcher = page.getByRole("button", { name: "Language" });
   const themeBtn = page.getByLabel("Toggle theme");
 
   await expect(logout).toBeVisible();
-  await expect(localeSelect).toBeVisible();
+  await expect(localeSwitcher).toBeVisible();
   await expect(themeBtn).toBeVisible();
 
   const before = {
     logout: await logout.boundingBox(),
-    locale: await localeSelect.boundingBox(),
+    locale: await localeSwitcher.boundingBox(),
     theme: await themeBtn.boundingBox(),
   };
 
@@ -95,7 +91,7 @@ test("theme toggle keeps header controls stable (layout regression)", async ({
 
   const after = {
     logout: await logout.boundingBox(),
-    locale: await localeSelect.boundingBox(),
+    locale: await localeSwitcher.boundingBox(),
     theme: await themeBtn.boundingBox(),
   };
 

@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/roiui/button";
+import { Toolbar, ToolbarGroup } from "@/components/roiui/toolbar";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   buildNotesEditorShortcutFromKeyEvent,
@@ -253,140 +254,147 @@ export function NoteBodyEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Tooltip content={`Bold (${boldShortcutLabel})`}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Bold"
-            onClick={() =>
-              applyEdit((text, start, end) => wrap(text, start, end, "**"))
-            }
-          >
-            <Bold className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content={`Italic (${italicShortcutLabel})`}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Italic"
-            onClick={() =>
-              applyEdit((text, start, end) => wrap(text, start, end, "*"))
-            }
-          >
-            <Italic className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Inline code">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Inline code"
-            onClick={() =>
-              applyEdit((text, start, end) => wrap(text, start, end, "`"))
-            }
-          >
-            <Code className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content={`Link (${linkShortcutLabel})`}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Link"
-            onClick={() =>
-              applyEdit((text, start, end) => {
-                const selected = text.slice(start, end) || "link";
-                const open = "[";
-                const mid = "](";
-                const close = ")";
-                const next = `${text.slice(0, start)}${open}${selected}${mid}https://example.com${close}${text.slice(end)}`;
+      <Toolbar
+        aria-label="Note editor toolbar"
+        className="flex-wrap items-start justify-start gap-2"
+      >
+        <ToolbarGroup className="flex-wrap">
+          <Tooltip content={`Bold (${boldShortcutLabel})`}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Bold"
+              onClick={() =>
+                applyEdit((text, start, end) => wrap(text, start, end, "**"))
+              }
+            >
+              <Bold className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content={`Italic (${italicShortcutLabel})`}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Italic"
+              onClick={() =>
+                applyEdit((text, start, end) => wrap(text, start, end, "*"))
+              }
+            >
+              <Italic className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Inline code">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Inline code"
+              onClick={() =>
+                applyEdit((text, start, end) => wrap(text, start, end, "`"))
+              }
+            >
+              <Code className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content={`Link (${linkShortcutLabel})`}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Link"
+              onClick={() =>
+                applyEdit((text, start, end) => {
+                  const selected = text.slice(start, end) || "link";
+                  const open = "[";
+                  const mid = "](";
+                  const close = ")";
+                  const next = `${text.slice(0, start)}${open}${selected}${mid}https://example.com${close}${text.slice(end)}`;
 
-                const urlStart =
-                  start + open.length + selected.length + mid.length;
-                const urlEnd = urlStart + "https://example.com".length;
-                return { next, range: { start: urlStart, end: urlEnd } };
-              })
-            }
-          >
-            <Link2 className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Quote">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Quote"
-            onClick={() =>
-              applyEdit((text, start, end) =>
-                prefixLines(text, start, end, "> "),
-              )
-            }
-          >
-            <Quote className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Bullet list">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Bullet list"
-            onClick={() =>
-              applyEdit((text, start, end) =>
-                prefixLines(text, start, end, "- "),
-              )
-            }
-          >
-            <List className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Numbered list">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            aria-label="Numbered list"
-            onClick={() =>
-              applyEdit((text, start, end) =>
-                prefixLines(text, start, end, "1. "),
-              )
-            }
-          >
-            <ListOrdered className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </Tooltip>
+                  const urlStart =
+                    start + open.length + selected.length + mid.length;
+                  const urlEnd = urlStart + "https://example.com".length;
+                  return { next, range: { start: urlStart, end: urlEnd } };
+                })
+              }
+            >
+              <Link2 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Quote">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Quote"
+              onClick={() =>
+                applyEdit((text, start, end) =>
+                  prefixLines(text, start, end, "> "),
+                )
+              }
+            >
+              <Quote className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Bullet list">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Bullet list"
+              onClick={() =>
+                applyEdit((text, start, end) =>
+                  prefixLines(text, start, end, "- "),
+                )
+              }
+            >
+              <List className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Numbered list">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              aria-label="Numbered list"
+              onClick={() =>
+                applyEdit((text, start, end) =>
+                  prefixLines(text, start, end, "1. "),
+                )
+              }
+            >
+              <ListOrdered className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+        </ToolbarGroup>
 
         {onSave ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            title={`Save (${saveShortcutLabel})`}
-            onClick={onSave}
-            className="gap-2"
-          >
-            <Save className="h-4 w-4" aria-label="Save" />
-            Save
-          </Button>
+          <ToolbarGroup>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              title={`Save (${saveShortcutLabel})`}
+              onClick={onSave}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" aria-label="Save" />
+              Save
+            </Button>
+          </ToolbarGroup>
         ) : null}
+      </Toolbar>
 
-        <p className="text-xs text-muted-foreground">{tipLabel}</p>
-      </div>
+      <p className="text-xs text-muted-foreground">{tipLabel}</p>
 
       <fieldset aria-label="Note editor" className="space-y-1 border-0 p-0">
         <textarea

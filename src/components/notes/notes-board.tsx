@@ -30,7 +30,7 @@ import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
 import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
-import { Badge } from "@/components/ui/badge";
+import { Toolbar, ToolbarGroup } from "@/components/roiui/toolbar";
 import {
   Card,
   CardContent,
@@ -41,7 +41,6 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip } from "@/components/ui/tooltip";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import {
   arrayMove,
@@ -912,7 +911,7 @@ export function NotesBoard() {
           setViewingNoteId(null);
         }}
         labelledBy={editingNote ? editDialogTitleId : viewDialogTitleId}
-        className="w-[min(96vw,56rem)]"
+        className="m-auto w-[min(96vw,64rem)] max-h-[min(90vh,56rem)] overflow-y-auto"
       >
         {editingNote ? (
           <div className="divide-y divide-border/70">
@@ -925,19 +924,17 @@ export function NotesBoard() {
                   {formatCreatedAt(editingNote.created_at)}
                 </p>
               </div>
-              <Tooltip content="Close">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={() => {
-                    setEditingNote(null);
-                  }}
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={() => {
+                  setEditingNote(null);
+                }}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Button>
             </div>
 
             <div className="space-y-4 p-6">
@@ -959,19 +956,21 @@ export function NotesBoard() {
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
               ) : null}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="outline" onClick={cancelEditing}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    void commitEditing();
-                  }}
-                  disabled={!dekKey}
-                >
-                  Save
-                </Button>
-              </div>
+              <Toolbar className="justify-end gap-2">
+                <ToolbarGroup>
+                  <Button variant="outline" onClick={cancelEditing}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      void commitEditing();
+                    }}
+                    disabled={!dekKey}
+                  >
+                    Save
+                  </Button>
+                </ToolbarGroup>
+              </Toolbar>
             </div>
           </div>
         ) : viewingNote ? (
@@ -985,53 +984,53 @@ export function NotesBoard() {
                   {formatCreatedAt(viewingNote.created_at)}
                 </p>
               </div>
-              <Tooltip content="Close">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={closeViewingNote}
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={closeViewingNote}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Button>
             </div>
 
             <div className="space-y-5 p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    startEditing(viewingNote);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" aria-hidden="true" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => togglePinned(viewingNote.id)}
-                >
-                  {isPinned(viewingNote.id) ? (
-                    <PinOff className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Pin className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {isPinned(viewingNote.id) ? "Unpin" : "Pin"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmingDelete(true)}
-                  disabled={confirmingDelete || deleting}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Delete
-                </Button>
-              </div>
+              <Toolbar className="justify-start gap-2">
+                <ToolbarGroup className="flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      startEditing(viewingNote);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => togglePinned(viewingNote.id)}
+                  >
+                    {isPinned(viewingNote.id) ? (
+                      <PinOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Pin className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {isPinned(viewingNote.id) ? "Unpin" : "Pin"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={confirmingDelete || deleting}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    Delete
+                  </Button>
+                </ToolbarGroup>
+              </Toolbar>
 
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
@@ -1175,34 +1174,37 @@ function NoteCard({
     <div
       ref={outerRef}
       style={style}
-      className={cn(isDragging ? "opacity-60" : "")}
+      data-dragging={isDragging ? "true" : "false"}
     >
       <Card className="group relative space-y-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
         {dragHandle}
+        {pinned ? (
+          <span
+            role="img"
+            aria-label="Pinned note"
+            className="pointer-events-none absolute left-3 top-3 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground shadow-sm"
+          >
+            <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        ) : null}
         <button
           type="button"
           aria-label={`Open note: ${title}`}
           onClick={onOpen}
           className="absolute inset-0 z-10 cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
-        <div className="relative flex items-start justify-between gap-3">
+        <div className="relative flex items-start gap-3">
           <input
             value={note.title}
             placeholder="Untitled"
             readOnly
             tabIndex={-1}
             aria-hidden="true"
-            className="pointer-events-none h-auto w-full truncate rounded-none border-0 bg-transparent p-0 text-base font-semibold leading-6 text-foreground shadow-none outline-none"
+            className={cn(
+              "pointer-events-none h-auto w-full truncate rounded-none border-0 bg-transparent p-0 text-base font-semibold leading-6 text-foreground shadow-none outline-none",
+              pinned ? "pl-8" : "",
+            )}
           />
-          {pinned ? (
-            <Badge
-              variant="outline"
-              className="gap-1 bg-background text-muted-foreground"
-            >
-              <Pin className="h-3.5 w-3.5" aria-hidden="true" />
-              Pinned
-            </Badge>
-          ) : null}
         </div>
 
         {preview ? (
