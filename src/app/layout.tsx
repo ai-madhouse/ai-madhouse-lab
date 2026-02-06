@@ -69,7 +69,7 @@ export default async function RootLayout({
           defaultTheme="system"
           storageKey="madhouse-theme"
         >
-          {children}
+          <div className="root">{children}</div>
         </ThemeProvider>
       </body>
     </html>
