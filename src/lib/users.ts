@@ -1,6 +1,5 @@
 import { getDb } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
-import { passwordSchema, usernameSchema } from "@/lib/validation/users";
 
 export type UserRow = {
   username: string;
@@ -9,19 +8,6 @@ export type UserRow = {
 };
 
 export { normalizeUsername } from "@/lib/validation/users";
-
-// Backwards-compatible helpers (internally powered by zod).
-export function validateUsername(username: string) {
-  const parsed = usernameSchema.safeParse(username);
-  if (parsed.success) return null;
-  return parsed.error.issues[0]?.message ?? "invalid username";
-}
-
-export function validatePassword(password: string) {
-  const parsed = passwordSchema.safeParse(password);
-  if (parsed.success) return null;
-  return parsed.error.issues[0]?.message ?? "invalid password";
-}
 
 export async function getUserByUsername(
   username: string,
