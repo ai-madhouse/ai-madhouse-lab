@@ -2,6 +2,48 @@ import { expect, test } from "@playwright/test";
 
 import { registerAndLandOnDashboard } from "./helpers";
 
+test("top nav updates active link and supports keyboard focus state", async ({
+  page,
+}) => {
+  await page.goto("/en", { waitUntil: "networkidle" });
+
+  const landingLink = page.getByRole("link", { name: "Landing" });
+  const aboutLink = page.getByRole("link", { name: "About" });
+
+  await expect(landingLink).toHaveAttribute("aria-current", "page");
+  await expect(aboutLink).not.toHaveAttribute("aria-current", "page");
+
+  await aboutLink.click();
+  await expect(page).toHaveURL(/\/en\/about$/);
+  await expect(aboutLink).toHaveAttribute("aria-current", "page");
+
+  const initialBg = await aboutLink.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+  await aboutLink.hover();
+  const hoveredBg = await aboutLink.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+
+  expect(hoveredBg).not.toBe(initialBg);
+
+  const landingOnAboutPage = page.getByRole("link", { name: "Landing" });
+
+  for (let i = 0; i < 12; i += 1) {
+    if (
+      await landingOnAboutPage.evaluate((el) => el === document.activeElement)
+    )
+      break;
+    await page.keyboard.press("Tab");
+  }
+
+  await expect(landingOnAboutPage).toBeFocused();
+  const isFocusVisible = await landingOnAboutPage.evaluate((el) =>
+    el.matches(":focus-visible"),
+  );
+  expect(isFocusVisible).toBe(true);
+});
+
 test("locale switcher has dark-mode-safe option styling", async ({ page }) => {
   await page.goto("/en", { waitUntil: "networkidle" });
 
