@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
+import { fetchCsrfTokenOrThrow } from "@/lib/client/csrf";
 import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import {
   createWrappedDek,
@@ -23,17 +24,6 @@ type UnlockResult = {
   csrfToken: string;
   dekKey: CryptoKey;
 };
-
-async function fetchCsrfToken() {
-  const res = await fetch("/api/csrf", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; token: string }
-    | { ok: false; error?: string }
-    | null;
-
-  if (res.ok && json && "ok" in json && json.ok) return json.token;
-  throw new Error((json && "error" in json && json.error) || "csrf failed");
-}
 
 async function fetchKeyRecord() {
   const res = await fetch("/api/crypto/key", { cache: "no-store" });
@@ -124,7 +114,7 @@ export function E2EEDekUnlockCard({
       setError(null);
       setLoading(true);
       try {
-        const token = await fetchCsrfToken();
+        const token = await fetchCsrfTokenOrThrow();
         if (cancelled) return;
         setCsrfToken(token);
 
@@ -219,7 +209,7 @@ export function E2EEDekUnlockCard({
 
     setBusy(true);
     try {
-      const token = csrfToken || (await fetchCsrfToken());
+      const token = csrfToken || (await fetchCsrfTokenOrThrow());
       setCsrfToken(token);
 
       const created = await createWrappedDek(passphrase);
@@ -277,7 +267,7 @@ export function E2EEDekUnlockCard({
     setBusy(true);
 
     try {
-      const token = csrfToken || (await fetchCsrfToken());
+      const token = csrfToken || (await fetchCsrfTokenOrThrow());
       setCsrfToken(token);
 
       const record = keyRecord ?? (await fetchKeyRecord());
