@@ -5,8 +5,8 @@ import { useState } from "react";
 
 import { PasswordFields } from "@/components/auth/password-fields";
 import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
+import { Input } from "@/components/roiui/input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerFormSchema } from "@/lib/schemas/auth";
 

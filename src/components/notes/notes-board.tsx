@@ -28,9 +28,9 @@ import {
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
+import { Input } from "@/components/roiui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";

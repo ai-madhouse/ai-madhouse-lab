@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PasswordRequirements } from "@/components/auth/password-requirements";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/roiui/input";
 import { Label } from "@/components/ui/label";
 
 export function PasswordFields({
