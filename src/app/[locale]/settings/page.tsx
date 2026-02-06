@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/app/[locale]/settings/change-password-form";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
 import { NotesShortcutsSettings } from "@/components/settings/notes-shortcuts-settings";
 import { SessionsListE2EE } from "@/components/settings/sessions-list-e2ee";
@@ -8,7 +9,6 @@ import { SignOutEverywhereDialog } from "@/components/settings/sign-out-everywhe
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,

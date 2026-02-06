@@ -28,9 +28,9 @@ import {
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
+import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
