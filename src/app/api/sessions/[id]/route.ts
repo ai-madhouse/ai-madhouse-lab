@@ -2,20 +2,16 @@ export const runtime = "nodejs";
 
 import type { NextRequest } from "next/server";
 
-import {
-  authCookieName,
-  decodeAndVerifySessionCookie,
-  verifyCsrfToken,
-} from "@/lib/auth";
+import { verifyCsrfToken } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { getSessionIdFromRequest } from "@/lib/server/request-session";
 import { revokeSessionAndNotify } from "@/lib/sessions-notify";
 
 export async function DELETE(
   request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const cookie = request.cookies.get(authCookieName)?.value;
-  const currentSessionId = decodeAndVerifySessionCookie(cookie);
+  const currentSessionId = getSessionIdFromRequest(request);
   if (!currentSessionId) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

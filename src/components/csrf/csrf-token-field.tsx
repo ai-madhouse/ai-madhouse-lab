@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { fetchCsrfTokenOrNull } from "@/lib/client/csrf";
+
 export function CsrfTokenField({ name = "csrfToken" }: { name?: string }) {
   const [token, setToken] = useState<string>("");
 
@@ -9,12 +11,8 @@ export function CsrfTokenField({ name = "csrfToken" }: { name?: string }) {
     let cancelled = false;
 
     async function run() {
-      const res = await fetch("/api/csrf", { cache: "no-store" });
-      const json = (await res.json().catch(() => null)) as {
-        ok: true;
-        token: string;
-      } | null;
-      if (!cancelled && json?.ok) setToken(json.token);
+      const csrfToken = await fetchCsrfTokenOrNull();
+      if (!cancelled && csrfToken) setToken(csrfToken);
     }
 
     run();

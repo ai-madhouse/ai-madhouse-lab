@@ -2,19 +2,11 @@ export const runtime = "nodejs";
 
 import type { NextRequest } from "next/server";
 
-import { authCookieName, decodeAndVerifySessionCookie } from "@/lib/auth";
 import { getUserDashboardMetrics } from "@/lib/dashboard-metrics";
-import { getSession } from "@/lib/sessions";
-
-async function requireSession(request: NextRequest) {
-  const rawCookie = request.cookies.get(authCookieName)?.value;
-  const sessionId = decodeAndVerifySessionCookie(rawCookie);
-  if (!sessionId) return null;
-  return await getSession(sessionId);
-}
+import { requireSessionFromRequest } from "@/lib/server/request-session";
 
 export async function GET(request: NextRequest) {
-  const session = await requireSession(request);
+  const session = await requireSessionFromRequest(request);
   if (!session) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

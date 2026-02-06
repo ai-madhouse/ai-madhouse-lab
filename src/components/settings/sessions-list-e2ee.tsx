@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { Button } from "@/components/roiui/button";
+import { fetchCsrfTokenOrNull } from "@/lib/client/csrf";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import { describeUserAgent } from "@/lib/user-agent";
 
@@ -137,14 +138,8 @@ export function SessionsListE2EE({
 
       try {
         // Fetch a fresh CSRF token for session actions.
-        const csrfRes = await fetch("/api/csrf", { cache: "no-store" });
-        const csrfJson = (await csrfRes.json().catch(() => null)) as
-          | { ok: true; token: string }
-          | { ok: false }
-          | null;
-        if (!cancelled && csrfRes.ok && csrfJson && "token" in csrfJson) {
-          setCsrfToken(csrfJson.token);
-        }
+        const token = await fetchCsrfTokenOrNull();
+        if (!cancelled && token) setCsrfToken(token);
       } catch {
         // ignore
       }
