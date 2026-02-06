@@ -3,7 +3,6 @@ export const runtime = "nodejs";
 import type { NextRequest } from "next/server";
 
 import { getDb } from "@/lib/db";
-import { buildNotesStreamTickResult } from "@/lib/notes-stream-events";
 import { requireSessionFromRequest } from "@/lib/server/request-session";
 
 async function getLatestEventId(username: string) {
@@ -50,13 +49,13 @@ export async function GET(request: NextRequest) {
       const intervalId = setInterval(async () => {
         try {
           const latest = await getLatestEventId(session.username);
-          const tick = buildNotesStreamTickResult({
-            lastId,
-            latestId: latest,
-          });
-          lastId = tick.nextLastId;
-          // Emits either notes:changed or ping keep-alive.
-          send(tick.payload.event, tick.payload.data);
+          if (latest && latest !== lastId) {
+            lastId = latest;
+            send("notes:changed", { id: latest });
+          } else {
+            // Keep-alive event to prevent proxies from closing the stream.
+            send("ping", { ts: Date.now() });
+          }
         } catch {
           // ignore
         }
