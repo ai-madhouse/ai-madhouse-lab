@@ -1,9 +1,15 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ModalDialog } from "@/components/ui/modal-dialog";
 
 export function SignOutEverywhereDialog({
   action,
@@ -23,35 +29,22 @@ export function SignOutEverywhereDialog({
   confirmLabel: string;
 }) {
   const [open, setOpen] = useState(false);
-  const titleId = useId();
-  const descriptionId = useId();
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="destructive"
-        disabled={disabled}
-        onClick={() => setOpen(true)}
-      >
-        {triggerLabel}
-      </Button>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={
+          <Button type="button" variant="destructive" disabled={disabled}>
+            {triggerLabel}
+          </Button>
+        }
+      />
 
-      <ModalDialog
-        open={open}
-        onOpenChange={setOpen}
-        labelledBy={titleId}
-        describedBy={descriptionId}
-        className="w-[min(96vw,36rem)]"
-      >
+      <AlertDialogContent className="w-[min(96vw,36rem)]">
         <div className="space-y-5 p-6">
           <div className="space-y-1">
-            <h2 id={titleId} className="text-lg font-semibold">
-              {title}
-            </h2>
-            <p id={descriptionId} className="text-sm text-muted-foreground">
-              {description}
-            </p>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -62,14 +55,19 @@ export function SignOutEverywhereDialog({
             >
               {cancelLabel}
             </Button>
-            <form action={action}>
+            <form
+              action={action}
+              onSubmit={() => {
+                setOpen(false);
+              }}
+            >
               <Button type="submit" variant="destructive">
                 {confirmLabel}
               </Button>
             </form>
           </div>
         </div>
-      </ModalDialog>
-    </>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
