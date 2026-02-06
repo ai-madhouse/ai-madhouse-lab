@@ -1,4 +1,10 @@
-import { ArrowRight, LineChart, Rocket, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  LineChart,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { buttonClassName } from "@/components/roiui/button";
 import { SiteFooter } from "@/components/site-footer";
@@ -26,28 +32,42 @@ export default async function LandingPage({
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Landing");
   const isAuthed = await isAuthenticated();
+  const primaryHref = isAuthed
+    ? `/${locale}/dashboard`
+    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/dashboard`)}`;
+  const secondaryHref = isAuthed
+    ? `/${locale}/settings`
+    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/settings`)}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen overflow-x-clip bg-background">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.18),transparent_55%),radial-gradient(circle_at_70%_20%,hsl(var(--secondary-foreground)/0.08),transparent_45%)]"
+      />
       <SiteHeader isAuthed={isAuthed} />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-12">
-        <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="space-y-6">
-            <Badge variant="secondary">{t("badge")}</Badge>
-            <h1 className="text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-              {t("title")}
-            </h1>
-            <p className="text-lg text-muted-foreground md:text-xl">
-              {t("subtitle")}
-            </p>
-            <div className="flex flex-wrap gap-3">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-6 pb-16 pt-10 md:gap-20 md:pt-14">
+        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          <div className="space-y-8">
+            <div className="space-y-5">
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em]"
+              >
+                {t("badge")}
+              </Badge>
+              <h1 className="max-w-3xl text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+                {t("title")}
+              </h1>
+              <p className="max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
+                {t("subtitle")}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
               <Link
-                href={
-                  isAuthed
-                    ? `/${locale}/dashboard`
-                    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/dashboard`)}`
-                }
-                className={buttonClassName({ className: "gap-2" })}
+                data-testid="landing-primary-cta"
+                href={primaryHref}
+                className={buttonClassName({ size: "lg", className: "gap-2" })}
               >
                 {t("ctaPrimary")}
                 <ArrowRight
@@ -56,51 +76,55 @@ export default async function LandingPage({
                 />
               </Link>
               <Link
-                href={
-                  isAuthed
-                    ? `/${locale}/settings`
-                    : `/${locale}/login?next=${encodeURIComponent(`/${locale}/settings`)}`
-                }
-                className={buttonClassName({ variant: "outline" })}
+                href={secondaryHref}
+                className={buttonClassName({ variant: "surface", size: "lg" })}
               >
                 {t("ctaSecondary")}
               </Link>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { key: "latency" },
-                { key: "uptime" },
-                { key: "experiments" },
-              ].map((item) => (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(["latency", "uptime", "experiments"] as const).map((item) => (
                 <div
-                  key={item.key}
-                  className="rounded-2xl border border-border/60 bg-card p-4"
+                  key={item}
+                  className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm"
                 >
                   <p className="text-sm text-muted-foreground">
-                    {t(`stats.${item.key}.label`)}
+                    {t(`stats.${item}.label`)}
                   </p>
-                  <p className="text-2xl font-semibold">
-                    {t(`stats.${item.key}.value`)}
+                  <p className="text-2xl font-semibold tracking-tight">
+                    {t(`stats.${item}.value`)}
                   </p>
                 </div>
               ))}
             </div>
           </div>
-          <Card className="bg-gradient-to-br from-card via-card to-secondary/40">
-            <CardHeader>
-              <CardTitle>{t("heroCard.title")}</CardTitle>
-              <CardDescription>{t("heroCard.subtitle")}</CardDescription>
+          <Card className="relative overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-secondary/60">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute right-6 top-6 h-16 w-16 rounded-full bg-primary/10 blur-2xl"
+            />
+            <CardHeader className="space-y-3">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" />
+                {t("heroCard.title")}
+              </div>
+              <CardTitle className="text-2xl tracking-tight">
+                {t("heroCard.subtitle")}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {["signal", "guardrails", "playbooks"].map((item) => (
-                <div key={item} className="space-y-2">
+            <CardContent className="space-y-4">
+              {(["signal", "guardrails", "playbooks"] as const).map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-border/70 bg-background/70 p-4"
+                >
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     {t(`heroCard.${item}.eyebrow`)}
                   </p>
-                  <p className="text-base font-medium">
+                  <p className="mt-2 text-base font-medium">
                     {t(`heroCard.${item}.title`)}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {t(`heroCard.${item}.description`)}
                   </p>
                 </div>
@@ -110,20 +134,22 @@ export default async function LandingPage({
         </section>
 
         <section className="space-y-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {t("features.eyebrow")}
               </p>
-              <h2 className="text-3xl font-semibold">{t("features.title")}</h2>
+              <h2 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-4xl">
+                {t("features.title")}
+              </h2>
             </div>
-            <p className="max-w-xl text-muted-foreground">
+            <p className="max-w-2xl text-muted-foreground">
               {t("features.subtitle")}
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Card className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="space-y-3">
                 <Rocket
                   className="h-5 w-5"
                   aria-label={t("features.cards.experience.icon")}
@@ -134,8 +160,8 @@ export default async function LandingPage({
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
+            <Card className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="space-y-3">
                 <LineChart
                   className="h-5 w-5"
                   aria-label={t("features.cards.engineering.icon")}
@@ -146,8 +172,8 @@ export default async function LandingPage({
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
+            <Card className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="space-y-3">
                 <ShieldCheck
                   className="h-5 w-5"
                   aria-label={t("features.cards.security.icon")}
@@ -161,38 +187,41 @@ export default async function LandingPage({
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card>
+        <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+          <Card className="border-border/70 bg-card/95 shadow-sm">
             <CardHeader>
               <CardTitle>{t("timeline.title")}</CardTitle>
               <CardDescription>{t("timeline.subtitle")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {["discover", "shape", "ship"].map((item) => (
-                <div key={item} className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    {t(`timeline.${item}.eyebrow`)}
-                  </p>
-                  <p className="text-base font-medium">
-                    {t(`timeline.${item}.title`)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t(`timeline.${item}.description`)}
-                  </p>
+            <CardContent className="space-y-4">
+              {(["discover", "shape", "ship"] as const).map((item, index) => (
+                <div key={item}>
+                  <div className="space-y-2 rounded-2xl border border-border/60 bg-background/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      {t(`timeline.${item}.eyebrow`)}
+                    </p>
+                    <p className="text-base font-medium">
+                      {t(`timeline.${item}.title`)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t(`timeline.${item}.description`)}
+                    </p>
+                  </div>
+                  {index < 2 ? <Separator className="mt-4" /> : null}
                 </div>
               ))}
             </CardContent>
           </Card>
-          <Card className="bg-secondary/40">
+          <Card className="border-border/70 bg-secondary/45 shadow-sm">
             <CardHeader>
               <CardTitle>{t("signal.title")}</CardTitle>
               <CardDescription>{t("signal.subtitle")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {["drift", "guard", "launch"].map((item) => (
+              {(["drift", "guard", "launch"] as const).map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-border/60 bg-background/70 p-4"
+                  className="rounded-2xl border border-border/60 bg-background/75 p-4"
                 >
                   <p className="text-sm font-medium">
                     {t(`signal.${item}.title`)}

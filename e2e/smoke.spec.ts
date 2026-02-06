@@ -2,6 +2,25 @@ import { expect, test } from "@playwright/test";
 
 import { registerAndLandOnDashboard } from "./helpers";
 
+test("landing shows top nav and routes primary CTA", async ({ page }) => {
+  await page.goto("/en", { waitUntil: "networkidle" });
+
+  const topNav = page.locator("header nav");
+  await expect(topNav).toBeVisible();
+  await expect(topNav.getByRole("link", { name: "Landing" })).toBeVisible();
+  await expect(topNav.getByRole("link", { name: "About" })).toBeVisible();
+
+  const primaryCta = page.getByTestId("landing-primary-cta");
+  await expect(primaryCta).toBeVisible();
+  await expect(primaryCta).toHaveAttribute(
+    "href",
+    /\/en\/login\?next=%2Fen%2Fdashboard$/,
+  );
+
+  await primaryCta.click();
+  await expect(page).toHaveURL(/\/en\/login\?next=%2Fen%2Fdashboard/);
+});
+
 test("CSP + Reporting-Endpoints headers present in production", async ({
   page,
 }) => {
