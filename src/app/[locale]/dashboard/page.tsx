@@ -112,8 +112,12 @@ export default async function DashboardPage({
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader isAuthed={isAuthed} />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
-        <section className="space-y-2">
+      <main
+        className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12"
+        data-layout-root="dashboard-layout"
+        data-layout-key="dashboard-main"
+      >
+        <section className="space-y-2" data-layout-key="dashboard-intro">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t("eyebrow")}
           </p>
@@ -133,7 +137,10 @@ export default async function DashboardPage({
           </div>
         ) : null}
 
-        <section className="grid gap-6 md:grid-cols-4">
+        <section
+          className="grid gap-6 md:grid-cols-4"
+          data-layout-key="dashboard-metrics"
+        >
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -214,7 +221,10 @@ export default async function DashboardPage({
           </Card>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section
+          className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
+          data-layout-key="dashboard-actions"
+        >
           <Card>
             <CardHeader>
               <CardTitle>{t("next.title")}</CardTitle>

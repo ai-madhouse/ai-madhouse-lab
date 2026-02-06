@@ -35,7 +35,7 @@ export const ToolbarNav = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <nav
     ref={ref}
-    className={cn("flex flex-wrap items-center gap-2", className)}
+    className={cn("flex min-w-0 items-center gap-2", className)}
     {...props}
   />
 ));

@@ -31,17 +31,21 @@ export function LocaleSwitcher() {
         <button
           type="button"
           className={cn(
-            "flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm",
+            "flex h-9 w-[4.5rem] shrink-0 items-center justify-between gap-1 rounded-full border border-border/60 bg-card px-2 text-sm text-muted-foreground shadow-sm sm:w-36 sm:gap-2 sm:px-3",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
           )}
           aria-label={t("label")}
+          data-layout-key="locale-switcher"
           {...triggerProps}
         >
-          <Globe2 className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm font-medium text-foreground">
+          <Globe2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="text-[11px] font-semibold uppercase text-foreground sm:hidden">
+            {locale}
+          </span>
+          <span className="hidden min-w-0 truncate text-sm font-medium text-foreground sm:inline">
             {t(locale)}
           </span>
-          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
         </button>
       )}
       contentClassName="min-w-[10rem]"

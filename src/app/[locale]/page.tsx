@@ -46,8 +46,15 @@ export default async function LandingPage({
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.18),transparent_55%),radial-gradient(circle_at_70%_20%,hsl(var(--secondary-foreground)/0.08),transparent_45%)]"
       />
       <SiteHeader isAuthed={isAuthed} />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-6 pb-16 pt-10 md:gap-20 md:pt-14">
-        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+      <main
+        className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-6 pb-16 pt-10 md:gap-20 md:pt-14"
+        data-layout-root="landing-layout"
+        data-layout-key="landing-main"
+      >
+        <section
+          className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start"
+          data-layout-key="landing-hero"
+        >
           <div className="space-y-8">
             <div className="space-y-5">
               <Badge
@@ -133,7 +140,7 @@ export default async function LandingPage({
           </Card>
         </section>
 
-        <section className="space-y-8">
+        <section className="space-y-8" data-layout-key="landing-features">
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -187,7 +194,10 @@ export default async function LandingPage({
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+        <section
+          className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]"
+          data-layout-key="landing-timeline"
+        >
           <Card className="border-border/70 bg-card/95 shadow-sm">
             <CardHeader>
               <CardTitle>{t("timeline.title")}</CardTitle>
