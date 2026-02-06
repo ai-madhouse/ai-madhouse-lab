@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { FormError, FormField } from "@/components/ui/form";
 import { registerFormSchema } from "@/lib/schemas/auth";
 
 export function RegisterForm({
@@ -55,23 +55,8 @@ export function RegisterForm({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {error ? (
-          <div
-            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-            role="alert"
-          >
-            {errorText}
-          </div>
-        ) : null}
-
-        {clientError ? (
-          <div
-            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-            role="alert"
-          >
-            {clientError}
-          </div>
-        ) : null}
+        {error ? <FormError>{errorText}</FormError> : null}
+        {clientError ? <FormError>{clientError}</FormError> : null}
 
         <form
           action={action}
@@ -102,17 +87,15 @@ export function RegisterForm({
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="next" value={nextPath} />
 
-          <div className="space-y-2">
-            <Label htmlFor="username">{usernameLabel}</Label>
+          <FormField id="username" label={usernameLabel}>
             <Input
-              id="username"
               name="username"
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
               required
             />
-          </div>
+          </FormField>
 
           <PasswordFields
             passwordId="password"

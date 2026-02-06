@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PasswordRequirements } from "@/components/auth/password-requirements";
 import { Input } from "@/components/roiui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
 
 export function PasswordFields({
   passwordId,
@@ -24,29 +24,28 @@ export function PasswordFields({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor={passwordId}>{passwordLabel}</Label>
+      <FormField
+        id={passwordId}
+        label={passwordLabel}
+        hint={<PasswordRequirements password={password} />}
+      >
         <Input
-          id={passwordId}
           name={passwordName}
           type="password"
           autoComplete="new-password"
           required
           onChange={(e) => setPassword(e.target.value)}
         />
-        <PasswordRequirements password={password} />
-      </div>
+      </FormField>
 
-      <div className="space-y-2">
-        <Label htmlFor={password2Id}>{password2Label}</Label>
+      <FormField id={password2Id} label={password2Label}>
         <Input
-          id={password2Id}
           name={password2Name}
           type="password"
           autoComplete="new-password"
           required
         />
-      </div>
+      </FormField>
     </div>
   );
 }
