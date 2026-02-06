@@ -5,8 +5,8 @@ import { useState } from "react";
 
 import { PasswordFields } from "@/components/auth/password-fields";
 import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
+import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
-import { Button } from "@/components/ui/button";
 import {
   CardContent,
   CardDescription,

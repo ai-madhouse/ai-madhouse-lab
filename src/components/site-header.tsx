@@ -17,8 +17,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { Button } from "@/components/roiui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
 import { cn, safeParseJson } from "@/lib/utils";

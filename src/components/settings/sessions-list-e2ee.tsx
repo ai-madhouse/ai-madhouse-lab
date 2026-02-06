@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/roiui/button";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import { describeUserAgent } from "@/lib/user-agent";
 
