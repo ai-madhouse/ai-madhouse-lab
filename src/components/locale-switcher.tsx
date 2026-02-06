@@ -1,11 +1,12 @@
 "use client";
 
-import { Globe2 } from "lucide-react";
+import { ChevronDown, Globe2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import type React from "react";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { locales } from "@/lib/i18n";
 import { switchLocalePathname } from "@/lib/locale-path";
+import { cn } from "@/lib/utils";
 
 export function LocaleSwitcher() {
   const locale = useLocale();
@@ -14,8 +15,7 @@ export function LocaleSwitcher() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextLocale = event.target.value;
+  const handleSelect = (nextLocale: string) => {
     const nextPath = switchLocalePathname({ pathname, nextLocale });
 
     const query = searchParams.toString();
@@ -25,25 +25,36 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <label className="flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm focus-within:ring-2 focus-within:ring-primary/40">
-      <Globe2 className="h-4 w-4" aria-label={t("icon")} />
-      <span className="sr-only">{t("label")}</span>
-      <select
-        value={locale}
-        onChange={handleChange}
-        className="appearance-none bg-transparent pr-5 text-sm font-medium text-foreground outline-none"
-        aria-label={t("label")}
-      >
-        {locales.map((entry) => (
-          <option
-            key={entry}
-            value={entry}
-            className="bg-background text-foreground"
-          >
-            {t(entry)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <DropdownMenu
+      align="start"
+      trigger={(triggerProps) => (
+        <button
+          type="button"
+          className={cn(
+            "flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          )}
+          aria-label={t("label")}
+          {...triggerProps}
+        >
+          <Globe2 className="h-4 w-4" aria-hidden="true" />
+          <span className="text-sm font-medium text-foreground">
+            {t(locale)}
+          </span>
+          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+        </button>
+      )}
+      contentClassName="min-w-[10rem]"
+    >
+      {locales.map((entry) => (
+        <DropdownMenuItem
+          key={entry}
+          onSelect={() => handleSelect(entry)}
+          className={entry === locale ? "bg-accent text-accent-foreground" : ""}
+        >
+          {t(entry)}
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenu>
   );
 }
