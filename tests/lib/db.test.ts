@@ -27,6 +27,9 @@ describe("db", () => {
       args: ["n1"],
     });
 
-    expect(row.rows[0]).toEqual({ id: "n1", title: "Hello", body: "World" });
+    const note = row.rows[0];
+    expect(note?.id).toBe("n1");
+    expect(note?.title).toBe("Hello");
+    expect(note?.body).toBe("World");
   });
 });

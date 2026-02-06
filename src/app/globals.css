@@ -101,6 +101,6 @@
   background: hsl(var(--primary) / 0.15);
 }
 
-.madhouse-modal-dialog::backdrop {
+.madhouse-dialog::backdrop {
   background: rgb(0 0 0 / 0.55);
 }
