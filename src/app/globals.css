@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* ROIUI quick-start requirement: portal container + isolated stacking context. */
+.root {
+  isolation: isolate;
+}
+
+@layer fallbacks, dynamic;
+
 :root {
   --font-sans: ui-sans-serif;
   --font-mono: ui-monospace;
@@ -23,6 +30,10 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius-inner: 0.175rem;
+
+  /* ROIUI: optional vars used by some primitives (safe defaults). */
+  --dialog-overlay: rgb(0 0 0 / 0.55);
+  --dialog-z: 100;
 }
 
 .dark {
