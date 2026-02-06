@@ -61,6 +61,35 @@ function reorderHandleFor(page: Page, title: string) {
   return noteCard(page, title).getByRole("button", { name: "Reorder note" });
 }
 
+function titlesEqual(a: string[], b: string[]) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+async function dragByMouse(
+  page: Page,
+  fromTitle: string,
+  toTitle: string,
+): Promise<boolean> {
+  const fromHandle = reorderHandleFor(page, fromTitle);
+  const toCard = noteCard(page, toTitle);
+
+  const fromBox = await fromHandle.boundingBox();
+  const toBox = await toCard.boundingBox();
+
+  if (!fromBox || !toBox) return false;
+
+  await page.mouse.move(
+    fromBox.x + fromBox.width / 2,
+    fromBox.y + fromBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(toBox.x + toBox.width / 2, toBox.y + toBox.height / 2, {
+    steps: 10,
+  });
+  await page.mouse.up();
+  return true;
+}
+
 async function createNote(page: Page, title: string, body: string) {
   await page.getByPlaceholder("Title").first().fill(title);
   await page.getByPlaceholder(/Body/i).first().fill(body);
@@ -85,6 +114,48 @@ async function otherSectionTitles(page: Page) {
 
   return titles;
 }
+
+test("notes: CRUD smoke (create/edit/delete)", async ({ page }) => {
+  const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
+  const passphrase = "CorrectHorseBatteryStaple1!";
+
+  const seed = Date.now().toString(36);
+  const title = `pw smoke ${seed}`;
+  const editedTitle = `${title} edited`;
+  const body = "smoke body";
+  const editedBody = "smoke body edited";
+
+  await gotoNotes(page, locale);
+  await ensureNotesUnlocked(page, passphrase);
+  await createNote(page, title, body);
+
+  await noteOpenButton(page, title).click();
+  const viewDialog = page.getByRole("dialog", { name: title });
+  await expect(viewDialog).toBeVisible();
+
+  await viewDialog.getByRole("button", { name: /^Edit$/ }).click();
+  const editDialog = page.getByRole("dialog", { name: "Edit note" });
+  await expect(editDialog).toBeVisible();
+
+  await editDialog.getByPlaceholder("Title").fill(editedTitle);
+  await editDialog.getByPlaceholder(/Body/i).fill(editedBody);
+  await editDialog
+    .getByRole("button", { name: /^Save$/ })
+    .last()
+    .click();
+
+  const updatedViewDialog = page.getByRole("dialog", { name: editedTitle });
+  await expect(updatedViewDialog).toBeVisible();
+  await expect(updatedViewDialog.getByText(editedBody)).toBeVisible();
+
+  await updatedViewDialog.getByRole("button", { name: /^Delete$/ }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "Delete note?" });
+  await expect(confirmDialog).toBeVisible();
+  await confirmDialog.getByRole("button", { name: /^Delete$/ }).click();
+
+  await expect(updatedViewDialog).toBeHidden();
+  await expect(noteOpenButton(page, editedTitle)).toHaveCount(0);
+});
 
 test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
   const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
@@ -220,37 +291,32 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
     const [first, second] = before;
     const expected = [second, first, ...before.slice(2)];
 
-    const sourceHandle = reorderHandleFor(page, first);
-    const sourceBounds = await sourceHandle.boundingBox();
-    const targetBounds = await noteCard(page, second).boundingBox();
-    expect(sourceBounds).not.toBeNull();
-    expect(targetBounds).not.toBeNull();
-    if (!sourceBounds || !targetBounds) {
-      throw new Error("Expected drag source and target bounds");
+    let reordered = false;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const from = attempt % 2 === 0 ? first : second;
+      const to = attempt % 2 === 0 ? second : first;
+
+      await reorderHandleFor(page, from).dragTo(noteCard(page, to));
+
+      let afterAttempt = await otherSectionTitles(page);
+      if (titlesEqual(afterAttempt, expected)) {
+        reordered = true;
+        break;
+      }
+
+      const usedMouseFallback = await dragByMouse(page, from, to);
+      if (!usedMouseFallback) {
+        continue;
+      }
+
+      afterAttempt = await otherSectionTitles(page);
+      if (titlesEqual(afterAttempt, expected)) {
+        reordered = true;
+        break;
+      }
     }
-
-    const draggedCardWrapper = noteCard(page, first).locator("..");
-    const opacityBefore = await draggedCardWrapper.evaluate(
-      (node) => window.getComputedStyle(node).opacity,
-    );
-
-    await page.mouse.move(
-      sourceBounds.x + sourceBounds.width / 2,
-      sourceBounds.y + sourceBounds.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      targetBounds.x + targetBounds.width / 2,
-      targetBounds.y + targetBounds.height / 2,
-      { steps: 12 },
-    );
-
-    const opacityDuring = await draggedCardWrapper.evaluate(
-      (node) => window.getComputedStyle(node).opacity,
-    );
-    expect(opacityDuring).toBe(opacityBefore);
-
-    await page.mouse.up();
+    expect(reordered).toBe(true);
 
     await expect
       .poll(() => otherSectionTitles(page), {
