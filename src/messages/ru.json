@@ -209,14 +209,18 @@
       },
       "realtime": {
         "label": "Realtime",
-        "note": "Доступен ли сервис realtime?"
+        "note": "Статус WebSocket и метрики соединений."
       }
     },
     "realtime": {
-      "ok": "В сети",
-      "off": "Не в сети",
-      "detailZero": "Нет активных соединений",
-      "detail": "{users} пользов., {conns} соедин."
+      "ok": "Подключено",
+      "off": "Отключено",
+      "connecting": "Подключение",
+      "statusConnected": "Этот браузер подключен к realtime.",
+      "statusConnecting": "Открываем realtime websocket...",
+      "statusDisconnected": "Этот браузер не подключен к realtime.",
+      "detail": "{users} пользов., {conns} соедин.",
+      "detailUnavailable": "Метрики соединений недоступны."
     },
     "next": {
       "title": "Куда дальше",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CsrfTokenField } from "@/components/csrf/csrf-token-field";
+import { RealtimeCardContent } from "@/components/dashboard/realtime-card-content";
 import { buttonClassName } from "@/components/roiui/button";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -203,20 +204,10 @@ export default async function DashboardPage({
               <CardDescription>{t("cards.realtime.note")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">
-                {metrics?.realtime?.ok ? t("realtime.ok") : t("realtime.off")}
-              </p>
-              {metrics?.realtime?.ok ? (
-                <p className="text-xs text-muted-foreground">
-                  {(metrics.realtime.usersConnected ?? 0) === 0 &&
-                  (metrics.realtime.connectionsTotal ?? 0) === 0
-                    ? t("realtime.detailZero")
-                    : t("realtime.detail", {
-                        users: String(metrics.realtime.usersConnected ?? 0),
-                        conns: String(metrics.realtime.connectionsTotal ?? 0),
-                      })}
-                </p>
-              ) : null}
+              <RealtimeCardContent
+                initialRealtime={metrics?.realtime ?? null}
+                isAuthed={isAuthed}
+              />
             </CardContent>
           </Card>
         </section>

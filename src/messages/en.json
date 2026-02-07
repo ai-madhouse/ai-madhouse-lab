@@ -209,14 +209,18 @@
       },
       "realtime": {
         "label": "Realtime",
-        "note": "Is the realtime service reachable?"
+        "note": "WebSocket status and connection metrics."
       }
     },
     "realtime": {
-      "ok": "Online",
-      "off": "Offline",
-      "detailZero": "No active connections",
-      "detail": "{users} user(s), {conns} connection(s)"
+      "ok": "Connected",
+      "off": "Disconnected",
+      "connecting": "Connecting",
+      "statusConnected": "This browser is connected to realtime.",
+      "statusConnecting": "Opening realtime websocket...",
+      "statusDisconnected": "This browser is not connected to realtime.",
+      "detail": "{users} user(s), {conns} connection(s)",
+      "detailUnavailable": "Connection metrics unavailable."
     },
     "next": {
       "title": "Next steps",
