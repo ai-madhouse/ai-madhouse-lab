@@ -209,14 +209,18 @@
       },
       "realtime": {
         "label": "Realtime",
-        "note": "Ar pasiekiama realtime paslauga?"
+        "note": "WebSocket busena ir jungciu metrikos."
       }
     },
     "realtime": {
-      "ok": "Veikia",
-      "off": "Neveikia",
-      "detailZero": "Nėra aktyvių jungčių",
-      "detail": "{users} naud., {conns} jung."
+      "ok": "Prisijungta",
+      "off": "Atsijungta",
+      "connecting": "Jungiamasi",
+      "statusConnected": "Si naršykle prisijungusi prie realtime.",
+      "statusConnecting": "Atidaromas realtime websocket...",
+      "statusDisconnected": "Si naršykle neprisijungusi prie realtime.",
+      "detail": "{users} naud., {conns} jung.",
+      "detailUnavailable": "Jungciu metrikos nepasiekiamos."
     },
     "next": {
       "title": "Ką toliau",
