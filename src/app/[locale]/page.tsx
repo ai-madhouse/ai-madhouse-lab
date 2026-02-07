@@ -52,10 +52,10 @@ export default async function LandingPage({
         data-layout-key="landing-main"
       >
         <section
-          className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start"
+          className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start"
           data-layout-key="landing-hero"
         >
-          <div className="space-y-8">
+          <div className="min-w-0 space-y-8">
             <div className="space-y-5">
               <Badge
                 variant="secondary"
@@ -105,33 +105,33 @@ export default async function LandingPage({
               ))}
             </div>
           </div>
-          <Card className="relative overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-secondary/60">
+          <Card className="relative flex h-[34rem] min-w-0 flex-col overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-secondary/60 sm:h-[35rem] lg:h-[36rem]">
             <div
               aria-hidden
               className="pointer-events-none absolute right-6 top-6 h-16 w-16 rounded-full bg-primary/10 blur-2xl"
             />
-            <CardHeader className="space-y-3">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5" />
-                {t("heroCard.title")}
+            <CardHeader className="min-w-0 space-y-3">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{t("heroCard.title")}</span>
               </div>
-              <CardTitle className="text-2xl tracking-tight">
+              <CardTitle className="overflow-hidden text-2xl tracking-tight [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                 {t("heroCard.subtitle")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
               {(["signal", "guardrails", "playbooks"] as const).map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-border/70 bg-background/70 p-4"
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/70 p-4"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     {t(`heroCard.${item}.eyebrow`)}
                   </p>
-                  <p className="mt-2 text-base font-medium">
+                  <p className="mt-2 overflow-hidden text-base font-medium [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                     {t(`heroCard.${item}.title`)}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 overflow-hidden text-sm text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                     {t(`heroCard.${item}.description`)}
                   </p>
                 </div>
