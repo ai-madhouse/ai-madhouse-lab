@@ -7,18 +7,8 @@ import "./globals.css";
 const nunito = localFont({
   src: [
     {
-      path: "../fonts/nunito/nunito-latin-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/nunito/nunito-latin-600-normal.woff2",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "../fonts/nunito/nunito-latin-700-normal.woff2",
-      weight: "700",
+      path: "../fonts/nunito/nunito-variable-normal.ttf",
+      weight: "200 1000",
       style: "normal",
     },
   ],
