@@ -158,10 +158,14 @@ export function DialogContent({
 
     if (open) {
       if (dialog.open) return;
+      if (typeof dialog.showModal !== "function") {
+        dialog.setAttribute("open", "");
+        return;
+      }
       try {
         dialog.showModal();
       } catch {
-        dialog.setAttribute("open", "");
+        return;
       }
       return;
     }
