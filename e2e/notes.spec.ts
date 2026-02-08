@@ -57,10 +57,6 @@ function noteCard(page: Page, title: string) {
   return noteOpenButton(page, title).locator("..");
 }
 
-function reorderHandleFor(page: Page, title: string) {
-  return noteCard(page, title).getByRole("button", { name: "Reorder note" });
-}
-
 function titlesEqual(a: string[], b: string[]) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -70,10 +66,10 @@ async function dragByMouse(
   fromTitle: string,
   toTitle: string,
 ): Promise<boolean> {
-  const fromHandle = reorderHandleFor(page, fromTitle);
+  const fromSurface = noteOpenButton(page, fromTitle);
   const toCard = noteCard(page, toTitle);
 
-  const fromBox = await fromHandle.boundingBox();
+  const fromBox = await fromSurface.boundingBox();
   const toBox = await toCard.boundingBox();
 
   if (!fromBox || !toBox) return false;
@@ -204,18 +200,14 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
       .locator("..");
     const pinnedMarker = pinnedCard.getByRole("img", { name: "Pinned note" });
     const pinnedMarkerBox = await pinnedMarker.boundingBox();
-    const dragHandleBox = await pinnedCard
-      .getByRole("button", { name: "Reorder note" })
-      .boundingBox();
 
     expect(pinnedMarkerBox).not.toBeNull();
-    expect(dragHandleBox).not.toBeNull();
-    if (!pinnedMarkerBox || !dragHandleBox) {
-      throw new Error("Expected pinned marker and drag handle bounds");
+    if (!pinnedMarkerBox) {
+      throw new Error("Expected pinned marker bounds");
     }
-    expect(pinnedMarkerBox.x + pinnedMarkerBox.width).toBeLessThanOrEqual(
-      dragHandleBox.x,
-    );
+    await expect(
+      pinnedCard.getByRole("button", { name: "Reorder note" }),
+    ).toHaveCount(0);
 
     await pinnedSection
       .getByRole("button", { name: `Open note: ${noteToMutate}` })
@@ -297,7 +289,7 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
       const from = attempt % 2 === 0 ? first : second;
       const to = attempt % 2 === 0 ? second : first;
 
-      await reorderHandleFor(page, from).dragTo(noteCard(page, to));
+      await noteOpenButton(page, from).dragTo(noteCard(page, to));
 
       let afterAttempt = await otherSectionTitles(page);
       if (titlesEqual(afterAttempt, expected)) {

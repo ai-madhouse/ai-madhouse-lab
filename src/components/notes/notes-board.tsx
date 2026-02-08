@@ -5,6 +5,7 @@ import {
   DndContext,
   type DragEndEvent,
   KeyboardSensor,
+  type Modifier,
   PointerSensor,
   useSensor,
   useSensors,
@@ -16,15 +17,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
@@ -69,8 +63,34 @@ type NotesHistoryRow = {
 
 const NOTES_PINS_STORAGE_KEY = "madhouse-notes-pins";
 const NOTES_ORDER_STORAGE_KEY = "madhouse-notes-order";
+const DRAG_ACTIVATION_DISTANCE = 6;
 
 type NotesBoardSection = "pinned" | "other";
+type SortableAttributes = ReturnType<typeof useSortable>["attributes"];
+type SortableListeners = ReturnType<typeof useSortable>["listeners"];
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+const clampToContainerBounds: Modifier = ({
+  transform,
+  containerNodeRect,
+  draggingNodeRect,
+}) => {
+  if (!containerNodeRect || !draggingNodeRect) return transform;
+
+  const minX = containerNodeRect.left - draggingNodeRect.left;
+  const maxX = containerNodeRect.right - draggingNodeRect.right;
+  const minY = containerNodeRect.top - draggingNodeRect.top;
+  const maxY = containerNodeRect.bottom - draggingNodeRect.bottom;
+
+  return {
+    ...transform,
+    x: clamp(transform.x, Math.min(minX, maxX), Math.max(minX, maxX)),
+    y: clamp(transform.y, Math.min(minY, maxY), Math.max(minY, maxY)),
+  };
+};
 
 function readNotesOrderFromStorage(): NotesBoardOrder {
   if (typeof window === "undefined") return { pinned: [], other: [] };
@@ -368,7 +388,9 @@ export function NotesBoard() {
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -838,67 +860,70 @@ export function NotesBoard() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          modifiers={[clampToContainerBounds]}
           onDragEnd={handleDragEnd}
         >
-          {pinnedNotes.length > 0 ? (
-            <section
-              className="space-y-3"
-              aria-labelledby="notes-pinned-heading"
-            >
-              <h3
-                id="notes-pinned-heading"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+          <div className="space-y-6 overflow-hidden">
+            {pinnedNotes.length > 0 ? (
+              <section
+                className="space-y-3"
+                aria-labelledby="notes-pinned-heading"
               >
-                Pinned
-              </h3>
-              <SortableContext
-                items={pinnedNoteOrderIds}
-                strategy={rectSortingStrategy}
-              >
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {pinnedNotes.map((note) => (
-                    <SortableNoteCard
-                      key={note.id}
-                      note={note}
-                      pinned
-                      section="pinned"
-                      onOpen={() => openViewingNote(note.id)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </section>
-          ) : null}
+                <h3
+                  id="notes-pinned-heading"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+                >
+                  Pinned
+                </h3>
+                <SortableContext
+                  items={pinnedNoteOrderIds}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {pinnedNotes.map((note) => (
+                      <SortableNoteCard
+                        key={note.id}
+                        note={note}
+                        pinned
+                        section="pinned"
+                        onOpen={() => openViewingNote(note.id)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </section>
+            ) : null}
 
-          {otherNotes.length > 0 ? (
-            <section
-              className="space-y-3"
-              aria-labelledby="notes-other-heading"
-            >
-              <h3
-                id="notes-other-heading"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+            {otherNotes.length > 0 ? (
+              <section
+                className="space-y-3"
+                aria-labelledby="notes-other-heading"
               >
-                {pinnedNotes.length > 0 ? "Others" : "All notes"}
-              </h3>
-              <SortableContext
-                items={otherNoteOrderIds}
-                strategy={rectSortingStrategy}
-              >
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {otherNotes.map((note) => (
-                    <SortableNoteCard
-                      key={note.id}
-                      note={note}
-                      pinned={false}
-                      section="other"
-                      onOpen={() => openViewingNote(note.id)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </section>
-          ) : null}
+                <h3
+                  id="notes-other-heading"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+                >
+                  {pinnedNotes.length > 0 ? "Others" : "All notes"}
+                </h3>
+                <SortableContext
+                  items={otherNoteOrderIds}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {otherNotes.map((note) => (
+                      <SortableNoteCard
+                        key={note.id}
+                        note={note}
+                        pinned={false}
+                        section="other"
+                        onOpen={() => openViewingNote(note.id)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </section>
+            ) : null}
+          </div>
         </DndContext>
       </div>
 
@@ -1130,22 +1155,9 @@ function SortableNoteCard({
       isDragging={isDragging}
       outerRef={setNodeRef}
       style={style}
-      dragHandle={
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 touch-none cursor-grab items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:text-foreground active:cursor-grabbing"
-          aria-label="Reorder note"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" aria-hidden="true" />
-        </button>
-      }
+      dragAttributes={attributes}
+      dragListeners={listeners}
+      dragSurfaceRef={setActivatorNodeRef}
     />
   );
 }
@@ -1154,7 +1166,9 @@ function NoteCard({
   note,
   pinned,
   onOpen,
-  dragHandle,
+  dragAttributes,
+  dragListeners,
+  dragSurfaceRef,
   isDragging = false,
   outerRef,
   style,
@@ -1162,13 +1176,21 @@ function NoteCard({
   note: NoteSnapshot;
   pinned: boolean;
   onOpen: () => void;
-  dragHandle?: ReactNode;
+  dragAttributes: SortableAttributes;
+  dragListeners: SortableListeners;
+  dragSurfaceRef?: (node: HTMLButtonElement | null) => void;
   isDragging?: boolean;
   outerRef?: (node: HTMLDivElement | null) => void;
   style?: CSSProperties;
 }) {
   const title = note.title.trim() || "Untitled";
   const preview = buildBodyPreview(note.body);
+  const pointerStartRef = useRef<{
+    id: number;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
 
   return (
     <div
@@ -1177,7 +1199,6 @@ function NoteCard({
       data-dragging={isDragging ? "true" : "false"}
     >
       <Card className="group relative space-y-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-        {dragHandle}
         {pinned ? (
           <span
             role="img"
@@ -1189,9 +1210,50 @@ function NoteCard({
         ) : null}
         <button
           type="button"
+          ref={dragSurfaceRef}
           aria-label={`Open note: ${title}`}
-          onClick={onOpen}
-          className="absolute inset-0 z-10 cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          onPointerDownCapture={(event) => {
+            if (event.button !== 0) return;
+            pointerStartRef.current = {
+              id: event.pointerId,
+              clientX: event.clientX,
+              clientY: event.clientY,
+            };
+            suppressClickRef.current = false;
+          }}
+          onPointerMoveCapture={(event) => {
+            const pointerStart = pointerStartRef.current;
+            if (!pointerStart || pointerStart.id !== event.pointerId) return;
+            if (suppressClickRef.current) return;
+
+            const distance = Math.hypot(
+              event.clientX - pointerStart.clientX,
+              event.clientY - pointerStart.clientY,
+            );
+            if (distance >= DRAG_ACTIVATION_DISTANCE) {
+              suppressClickRef.current = true;
+            }
+          }}
+          onPointerUpCapture={(event) => {
+            if (pointerStartRef.current?.id !== event.pointerId) return;
+            pointerStartRef.current = null;
+          }}
+          onPointerCancelCapture={() => {
+            pointerStartRef.current = null;
+          }}
+          onClick={(event) => {
+            if (suppressClickRef.current || isDragging) {
+              event.preventDefault();
+              event.stopPropagation();
+              suppressClickRef.current = false;
+              return;
+            }
+
+            onOpen();
+          }}
+          className="absolute inset-0 z-10 touch-none cursor-pointer rounded-2xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          {...dragAttributes}
+          {...dragListeners}
         />
         <div className="relative flex items-start gap-3">
           <input
