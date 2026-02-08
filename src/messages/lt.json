@@ -216,11 +216,11 @@
       "ok": "Prisijungta",
       "off": "Atsijungta",
       "connecting": "Jungiamasi",
-      "statusConnected": "Si naršykle prisijungusi prie realtime.",
+      "statusConnected": "Ši naršyklė prisijungusi prie realtime.",
       "statusConnecting": "Atidaromas realtime websocket...",
-      "statusDisconnected": "Si naršykle neprisijungusi prie realtime.",
+      "statusDisconnected": "Ši naršyklė neprisijungusi prie realtime.",
       "detail": "{users} naud., {conns} jung.",
-      "detailUnavailable": "Jungciu metrikos nepasiekiamos."
+      "detailUnavailable": "Jungčių metrikos nepasiekiamos."
     },
     "next": {
       "title": "Ką toliau",
