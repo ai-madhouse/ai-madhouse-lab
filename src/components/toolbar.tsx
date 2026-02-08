@@ -113,8 +113,11 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
       data-layout-root="site-header"
       data-layout-key="header"
     >
-      <RoiToolbar className="mx-auto max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
-        <ToolbarGroup className="min-w-0 gap-3" data-layout-key="header-brand">
+      <RoiToolbar className="mx-auto max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 md:flex-nowrap sm:px-6">
+        <ToolbarGroup
+          className="min-w-0 shrink-0 gap-3"
+          data-layout-key="header-brand"
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
             <Sparkles className="h-5 w-5" aria-label={t("brandIcon")} />
           </div>
@@ -129,7 +132,7 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
         </ToolbarGroup>
 
         <ToolbarNav
-          className="order-3 w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:gap-2.5 md:overflow-visible md:pb-0"
+          className="order-3 w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:order-none md:min-w-0 md:flex-1 md:gap-2.5 md:overflow-x-auto md:pb-0 lg:overflow-visible"
           data-layout-key="header-nav"
         >
           {navItems.map((item) => {
@@ -151,10 +154,10 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
         </ToolbarNav>
 
         <ToolbarGroup
-          className="ml-auto shrink-0 gap-2"
+          className="ml-auto shrink-0 gap-2 whitespace-nowrap"
           data-layout-key="header-actions"
         >
-          <LocaleSwitcher />
+          <LocaleSwitcher mode="code" />
           <ThemeToggle />
 
           {!isAuthed ? (

@@ -8,12 +8,20 @@ import { locales } from "@/lib/i18n";
 import { switchLocalePathname } from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 
-export function LocaleSwitcher() {
+const localeCodeMap: Record<string, string> = {
+  en: "EN",
+  ru: "RU",
+  lt: "LT",
+};
+
+export function LocaleSwitcher({ mode = "name" }: { mode?: "name" | "code" }) {
   const locale = useLocale();
   const t = useTranslations("Locale");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const localeCode = localeCodeMap[locale] ?? locale.toUpperCase();
+  const codeOnly = mode === "code";
 
   const handleSelect = (nextLocale: string) => {
     const nextPath = switchLocalePathname({ pathname, nextLocale });
@@ -31,7 +39,10 @@ export function LocaleSwitcher() {
         <button
           type="button"
           className={cn(
-            "flex h-9 w-[4.5rem] shrink-0 items-center justify-between gap-1 rounded-full border border-border/60 bg-card px-2 text-sm text-muted-foreground shadow-sm sm:w-36 sm:gap-2 sm:px-3",
+            "flex h-9 shrink-0 items-center justify-between gap-1 rounded-full border border-border/60 bg-card text-sm text-muted-foreground shadow-sm",
+            codeOnly
+              ? "w-[4.75rem] px-2"
+              : "w-[4.5rem] px-2 sm:w-36 sm:gap-2 sm:px-3",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
           )}
           aria-label={t("label")}
@@ -39,12 +50,20 @@ export function LocaleSwitcher() {
           {...triggerProps}
         >
           <Globe2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase text-foreground sm:hidden">
-            {locale}
-          </span>
-          <span className="hidden min-w-0 truncate text-sm font-medium text-foreground sm:inline">
-            {t(locale)}
-          </span>
+          {codeOnly ? (
+            <span className="text-xs font-semibold uppercase text-foreground">
+              {localeCode}
+            </span>
+          ) : (
+            <>
+              <span className="text-[11px] font-semibold uppercase text-foreground sm:hidden">
+                {localeCode}
+              </span>
+              <span className="hidden min-w-0 truncate text-sm font-medium text-foreground sm:inline">
+                {t(locale)}
+              </span>
+            </>
+          )}
           <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
         </button>
       )}
