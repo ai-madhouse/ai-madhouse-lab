@@ -23,6 +23,12 @@ import {
   type NotesEditorShortcutMap,
   readNotesEditorShortcutMapFromLocalStorage,
 } from "@/lib/notes-editor-shortcuts";
+import {
+  toggleBulletList,
+  toggleInlineMarker,
+  toggleLinePrefix,
+  toggleNumberedList,
+} from "@/lib/notes-markdown-formatting";
 
 function isMac() {
   if (typeof navigator === "undefined") return false;
@@ -35,51 +41,6 @@ function schedule(fn: () => void) {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
-}
-
-function getLineStart(text: string, index: number) {
-  return text.lastIndexOf("\n", index - 1) + 1;
-}
-
-function getLineEnd(text: string, index: number) {
-  const next = text.indexOf("\n", index);
-  return next === -1 ? text.length : next;
-}
-
-function prefixLines(text: string, start: number, end: number, prefix: string) {
-  const a = getLineStart(text, start);
-  const b = getLineEnd(text, end);
-
-  const before = text.slice(0, a);
-  const middle = text.slice(a, b);
-  const after = text.slice(b);
-
-  const updated = middle
-    .split("\n")
-    .map((line) =>
-      line.startsWith(prefix) ? line.slice(prefix.length) : `${prefix}${line}`,
-    )
-    .join("\n");
-
-  return {
-    next: `${before}${updated}${after}`,
-    range: { start: a, end: a + updated.length },
-  };
-}
-
-function wrap(
-  text: string,
-  start: number,
-  end: number,
-  open: string,
-  close = open,
-) {
-  const selected = text.slice(start, end);
-  const next = `${text.slice(0, start)}${open}${selected}${close}${text.slice(end)}`;
-  return {
-    next,
-    range: { start: start + open.length, end: end + open.length },
-  };
 }
 
 export function NoteBodyEditor({
@@ -103,8 +64,6 @@ export function NoteBodyEditor({
   const [shortcuts, setShortcuts] = useState<NotesEditorShortcutMap>(() => ({
     ...DEFAULT_NOTES_EDITOR_SHORTCUTS,
   }));
-
-  const _hasSelection = selection.end > selection.start;
 
   const boldShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.bold);
   const italicShortcutLabel = formatNotesEditorShortcutForUi(shortcuts.italic);
@@ -196,7 +155,7 @@ export function NoteBodyEditor({
           return { next, range: { start: start + 2, end: start + 2 } };
         }
 
-        const { next, range } = prefixLines(text, start, end, "  ");
+        const { next, range } = toggleLinePrefix(text, start, end, "  ");
         return { next, range };
       });
       return;
@@ -226,13 +185,17 @@ export function NoteBodyEditor({
 
     if (shortcut === shortcuts.bold) {
       event.preventDefault();
-      applyEdit((text, start, end) => wrap(text, start, end, "**"));
+      applyEdit((text, start, end) =>
+        toggleInlineMarker(text, start, end, "**"),
+      );
       return;
     }
 
     if (shortcut === shortcuts.italic) {
       event.preventDefault();
-      applyEdit((text, start, end) => wrap(text, start, end, "*"));
+      applyEdit((text, start, end) =>
+        toggleInlineMarker(text, start, end, "*"),
+      );
       return;
     }
 
@@ -254,21 +217,21 @@ export function NoteBodyEditor({
 
   return (
     <div className="space-y-2">
-      <Toolbar
-        aria-label="Note editor toolbar"
-        className="flex-wrap items-start justify-start gap-2"
-      >
-        <ToolbarGroup className="flex-wrap">
+      <Toolbar aria-label="Note editor toolbar" className="justify-start">
+        <ToolbarGroup className="w-full max-w-max flex-wrap gap-1 rounded-2xl border border-border/70 bg-card/60 p-1">
           <Tooltip content={`Bold (${boldShortcutLabel})`}>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Bold"
-              onClick={() =>
-                applyEdit((text, start, end) => wrap(text, start, end, "**"))
-              }
+              className="h-8 w-8 p-0"
+              onClick={() => {
+                applyEdit((text, start, end) =>
+                  toggleInlineMarker(text, start, end, "**"),
+                );
+              }}
             >
               <Bold className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -276,13 +239,16 @@ export function NoteBodyEditor({
           <Tooltip content={`Italic (${italicShortcutLabel})`}>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Italic"
-              onClick={() =>
-                applyEdit((text, start, end) => wrap(text, start, end, "*"))
-              }
+              className="h-8 w-8 p-0"
+              onClick={() => {
+                applyEdit((text, start, end) =>
+                  toggleInlineMarker(text, start, end, "*"),
+                );
+              }}
             >
               <Italic className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -290,13 +256,16 @@ export function NoteBodyEditor({
           <Tooltip content="Inline code">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Inline code"
-              onClick={() =>
-                applyEdit((text, start, end) => wrap(text, start, end, "`"))
-              }
+              className="h-8 w-8 p-0"
+              onClick={() => {
+                applyEdit((text, start, end) =>
+                  toggleInlineMarker(text, start, end, "`"),
+                );
+              }}
             >
               <Code className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -304,10 +273,11 @@ export function NoteBodyEditor({
           <Tooltip content={`Link (${linkShortcutLabel})`}>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Link"
+              className="h-8 w-8 p-0"
               onClick={() =>
                 applyEdit((text, start, end) => {
                   const selected = text.slice(start, end) || "link";
@@ -329,15 +299,16 @@ export function NoteBodyEditor({
           <Tooltip content="Quote">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Quote"
-              onClick={() =>
+              className="h-8 w-8 p-0"
+              onClick={() => {
                 applyEdit((text, start, end) =>
-                  prefixLines(text, start, end, "> "),
-                )
-              }
+                  toggleLinePrefix(text, start, end, "> "),
+                );
+              }}
             >
               <Quote className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -345,15 +316,16 @@ export function NoteBodyEditor({
           <Tooltip content="Bullet list">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Bullet list"
-              onClick={() =>
+              className="h-8 w-8 p-0"
+              onClick={() => {
                 applyEdit((text, start, end) =>
-                  prefixLines(text, start, end, "- "),
-                )
-              }
+                  toggleBulletList(text, start, end),
+                );
+              }}
             >
               <List className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -361,37 +333,40 @@ export function NoteBodyEditor({
           <Tooltip content="Numbered list">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               aria-label="Numbered list"
-              onClick={() =>
+              className="h-8 w-8 p-0"
+              onClick={() => {
                 applyEdit((text, start, end) =>
-                  prefixLines(text, start, end, "1. "),
-                )
-              }
+                  toggleNumberedList(text, start, end),
+                );
+              }}
             >
               <ListOrdered className="h-4 w-4" aria-hidden="true" />
             </Button>
           </Tooltip>
-        </ToolbarGroup>
 
-        {onSave ? (
-          <ToolbarGroup>
+          {onSave ? (
+            <span className="mx-1 h-5 w-px bg-border/70" aria-hidden="true" />
+          ) : null}
+
+          {onSave ? (
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={disabled}
               title={`Save (${saveShortcutLabel})`}
               onClick={onSave}
-              className="gap-2"
+              className="h-8 rounded-xl px-2.5 text-xs"
             >
-              <Save className="h-4 w-4" aria-label="Save" />
+              <Save className="h-4 w-4" aria-hidden="true" />
               Save
             </Button>
-          </ToolbarGroup>
-        ) : null}
+          ) : null}
+        </ToolbarGroup>
       </Toolbar>
 
       <p className="text-xs text-muted-foreground">{tipLabel}</p>
