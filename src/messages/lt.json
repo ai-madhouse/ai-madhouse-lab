@@ -109,12 +109,12 @@
       }
     },
     "heroCard": {
-      "title": "Operacijų skydas",
+      "title": "Operacijų suvestinė",
       "subtitle": "Trumpa suvestinė apie tai, kas vyksta dabar.",
       "signal": {
         "eyebrow": "Signalai",
         "title": "Adaptyvi telemetrija",
-        "description": "Fiksuojame realaus laiko signalus visame stoge."
+        "description": "Fiksuojame realaus laiko signalus visame steke."
       },
       "guardrails": {
         "eyebrow": "Apsaugos",
@@ -122,7 +122,7 @@
         "description": "Kiekvienas atsakymas pereina struktūrinį vertinimą."
       },
       "playbooks": {
-        "eyebrow": "Pagrindai",
+        "eyebrow": "Scenarijai",
         "title": "Incidentų choreografija",
         "description": "Parengti scenarijai padeda komandai išlikti ramiems."
       }
@@ -208,8 +208,8 @@
         "note": "Kiek užrašų įvykių buvo per parą."
       },
       "realtime": {
-        "label": "Realtime",
-        "note": "WebSocket busena ir jungciu metrikos."
+        "label": "Realiu laiku",
+        "note": "Ar pasiekiama tiesioginių duomenų paslauga?"
       }
     },
     "realtime": {
@@ -226,7 +226,7 @@
       "title": "Ką toliau",
       "subtitle": "Trys vietos, kurias dažniausiai naudosiesi.",
       "notes": "Atidaryti užrašus",
-      "live": "Atidaryti Live",
+      "live": "Atidaryti tiesioginį vaizdą",
       "settings": "Atidaryti nustatymus"
     },
     "security": {
@@ -246,10 +246,10 @@
   "Settings": {
     "eyebrow": "Valdymo kambarys",
     "title": "Nustatymai",
-    "subtitle": "Derinkite patirtį, atnaujinkite profilį ir laikykite globalius leidimus viename ritme.",
+    "subtitle": "Prisitaikyk aplinką, atnaujink profilį ir laikyk pasaulinius paleidimus viename ritme.",
     "profile": {
       "title": "Profilis",
-      "subtitle": "Duokite komandai reikalingą kontekstą.",
+      "subtitle": "Duok komandai tiek konteksto, kad sprendimai judėtų greitai.",
       "name": "Rodomas vardas",
       "namePlaceholder": "Avery Chen",
       "role": "Vaidmuo",
@@ -289,7 +289,7 @@
         "cancel": "Atšaukti",
         "confirm": "Atsijungti visur"
       },
-      "note": "Atšaukus sesijas jos pašalinamos serveryje. Kitas užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
+      "note": "Atšaukus sesijas jos pašalinamos serveryje. Kita užklausa iš to įrenginio pareikalaus prisijungti iš naujo."
     },
     "sessionsList": {
       "unlockLabel": "Atrakinti sesijų detales",
@@ -318,7 +318,7 @@
         "link": "Įterpti nuorodą"
       },
       "actionHelp": {
-        "save": "Išsaugoti pastabą (kai prieinama).",
+        "save": "Išsaugoti užrašą (kai įmanoma).",
         "bold": "Apgaubti pažymėjimą **paryškintai**.",
         "italic": "Apgaubti pažymėjimą *kursyvu*.",
         "link": "Įterpti Markdown nuorodą."
@@ -333,7 +333,7 @@
     },
     "language": {
       "title": "Kalba ir regionas",
-      "subtitle": "Pasirinkite lokalę peržiūroms arba demo.",
+      "subtitle": "Pasirink lokalę peržiūrai ar demonstracijai.",
       "note": "Lokalės keitimas atnaujina navigaciją, turinį ir gaires."
     }
   },
@@ -360,11 +360,11 @@
   },
   "Live": {
     "eyebrow": "Dabar",
-    "title": "Live vaizdas",
+    "title": "Tiesioginis vaizdas",
     "subtitle": "Gyvi signalai iš tavo paskyros duomenų (ne atsitiktiniai skaičiai).",
     "boardTitle": "Gyvi signalai",
     "boardSubtitle": "Atnaujinama kas kelias sekundes. Atidaryk dviejuose įrenginiuose — turėtų sinchronizuotis.",
-    "icon": "Activity",
+    "icon": "Aktyvumas",
     "errors": {
       "stream": "Tiesioginis srautas nutrūko (dažniausiai tai reiškia, kad atsijungei)."
     },
@@ -372,17 +372,17 @@
       "sessions": {
         "label": "Sesijos",
         "note": "Kiek įrenginių dabar prisijungę.",
-        "icon": "Sessions"
+        "icon": "Sesijos"
       },
       "notes": {
         "label": "Užrašai",
         "note": "Iš viso užrašų (E2EE).",
-        "icon": "Notes"
+        "icon": "Užrašai"
       },
       "writes": {
         "label": "Veiksmai (1 val.)",
         "note": "Užrašų įvykiai per paskutinę valandą.",
-        "icon": "Writes"
+        "icon": "Veiksmai"
       },
       "lastActivity": {
         "label": "Paskutinė veikla",
@@ -402,7 +402,7 @@
   "About": {
     "badge": "Projektas",
     "title": "Apie šį demo",
-    "subtitle": "Bun-first Next.js pradinis projektas su i18n, temomis, testais ir keliomis puslapiais, kuriuos galite plėsti.",
+    "subtitle": "Bun-first Next.js pradinis projektas su i18n, temomis, testais ir keliais lengvai plečiamais puslapiais.",
     "cards": {
       "stack": {
         "title": "Technologijos",
@@ -428,6 +428,6 @@
   "Notes": {
     "eyebrow": "Užrašai",
     "title": "Užrašai",
-    "subtitle": "E2EE užrašų demo: priedo-iki galo šifravimas ir įvykių žurnalas."
+    "subtitle": "E2EE užrašų demonstracija su įvykių žurnalu."
   }
 }
