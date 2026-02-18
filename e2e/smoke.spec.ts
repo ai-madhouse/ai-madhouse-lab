@@ -47,9 +47,8 @@ test("Theme toggle does not shift the logout button", async ({ page }) => {
   await registerAndLandOnDashboard(page, { locale: "en" });
 
   const logout = page
-    .locator("button", { hasText: "Sign out" })
-    .filter({ hasNotText: "everywhere" })
-    .first();
+    .locator("header")
+    .getByRole("button", { name: /Sign out/i });
   await expect(logout).toBeVisible();
 
   const boxBefore = await logout.boundingBox();
