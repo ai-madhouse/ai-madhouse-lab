@@ -4,24 +4,6 @@ import { registerAndLandOnDashboard } from "./helpers";
 
 const locales = ["en", "ru", "lt"] as const;
 
-async function readLayoutKeys(page: Page, rootName: string) {
-  return page.evaluate((name) => {
-    const root = document.querySelector<HTMLElement>(
-      `[data-layout-root="${name}"]`,
-    );
-    if (!root) return [];
-
-    const nodes = [
-      root,
-      ...Array.from(root.querySelectorAll<HTMLElement>("[data-layout-key]")),
-    ];
-
-    return nodes
-      .map((node) => node.getAttribute("data-layout-key"))
-      .filter((value): value is string => Boolean(value));
-  }, rootName);
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   const sizes = await page.evaluate(() => {
     const html = document.documentElement;
@@ -108,7 +90,9 @@ test("theme toggle keeps header controls stable (layout regression)", async ({
 }) => {
   await registerAndLandOnDashboard(page, { locale: "en" });
 
-  const logout = page.locator("header").getByRole("button", { name: /Sign out/i });
+  const logout = page
+    .locator("header")
+    .getByRole("button", { name: /Sign out/i });
 
   const localeSwitcher = page.getByRole("button", { name: "Language" });
   const themeBtn = page.getByLabel("Toggle theme");

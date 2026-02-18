@@ -46,7 +46,9 @@ test("CSP + Reporting-Endpoints headers present in production", async ({
 test("Theme toggle does not shift the logout button", async ({ page }) => {
   await registerAndLandOnDashboard(page, { locale: "en" });
 
-  const logout = page.locator("header").getByRole("button", { name: /Sign out/i });
+  const logout = page
+    .locator("header")
+    .getByRole("button", { name: /Sign out/i });
   await expect(logout).toBeVisible();
 
   const boxBefore = await logout.boundingBox();
