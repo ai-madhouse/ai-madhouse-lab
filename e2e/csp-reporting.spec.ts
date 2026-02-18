@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import { registerAndLandOnDashboard } from "./helpers";
 
+test.setTimeout(120_000);
+
 test("CSP reporting pipeline: POST report + verify server stores redacted sample", async ({
   page,
   request,

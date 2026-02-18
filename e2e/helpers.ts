@@ -16,13 +16,16 @@ export async function registerAndLandOnDashboard(
   const { username, password } = uniqueUser();
 
   await page.goto(`/${locale}/register`, { waitUntil: "networkidle" });
+  await expect(
+    page.locator('input[name="csrfToken"][type="hidden"]'),
+  ).toHaveValue(/.+/);
 
   await page.locator('input[name="username"]').fill(username);
   await page.locator('input[name="password"]').first().fill(password);
   await page.locator('input[name="password2"]').fill(password);
-
   await page.locator('button[type="submit"]').first().click();
-  await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
+
+  await signInFromLoginPage({ page, locale, username, password });
 
   return { username, password, locale };
 }
@@ -53,10 +56,9 @@ export async function signInFromLoginPage({
 }
 
 export async function signOutFromHeader(page: Page, locale: string) {
-  const signOut = page
-    .locator("button", { hasText: "Sign out" })
-    .filter({ hasNotText: "everywhere" })
-    .first();
+  const signOut = page.locator("header").getByRole("button", {
+    name: /Sign out/i,
+  });
   await expect(signOut).toBeVisible();
   await signOut.click();
   await expect(page).toHaveURL(new RegExp(`/${locale}/login`));

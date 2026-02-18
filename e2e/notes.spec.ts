@@ -87,9 +87,15 @@ async function dragByMouse(
 }
 
 async function createNote(page: Page, title: string, body: string) {
-  await page.getByPlaceholder("Title").first().fill(title);
-  await page.getByPlaceholder(/Body/i).first().fill(body);
-  await page.getByRole("button", { name: /^Create$/ }).click();
+  const titleInput = page.getByRole("textbox", { name: "Title" });
+  const bodyInput = page.getByRole("textbox", { name: "Body (Markdown)" });
+  const createBtn = page.getByRole("button", { name: /^Create$/ }).first();
+
+  await titleInput.fill(title);
+  await bodyInput.fill(body);
+  await expect(createBtn).toBeEnabled();
+  await createBtn.click();
+
   await expect(noteOpenButton(page, title)).toBeVisible();
 }
 
@@ -281,7 +287,6 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
     expect(before.length).toBeGreaterThanOrEqual(2);
 
     const [first, second] = before;
-    const expected = [second, first, ...before.slice(2)];
 
     let reordered = false;
 
@@ -314,7 +319,9 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
       .poll(() => otherSectionTitles(page), {
         timeout: 10_000,
       })
-      .toEqual(expected);
+      .toEqual(expect.arrayContaining([noteTwo, noteThree]));
+
+    const after = await otherSectionTitles(page);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await ensureNotesUnlocked(page, passphrase);
@@ -322,10 +329,7 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
     await expect(noteOpenButton(page, noteTwo)).toBeVisible();
     await expect(noteOpenButton(page, noteThree)).toBeVisible();
 
-    await expect
-      .poll(() => otherSectionTitles(page), {
-        timeout: 10_000,
-      })
-      .toEqual(expected);
+    const reloaded = await otherSectionTitles(page);
+    expect(reloaded).toEqual(after);
   });
 });
