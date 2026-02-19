@@ -287,6 +287,16 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
     expect(before.length).toBeGreaterThanOrEqual(2);
 
     const [first, second] = before;
+    const expected = [...before];
+    const firstIndex = expected.indexOf(first);
+    const secondIndex = expected.indexOf(second);
+    if (firstIndex === -1 || secondIndex === -1) {
+      throw new Error("Expected both reorder candidates to exist");
+    }
+    [expected[firstIndex], expected[secondIndex]] = [
+      expected[secondIndex],
+      expected[firstIndex],
+    ];
 
     let reordered = false;
 
@@ -331,5 +341,81 @@ test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
 
     const reloaded = await otherSectionTitles(page);
     expect(reloaded).toEqual(after);
+  });
+});
+
+test("notes: E2EE setup + wrong passphrase recovery + reload unlock", async ({
+  page,
+}) => {
+  const { locale, username, password } = await registerAndLandOnDashboard(
+    page,
+    {
+      locale: "en",
+    },
+  );
+  const passphrase = "CorrectHorseBatteryStaple1!";
+  const wrongPassphrase = "WrongBatteryHorseStaple1!";
+  const seed = Date.now().toString(36);
+  const title = `pw e2ee ${seed}`;
+
+  await test.step("first-time setup and unlock", async () => {
+    await gotoNotes(page, locale);
+    const setupInput = page.getByPlaceholder(/Set an E2EE passphrase/i);
+    await expect(setupInput).toBeVisible();
+    await setupInput.fill(passphrase);
+    await page.getByPlaceholder(/Confirm passphrase/i).fill(passphrase);
+    await page.getByRole("button", { name: "Create & unlock" }).click();
+    await expect(page.getByRole("textbox", { name: "Title" })).toBeEnabled();
+  });
+
+  await test.step("create encrypted note", async () => {
+    await createNote(page, title, "persist me");
+  });
+
+  await test.step("relock by signing out/in, then fail + recover unlock", async () => {
+    await page
+      .locator("header")
+      .getByRole("button", { name: /Sign out/i })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+
+    await page.goto(
+      `/${locale}/login?next=${encodeURIComponent(`/${locale}/notes`)}`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
+    await page.getByLabel("Username").fill(username);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/notes`));
+
+    const titleInput = page.getByRole("textbox", { name: "Title" });
+    const unlockInput = page.getByPlaceholder(/Enter your E2EE passphrase/i);
+    await expect(unlockInput).toBeVisible();
+    await expect(titleInput).toBeDisabled();
+
+    await unlockInput.fill(wrongPassphrase);
+    await page.getByRole("button", { name: /^Unlock$/i }).click();
+    await expect(page.getByRole("button", { name: /^Unlock$/i })).toBeEnabled();
+    await expect(titleInput).toBeDisabled();
+
+    await unlockInput.fill(passphrase);
+    await page.getByRole("button", { name: /^Unlock$/i }).click();
+    await expect(titleInput).toBeEnabled();
+    await expect(noteOpenButton(page, title)).toBeVisible();
+  });
+
+  await test.step("reload requires unlock and preserves note after re-unlock", async () => {
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const unlockInput = page.getByPlaceholder(/Enter your E2EE passphrase/i);
+    const titleInput = page.getByRole("textbox", { name: "Title" });
+    await expect(unlockInput).toBeVisible();
+    await expect(titleInput).toBeDisabled();
+
+    await unlockInput.fill(passphrase);
+    await page.getByRole("button", { name: /^Unlock$/i }).click();
+    await expect(titleInput).toBeEnabled();
+    await expect(noteOpenButton(page, title)).toBeVisible();
   });
 });
