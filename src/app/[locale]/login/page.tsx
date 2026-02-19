@@ -30,18 +30,30 @@ type LoginPageProps = {
 async function loginAction(formData: FormData) {
   "use server";
 
+  const initialLocale = normalizeLocale(String(formData.get("locale") ?? "en"));
+  const initialNextPath = safeNextPath(
+    initialLocale,
+    String(formData.get("next") ?? ""),
+  );
+  const csrfTokenRaw = String(formData.get("csrfToken") ?? "");
+
+  if (!csrfTokenRaw) {
+    redirect(
+      `/${initialLocale}/login?error=csrf&next=${encodeURIComponent(initialNextPath)}`,
+    );
+  }
+
   const parsed = loginFormSchema.safeParse({
-    locale: String(formData.get("locale") ?? "en"),
-    next: String(formData.get("next") ?? ""),
+    locale: initialLocale,
+    next: initialNextPath,
     username: String(formData.get("username") ?? ""),
     password: String(formData.get("password") ?? ""),
-    csrfToken: String(formData.get("csrfToken") ?? ""),
+    csrfToken: csrfTokenRaw,
   });
 
   // Generic error for invalid payload.
   if (!parsed.success) {
-    const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
-    redirect(`/${locale}/login?error=1`);
+    redirect(`/${initialLocale}/login?error=1`);
   }
 
   const { locale, next, username, csrfToken } = parsed.data;

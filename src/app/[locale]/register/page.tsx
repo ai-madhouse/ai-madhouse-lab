@@ -31,19 +31,31 @@ type RegisterPageProps = {
 async function registerAction(formData: FormData) {
   "use server";
 
+  const initialLocale = normalizeLocale(String(formData.get("locale") ?? "en"));
+  const initialNextPath = safeNextPath(
+    initialLocale,
+    String(formData.get("next") ?? ""),
+  );
+  const csrfTokenRaw = String(formData.get("csrfToken") ?? "");
+
+  if (!csrfTokenRaw) {
+    redirect(
+      `/${initialLocale}/register?error=csrf&next=${encodeURIComponent(initialNextPath)}`,
+    );
+  }
+
   const parsed = registerFormSchema.safeParse({
-    locale: String(formData.get("locale") ?? "en"),
-    next: String(formData.get("next") ?? ""),
+    locale: initialLocale,
+    next: initialNextPath,
     username: String(formData.get("username") ?? ""),
     password: String(formData.get("password") ?? ""),
     password2: String(formData.get("password2") ?? ""),
-    csrfToken: String(formData.get("csrfToken") ?? ""),
+    csrfToken: csrfTokenRaw,
   });
 
   if (!parsed.success) {
-    const locale = normalizeLocale(String(formData.get("locale") ?? "en"));
     const msg = parsed.error.issues[0]?.message ?? "invalid";
-    redirect(`/${locale}/register?error=${encodeURIComponent(msg)}`);
+    redirect(`/${initialLocale}/register?error=${encodeURIComponent(msg)}`);
   }
 
   const { locale, next, username, csrfToken } = parsed.data;
