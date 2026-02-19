@@ -31,3 +31,6 @@ jobs:
 
       - name: Build
         run: bun run build
+
+      - name: Repo preflight
+        run: bun run preflight
