@@ -55,6 +55,7 @@ bun run realtime
 - Lint (Biome): `bun run lint`
 - Format (Biome): `bun run format`
 - Tests: `bun test`
+- Repo preflight: `bun run preflight`
 
 ## Environment variables
 
@@ -66,3 +67,8 @@ bun run realtime
 
 - Users can register at `/{locale}/register`.
 - Auth is session-based (sqlite `sessions` table) and checked on every request.
+- Repo hygiene is enforced by `scripts/repo-preflight.ts`:
+  - blocks tracked artifact paths (`test-results/`, `playwright-report/`, `blob-report/`, etc.)
+  - blocks root-owned tracked files
+  - on managed VPS paths, enforces worktree-only changes and task branch naming (`vk/<task-id>-<slug>`)
+  - on managed VPS paths, checks shared roots use mode `2775`
