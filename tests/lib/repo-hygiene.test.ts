@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 import {
   hasGroupWriteExecute,
   isForbiddenTrackedPath,
@@ -36,9 +35,12 @@ describe("repo hygiene guardrails", () => {
     expect(hasGroupWriteExecute(0o2755)).toBe(false);
   });
 
-  test("ci workflow runs repo preflight", async () => {
-    const workflowPath = path.join(process.cwd(), ".github/workflows/ci.yml");
-    const workflow = await readFile(workflowPath, "utf8");
-    expect(workflow).toContain("bun run preflight");
+  test("lint script includes repo preflight", async () => {
+    const packagePath = `${process.cwd()}/package.json`;
+    const packageRaw = await readFile(packagePath, "utf8");
+    const packageJson = JSON.parse(packageRaw) as {
+      scripts?: Record<string, string>;
+    };
+    expect(packageJson.scripts?.lint).toContain("bun run preflight");
   });
 });
