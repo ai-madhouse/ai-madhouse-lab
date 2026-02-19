@@ -76,3 +76,23 @@ export async function fetchCsrfToken(page: Page) {
   if (!json.ok) throw new Error(json.error || "csrf fetch failed");
   return json.token;
 }
+
+export async function getFormCsrfToken(page: Page) {
+  const csrfField = page.locator('input[name="csrfToken"]');
+  await expect(csrfField).toHaveValue(/\S+/);
+  return await csrfField.inputValue();
+}
+
+export async function setFormCsrfToken(page: Page, token: string) {
+  const csrfField = page.locator('input[name="csrfToken"]');
+  await csrfField.evaluate((node, nextToken) => {
+    (node as HTMLInputElement).value = nextToken;
+  }, token);
+}
+
+export async function sessionMeStatusFromBrowser(page: Page) {
+  return await page.evaluate(async () => {
+    const res = await fetch("/api/session/me", { cache: "no-store" });
+    return res.status;
+  });
+}

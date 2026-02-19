@@ -10,8 +10,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     headless: true,
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    screenshot: "off",
+    video: "off",
+    trace: "off",
     launchOptions: {
       // Try to ensure Reporting API is enabled in headless.
       args: [

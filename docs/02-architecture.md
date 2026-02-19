@@ -31,6 +31,7 @@ The locale prefix is enforced in `src/proxy.ts` (Next.js Proxy) and defaults to 
 - **Nonce-based CSP** (production)
 
 See: `docs/07-security-headers-and-csp.md`
+See: `docs/security/auth-csrf-contract-matrix.md`
 
 ## Internationalization
 

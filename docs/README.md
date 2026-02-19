@@ -8,4 +8,4 @@
 - [04 — Features](./04-features.md)
 - [06 — UI Design](./06-ui-design.md)
 - [07 — Security headers & CSP](./07-security-headers-and-csp.md)
-
+- [Security — Auth + CSRF Contract Matrix](./security/auth-csrf-contract-matrix.md)
