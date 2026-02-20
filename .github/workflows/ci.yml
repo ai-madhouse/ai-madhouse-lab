@@ -13,6 +13,7 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,10 +25,95 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Lint
-        run: bun run lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          echo "::group::Lint (bun run lint)"
+          bun run lint 2>&1 | tee /tmp/ci-lint.log
+          status=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Lint quick context"
+            sed -n '1,60p' /tmp/ci-lint.log
+            echo "::endgroup::"
+            echo "::error title=Lint failed::Run 'bun run lint' locally and fix the first reported violation."
+            exit "$status"
+          fi
 
       - name: Test
-        run: bun test
+        id: test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          echo "::group::Unit tests (bun test)"
+          bun test 2>&1 | tee /tmp/ci-test.log
+          status=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Test quick context"
+            tail -n 80 /tmp/ci-test.log
+            echo "::endgroup::"
+            echo "::error title=Unit tests failed::Run 'bun test' locally and inspect the first failing test."
+            exit "$status"
+          fi
 
       - name: Build
-        run: bun run build
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          echo "::group::Build (bun run build)"
+          bun run build 2>&1 | tee /tmp/ci-build.log
+          status=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Build quick context"
+            tail -n 100 /tmp/ci-build.log
+            echo "::endgroup::"
+            echo "::error title=Build failed::Run 'bun run build' locally and address the first fatal error."
+            exit "$status"
+          fi
+
+      - name: Summarize check results
+        if: always()
+        shell: bash
+        run: |
+          lint_outcome="${{ steps.lint.outcome }}"
+          test_outcome="${{ steps.test.outcome }}"
+          build_outcome="${{ steps.build.outcome }}"
+
+          {
+            echo "## CI Check Summary"
+            echo ""
+            echo "| Check | Outcome |"
+            echo "| --- | --- |"
+            echo "| lint (`bun run lint`) | ${lint_outcome} |"
+            echo "| test (`bun test`) | ${test_outcome} |"
+            echo "| build (`bun run build`) | ${build_outcome} |"
+            echo ""
+            if [ "$lint_outcome" = "failure" ] || [ "$test_outcome" = "failure" ] || [ "$build_outcome" = "failure" ]; then
+              echo "### Next step"
+              echo "- Re-run the first failed command locally to iterate quickly."
+            fi
+            echo ""
+            echo "### E2E note"
+            echo "- Playwright is intentionally not part of this workflow."
+            echo "- For host verification use a unique port: \`PW_PORT=<free-port> bun run e2e\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce check outcomes
+        if: always()
+        shell: bash
+        run: |
+          lint_outcome="${{ steps.lint.outcome }}"
+          test_outcome="${{ steps.test.outcome }}"
+          build_outcome="${{ steps.build.outcome }}"
+
+          if [ "$lint_outcome" = "failure" ] || [ "$test_outcome" = "failure" ] || [ "$build_outcome" = "failure" ]; then
+            echo "One or more checks failed. See grouped step logs above and the run summary."
+            exit 1
+          fi
