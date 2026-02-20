@@ -73,6 +73,7 @@ export function LocaleSwitcher({ mode = "name" }: { mode?: "name" | "code" }) {
         <DropdownMenuItem
           key={entry}
           onSelect={() => handleSelect(entry)}
+          data-testid={`locale-option-${entry}`}
           className={entry === locale ? "bg-accent text-accent-foreground" : ""}
         >
           {t(entry)}

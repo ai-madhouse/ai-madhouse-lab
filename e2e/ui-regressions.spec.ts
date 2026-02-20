@@ -24,18 +24,18 @@ test("top nav updates active link and supports keyboard focus state", async ({
 }) => {
   await page.goto("/en", { waitUntil: "networkidle" });
 
-  const landingLink = page.getByRole("link", { name: "Landing" });
-  const aboutLink = page.getByRole("link", { name: "About" });
+  const landingLink = page.locator('[data-layout-key="nav-home"]');
+  const aboutLink = page.locator('[data-layout-key="nav-about"]');
 
-  await expect(landingLink).toHaveClass(/bg-primary/);
-  await expect(aboutLink).toHaveClass(/text-muted-foreground/);
+  await expect(landingLink).toHaveAttribute("aria-current", "page");
+  await expect(landingLink).toHaveAttribute("data-active", "true");
+  await expect(aboutLink).not.toHaveAttribute("aria-current", "page");
+  await expect(aboutLink).toHaveAttribute("data-active", "false");
 
   await aboutLink.click();
   await expect(page).toHaveURL(/\/en\/about$/);
-  await expect(aboutLink).toHaveClass(/bg-primary/);
-
-  const inactiveLink = page.getByRole("link", { name: "Landing" });
-  await expect(inactiveLink).toHaveClass(/hover:bg-accent/);
+  await expect(aboutLink).toHaveAttribute("aria-current", "page");
+  await expect(aboutLink).toHaveAttribute("data-active", "true");
 
   const landingOnAboutPage = page.getByRole("link", { name: "Landing" });
 
@@ -50,26 +50,28 @@ test("top nav updates active link and supports keyboard focus state", async ({
   await expect(landingOnAboutPage).toBeFocused();
 });
 
-test("locale switcher has dark-mode-safe option styling", async ({ page }) => {
-  await page.goto("/en", { waitUntil: "networkidle" });
+test("locale switcher opens via menu semantics and preserves route/query/hash", async ({
+  page,
+}) => {
+  await page.goto("/en/about?from=contract#header-contract", {
+    waitUntil: "networkidle",
+  });
 
-  const localeTrigger = page.getByRole("button", { name: "Language" });
+  const localeTrigger = page.locator('[data-layout-key="locale-switcher"]');
   await expect(localeTrigger).toBeVisible();
+  await expect(localeTrigger).toHaveAttribute("aria-haspopup", "menu");
+  await expect(localeTrigger).toHaveAttribute("aria-expanded", "false");
+
   await localeTrigger.click();
+  await expect(localeTrigger).toHaveAttribute("aria-expanded", "true");
 
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
-  const optionClasses = await menu
-    .getByRole("menuitem")
-    .evaluateAll((items) => items.map((item) => item.className));
+  await expect(menu.getByRole("menuitem")).toHaveCount(3);
 
-  expect(optionClasses.length).toBeGreaterThan(0);
-  for (const cls of optionClasses) {
-    expect(
-      cls.includes("text-foreground") || cls.includes("text-accent-foreground"),
-    ).toBe(true);
-    expect(cls).toContain("hover:bg-accent");
-  }
+  await page.getByTestId("locale-option-ru").click();
+  await expect(page).toHaveURL("/ru/about?from=contract#header-contract");
+  await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
 test("landing layout stays structurally stable across locales", async ({
@@ -90,16 +92,14 @@ test("theme toggle keeps header controls stable (layout regression)", async ({
 }) => {
   await registerAndLandOnDashboard(page, { locale: "en" });
 
-  const logout = page
-    .locator("header")
-    .getByRole("button", { name: /Sign out/i });
+  const logout = page.locator('[data-layout-key="header-auth"]');
+  const localeSwitcher = page.locator('[data-layout-key="locale-switcher"]');
+  const themeBtn = page.locator('[data-layout-key="theme-toggle"]');
+  const html = page.locator("html");
 
-  const localeSwitcher = page.getByRole("button", { name: "Language" });
-  const themeBtn = page.getByLabel("Toggle theme");
-
-  await expect(logout).toBeVisible();
-  await expect(localeSwitcher).toBeVisible();
-  await expect(themeBtn).toBeVisible();
+  await expect(logout).toHaveCount(1);
+  await expect(localeSwitcher).toHaveCount(1);
+  await expect(themeBtn).toHaveCount(1);
 
   const before = {
     logout: await logout.boundingBox(),
@@ -111,8 +111,11 @@ test("theme toggle keeps header controls stable (layout regression)", async ({
   expect(before.locale).toBeTruthy();
   expect(before.theme).toBeTruthy();
 
+  const darkBefore = await html.evaluate((el) => el.classList.contains("dark"));
   await themeBtn.click();
-  await page.waitForTimeout(150);
+  await expect
+    .poll(async () => html.evaluate((el) => el.classList.contains("dark")))
+    .not.toBe(darkBefore);
 
   const after = {
     logout: await logout.boundingBox(),
