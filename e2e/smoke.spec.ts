@@ -46,17 +46,21 @@ test("CSP + Reporting-Endpoints headers present in production", async ({
 test("Theme toggle does not shift the logout button", async ({ page }) => {
   await registerAndLandOnDashboard(page, { locale: "en" });
 
-  const logout = page
-    .locator("header")
-    .getByRole("button", { name: /Sign out/i });
+  const logout = page.locator('[data-layout-key="header-auth"]');
+  const themeToggle = page.locator('[data-layout-key="theme-toggle"]');
+  const html = page.locator("html");
+
   await expect(logout).toBeVisible();
+  await expect(themeToggle).toBeVisible();
 
   const boxBefore = await logout.boundingBox();
   expect(boxBefore).toBeTruthy();
 
-  // Toggle theme
-  await page.getByLabel("Toggle theme").click();
-  await page.waitForTimeout(150);
+  const darkBefore = await html.evaluate((el) => el.classList.contains("dark"));
+  await themeToggle.click();
+  await expect
+    .poll(async () => html.evaluate((el) => el.classList.contains("dark")))
+    .not.toBe(darkBefore);
 
   const boxAfter = await logout.boundingBox();
   expect(boxAfter).toBeTruthy();
@@ -64,7 +68,6 @@ test("Theme toggle does not shift the logout button", async ({ page }) => {
   const dx = Math.abs((boxAfter!.x ?? 0) - (boxBefore!.x ?? 0));
   const dw = Math.abs((boxAfter!.width ?? 0) - (boxBefore!.width ?? 0));
 
-  // Very small tolerance; should be stable now that toggle is fixed-width.
   expect(dx).toBeLessThanOrEqual(0.5);
   expect(dw).toBeLessThanOrEqual(0.5);
 });

@@ -7,6 +7,7 @@
 - [Commands](#commands)
 - [Environment variables](#environment-variables)
 - [Notes](#notes)
+- [UI contracts](#ui-contracts)
 
 ## Requirements
 
@@ -72,3 +73,8 @@ bun run realtime
   - blocks root-owned tracked files
   - on managed VPS paths, enforces worktree-only changes and task branch naming (`vk/<task-id>-<slug>`)
   - on managed VPS paths, checks shared roots use mode `2775`
+
+## UI contracts
+
+- Shared header controls (top nav active state, locale switcher, theme toggle) are defined in `docs/05-header-ui-contracts.md`.
+- Keep E2E assertions aligned with that contract and avoid internal-style assumptions.

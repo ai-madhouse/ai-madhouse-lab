@@ -48,17 +48,15 @@ export async function signInFromLoginPage({
     waitUntil: "domcontentloaded",
   });
 
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.locator('input[name="username"]').fill(username);
+  await page.locator('input[name="password"]').first().fill(password);
+  await page.locator('button[type="submit"]').first().click();
 
   await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
 }
 
 export async function signOutFromHeader(page: Page, locale: string) {
-  const signOut = page.locator("header").getByRole("button", {
-    name: /Sign out/i,
-  });
+  const signOut = page.locator('[data-layout-key="header-auth"]');
   await expect(signOut).toBeVisible();
   await signOut.click();
   await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
