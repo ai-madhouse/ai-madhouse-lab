@@ -19,6 +19,48 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(sizes.maxScrollWidth).toBeLessThanOrEqual(sizes.viewportWidth + 1);
 }
 
+async function gotoNotes(page: Page, locale: string) {
+  await page.goto(`/${locale}/notes`, { waitUntil: "domcontentloaded" });
+  await expect(
+    page.locator("main").getByRole("heading", { name: "Notes" }).first(),
+  ).toBeVisible();
+}
+
+async function ensureNotesUnlocked(page: Page, passphrase: string) {
+  const titleInput = page.getByRole("textbox", { name: "Title" });
+  await expect(titleInput).toBeVisible();
+
+  try {
+    await expect(titleInput).toBeEnabled({ timeout: 5_000 });
+    return;
+  } catch {
+    // no-op: continue with setup/unlock flow
+  }
+
+  const setupInput = page.getByPlaceholder(/Set an E2EE passphrase/i);
+  const unlockInput = page.getByPlaceholder(/Enter your E2EE passphrase/i);
+
+  const mode = await Promise.race([
+    setupInput
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => "setup" as const),
+    unlockInput
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => "unlock" as const),
+  ]);
+
+  if (mode === "setup") {
+    await setupInput.fill(passphrase);
+    await page.getByPlaceholder(/Confirm passphrase/i).fill(passphrase);
+    await page.getByRole("button", { name: "Create & unlock" }).click();
+  } else {
+    await unlockInput.fill(passphrase);
+    await page.getByRole("button", { name: /^Unlock$/i }).click();
+  }
+
+  await expect(titleInput).toBeEnabled();
+}
+
 test("top nav updates active link and supports keyboard focus state", async ({
   page,
 }) => {
@@ -144,10 +186,95 @@ test("dashboard + top bar stay structurally stable across locales", async ({
   }
 });
 
-test("dashboard realtime indicator stays connected for a healthy websocket", async ({
+test("notes create sends string payload fields and persists after reload", async ({
+  page,
+}) => {
+  const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
+  const passphrase = "CorrectHorseBatteryStaple1!";
+  const seed = Date.now().toString(36);
+  const title = `pw notes validation ${seed}`;
+  const body = "notes create regression coverage";
+  const createPayloads: Array<{
+    note_id?: unknown;
+    payload_iv?: unknown;
+    payload_ciphertext?: unknown;
+  }> = [];
+
+  await page.route("**/api/notes-history", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    const raw = request.postData();
+    if (!raw) {
+      await route.continue();
+      return;
+    }
+
+    let parsed: { kind?: unknown } | null = null;
+    try {
+      parsed = JSON.parse(raw) as { kind?: unknown } | null;
+    } catch {
+      await route.continue();
+      return;
+    }
+    if (parsed?.kind === "create") {
+      createPayloads.push(parsed);
+    }
+    await route.continue();
+  });
+
+  await gotoNotes(page, locale);
+  await ensureNotesUnlocked(page, passphrase);
+
+  await page.getByRole("textbox", { name: "Title" }).fill(title);
+  await page.getByRole("textbox", { name: "Body (Markdown)" }).fill(body);
+  await page
+    .getByRole("button", { name: /^Create$/ })
+    .first()
+    .click();
+
+  const noteButton = page.getByRole("button", { name: `Open note: ${title}` });
+  await expect(noteButton).toBeVisible();
+
+  await expect.poll(() => createPayloads.length, { timeout: 5_000 }).toBe(1);
+  const createPayload = createPayloads[0];
+  expect(typeof createPayload.note_id).toBe("string");
+  if (typeof createPayload.note_id !== "string") {
+    throw new Error("Expected create payload note_id to be a string");
+  }
+  expect(createPayload.note_id.length).toBeGreaterThan(0);
+  expect(typeof createPayload.payload_iv).toBe("string");
+  if (typeof createPayload.payload_iv !== "string") {
+    throw new Error("Expected create payload payload_iv to be a string");
+  }
+  expect(createPayload.payload_iv.length).toBeGreaterThan(0);
+  expect(typeof createPayload.payload_ciphertext).toBe("string");
+  if (typeof createPayload.payload_ciphertext !== "string") {
+    throw new Error(
+      "Expected create payload payload_ciphertext to be a string",
+    );
+  }
+  expect(createPayload.payload_ciphertext.length).toBeGreaterThan(0);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await ensureNotesUnlocked(page, passphrase);
+  await expect(noteButton).toBeVisible();
+});
+
+test("dashboard realtime indicator handles disconnect and reconnect transitions", async ({
   page,
 }) => {
   await page.addInitScript(() => {
+    const wsInstances: MockWebSocket[] = [];
+    Object.defineProperty(window, "__mockRealtimeWsInstances", {
+      value: wsInstances,
+      configurable: true,
+      writable: false,
+    });
+
     class MockWebSocket {
       static readonly CONNECTING = 0;
       static readonly OPEN = 1;
@@ -163,6 +290,7 @@ test("dashboard realtime indicator stays connected for a healthy websocket", asy
 
       constructor(url: string) {
         this.url = url;
+        wsInstances.push(this);
 
         setTimeout(() => {
           this.readyState = MockWebSocket.OPEN;
@@ -209,6 +337,28 @@ test("dashboard realtime indicator stays connected for a healthy websocket", asy
     /Opening realtime websocket|connected to realtime/,
   );
   await expect(statusLabel).toHaveText("Connected");
+  await expect(statusDetail).toHaveText(
+    "This browser is connected to realtime.",
+  );
+  await page.evaluate(() => {
+    const sockets = (
+      window as Window & {
+        __mockRealtimeWsInstances?: Array<{ close: () => void }>;
+      }
+    ).__mockRealtimeWsInstances;
+    if (!Array.isArray(sockets)) return;
+    for (const socket of sockets) socket.close();
+    sockets.splice(0, sockets.length);
+  });
+  await expect
+    .poll(() => statusLabel.textContent(), { timeout: 3_000 })
+    .toBe("Disconnected");
+  await expect(statusDetail).toHaveText(
+    "This browser is not connected to realtime.",
+  );
+  await expect
+    .poll(() => statusLabel.textContent(), { timeout: 3_000 })
+    .toBe("Connected");
   await expect(statusDetail).toHaveText(
     "This browser is connected to realtime.",
   );
