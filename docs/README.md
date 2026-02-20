@@ -6,7 +6,7 @@
 - [02 — Architecture](./02-architecture.md)
 - [03 — Development](./03-development.md)
 - [04 — Features](./04-features.md)
-- [05 — Header UI contracts](./05-header-ui-contracts.md)
+- [05 — Internal API Contracts](./05-internal-api-contracts.md)
 - [06 — UI Design](./06-ui-design.md)
 - [07 — Security headers & CSP](./07-security-headers-and-csp.md)
 - [Security — Auth + CSRF Contract Matrix](./security/auth-csrf-contract-matrix.md)
