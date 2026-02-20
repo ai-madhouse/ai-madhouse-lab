@@ -143,3 +143,76 @@ test("dashboard + top bar stay structurally stable across locales", async ({
     });
   }
 });
+
+test("dashboard realtime indicator stays connected for a healthy websocket", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class MockWebSocket {
+      static readonly CONNECTING = 0;
+      static readonly OPEN = 1;
+      static readonly CLOSING = 2;
+      static readonly CLOSED = 3;
+
+      readonly url: string;
+      readyState = MockWebSocket.CONNECTING;
+      onopen: ((this: WebSocket, ev: Event) => unknown) | null = null;
+      onclose: ((this: WebSocket, ev: CloseEvent) => unknown) | null = null;
+      onerror: ((this: WebSocket, ev: Event) => unknown) | null = null;
+      onmessage: ((this: WebSocket, ev: MessageEvent) => unknown) | null = null;
+
+      constructor(url: string) {
+        this.url = url;
+
+        setTimeout(() => {
+          this.readyState = MockWebSocket.OPEN;
+          this.onopen?.call(this as unknown as WebSocket, new Event("open"));
+        }, 20);
+      }
+
+      close() {
+        if (this.readyState === MockWebSocket.CLOSED) return;
+        this.readyState = MockWebSocket.CLOSED;
+        this.onclose?.call(
+          this as unknown as WebSocket,
+          new CloseEvent("close", {
+            code: 1000,
+            reason: "test-close",
+            wasClean: true,
+          }),
+        );
+      }
+
+      send(_data: string | Blob | ArrayBuffer | ArrayBufferView) {}
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() {
+        return true;
+      }
+    }
+
+    Object.defineProperty(window, "WebSocket", {
+      value: MockWebSocket,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  await registerAndLandOnDashboard(page, { locale: "en" });
+
+  const realtimeCard = page.getByTestId("dashboard-realtime-card");
+  const statusLabel = realtimeCard.getByTestId("realtime-status-label");
+  const statusDetail = realtimeCard.getByTestId("realtime-status-detail");
+
+  await expect(realtimeCard).toBeVisible();
+  await expect(statusDetail).toContainText(
+    /Opening realtime websocket|connected to realtime/,
+  );
+  await expect(statusLabel).toHaveText("Connected");
+  await expect(statusDetail).toHaveText(
+    "This browser is connected to realtime.",
+  );
+  await expect
+    .poll(async () => await statusDetail.textContent(), { timeout: 1_000 })
+    .toBe("This browser is connected to realtime.");
+});

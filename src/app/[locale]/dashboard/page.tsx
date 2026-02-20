@@ -193,7 +193,7 @@ export default async function DashboardPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-testid="dashboard-realtime-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground">

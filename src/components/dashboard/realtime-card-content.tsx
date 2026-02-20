@@ -105,8 +105,15 @@ export function RealtimeCardContent({
 
   return (
     <>
-      <p className="text-3xl font-semibold">{statusLabel}</p>
-      <p className="text-xs text-muted-foreground">{statusDetail}</p>
+      <p className="text-3xl font-semibold" data-testid="realtime-status-label">
+        {statusLabel}
+      </p>
+      <p
+        className="text-xs text-muted-foreground"
+        data-testid="realtime-status-detail"
+      >
+        {statusDetail}
+      </p>
       <p className="text-xs text-muted-foreground">{metricsText}</p>
     </>
   );
