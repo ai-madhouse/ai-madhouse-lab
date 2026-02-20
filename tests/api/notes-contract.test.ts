@@ -240,6 +240,28 @@ describe("internal API contracts: /api/notes-history and /api/notes-stream", () 
     expect(json.id.length).toBeGreaterThan(0);
   });
 
+  test("/api/notes-history POST accepts null optional fields in create payload", async () => {
+    const res = await notesHistoryPost(
+      createAuthedRequest("http://local.test/api/notes-history", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-csrf-token": "ok-token",
+        },
+        body: JSON.stringify({
+          kind: "create",
+          note_id: "note-null-optional",
+          target_event_id: null,
+          payload_iv: "iv",
+          payload_ciphertext: "cipher",
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = notesHistoryPostSuccessResponseSchema.parse(await res.json());
+    expect(json.id.length).toBeGreaterThan(0);
+  });
+
   test("/api/notes-stream unauthorized and stream contracts", async () => {
     const unauthorized = await notesStreamGet(
       new NextRequest("http://local.test/api/notes-stream"),
