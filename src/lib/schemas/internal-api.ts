@@ -53,10 +53,10 @@ export const notesHistoryGetSuccessResponseSchema = z
 export const notesHistoryPostRequestSchema = z
   .object({
     kind: notesEventKindSchema,
-    note_id: z.string().optional(),
-    target_event_id: z.string().optional(),
-    payload_iv: z.string().optional(),
-    payload_ciphertext: z.string().optional(),
+    note_id: z.string().nullish(),
+    target_event_id: z.string().nullish(),
+    payload_iv: z.string().nullish(),
+    payload_ciphertext: z.string().nullish(),
   })
   .superRefine((value, ctx) => {
     if (!value.note_id) {
