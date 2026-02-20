@@ -22,6 +22,7 @@ describe("/api/csp-report", () => {
     );
 
     expect(res.status).toBe(204);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
   test("returns 204 for malformed json (best-effort)", async () => {
@@ -34,6 +35,7 @@ describe("/api/csp-report", () => {
     );
 
     expect(res.status).toBe(204);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
   test("drops oversized bodies via content-length gate", async () => {
@@ -49,6 +51,7 @@ describe("/api/csp-report", () => {
     );
 
     expect(res.status).toBe(204);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
   test("rate limits burst (should not throw)", async () => {
@@ -72,6 +75,9 @@ describe("/api/csp-report", () => {
     );
 
     const results = await Promise.all(reqs);
-    for (const r of results) expect(r.status).toBe(204);
+    for (const r of results) {
+      expect(r.status).toBe(204);
+      expect(r.headers.get("cache-control")).toBe("no-store");
+    }
   });
 });
