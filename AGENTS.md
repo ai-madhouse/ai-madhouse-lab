@@ -24,15 +24,33 @@ If you are an agent: follow this file *exactly*.
 - When adding user-visible copy, update **all locales** in `src/messages/*.json` (don’t leave only `en`).
 - Prefer **not** adding new nav links unless the task explicitly asks (avoids translation churn).
 
-### Server-first by default
-- Components are **Server Components by default**.
-- Add `'use client'` only when you need hooks, event handlers, or browser APIs.
-- Push the client boundary down: keep pages/layouts server when possible; isolate interactive leaf components.
+### Runtime architecture rule (current migration baseline)
+- **App data/actions must be API/WS-driven** across the product (dashboard/settings/live/notes/auth).
+- Do **not** implement app-logic data flows via Server Components.
+- Use SSR/SSG where applicable for shell/static/initial render, then hydrate runtime data from API and live updates from WS.
+- For runtime routes, enforce this exact flow:
+  1) initial data fetch via API
+  2) normalize/store it in Jotai atoms
+  3) WS messages update those same atoms
+  4) UI subscribes to atom state and re-renders from atom updates (single source of truth)
 
 ### TypeScript rules (keep it strict)
 - Avoid `any`.
 - Avoid `as` casts unless you also add a runtime check/type guard.
 - Validate untrusted inputs (forms, route handlers) with `zod` (already a dependency).
+- Prefer discriminated unions + exhaustive handling for UI/API state.
+- Prefer `Result`-style expected-failure handling over throw-as-control-flow.
+
+### Production checklist integration (authoritative)
+The migration checklist file is authoritative reference:
+`/home/openclaw/.openclaw/media/inbound/file_4---77b8d30a-ef3f-4ffa-a0d0-110254b7f2dd.md`
+
+Enforced coding constraints:
+- **No duplicated logic/files** (no mirror/re-export helper clutter).
+- **No long branching**: avoid if/switch chains with >3 outcomes; use lookup maps / strategy / discriminated unions.
+- **React Compiler aware**: do not add `useMemo`/`useCallback` for render micro-optimization by default.
+- **Boundary validation**: validate at API/network/storage/env input boundaries.
+- **TSDoc discipline**: only for public/non-obvious intent and constraints; avoid comment spam.
 
 ### Follow existing house patterns
 - Styling: Tailwind v4 tokens live in `src/app/globals.css` (`@theme inline`). Prefer tokens over magic numbers.
@@ -82,6 +100,11 @@ Statuses are treated as truth, not aspiration.
 - Agents **do not push** unless explicitly instructed.
 - Agents **do not create PRs** unless explicitly instructed.
 - Maintainer uses `gh` to label + create PRs + merge.
+
+### 5) Reviewer context handling
+- `.pr-addendum.md` is forbidden in repo history and commits.
+- Do not create it.
+- Reviewer context must be appended to VK task `## Notes` (append-only), and PR body must be synthesized from task context + actual code changes.
 
 ---
 
