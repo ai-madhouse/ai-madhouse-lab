@@ -1,5 +1,6 @@
 "use client";
 
+import { useAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -7,60 +8,32 @@ import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { Button } from "@/components/roiui/button";
 import { fetchCsrfTokenOrNull } from "@/lib/client/csrf";
 import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
+import {
+  fetchCurrentSession,
+  fetchSessions,
+  type SessionRow,
+  settingsCsrfTokenAtom,
+  settingsCurrentSessionIdAtom,
+  settingsDekKeyAtom,
+  settingsErrorAtom,
+  settingsLoadingAtom,
+  settingsMetaWarningAtom,
+  settingsRowsAtom,
+} from "@/lib/runtime/settings-state";
 import { describeUserAgent } from "@/lib/user-agent";
-
-type SessionRow = {
-  id: string;
-  created_at: string;
-  expires_at: string;
-  meta_iv: string | null;
-  meta_ciphertext: string | null;
-};
 
 type SessionMeta = {
   ip: string;
   userAgent: string;
 };
 
-// csrf token is fetched by E2EEDekUnlockCard and provided via onUnlocked
-
-// (moved into E2EEDekUnlockCard)
-
-// (moved into E2EEDekUnlockCard)
-
-async function fetchSessions() {
-  const res = await fetch("/api/sessions", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; sessions: SessionRow[] }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error(
-      (json && "error" in json && json.error) || "sessions_failed",
-    );
-  }
-
-  return (json && "sessions" in json && json.sessions) || [];
-}
-
-async function fetchMe() {
-  const res = await fetch("/api/session/me", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; sessionId: string; ip: string }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error((json && "error" in json && json.error) || "me_failed");
-  }
-
-  if (!json || !("sessionId" in json) || !json.sessionId) {
-    throw new Error("missing sessionId");
-  }
-
-  return json;
-}
+const errorLabelKeyMap: Record<string, string> = {
+  missing_csrf: "errors.missingCsrf",
+  revoke_failed: "errors.revokeFailed",
+  sessions_failed: "errors.sessionsFailed",
+  me_failed: "errors.meFailed",
+  meta_failed: "errors.metaFailed",
+};
 
 async function upsertSessionMeta({
   csrfToken,
@@ -94,50 +67,45 @@ async function upsertSessionMeta({
   }
 }
 
-// (replaced with proper UI in E2EEDekUnlockCard)
-
-// describeUserAgent moved to @/lib/user-agent
 export function SessionsListE2EE({
-  currentSessionId,
+  onCountChange,
 }: {
-  currentSessionId: string | null;
+  onCountChange?: (count: number) => void;
 }) {
-  const [dekKey, setDekKey] = useState<CryptoKey | null>(null);
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
-
   const t = useTranslations("Settings.sessionsList");
 
-  const [rows, setRows] = useState<SessionRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [metaWarning, setMetaWarning] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [dekKey, setDekKey] = useAtom(settingsDekKeyAtom);
+  const [csrfToken, setCsrfToken] = useAtom(settingsCsrfTokenAtom);
+  const [rows, setRows] = useAtom(settingsRowsAtom);
+  const [, setCurrentSessionId] = useAtom(settingsCurrentSessionIdAtom);
+  const [error, setError] = useAtom(settingsErrorAtom);
+  const [metaWarning, setMetaWarning] = useAtom(settingsMetaWarningAtom);
+  const [loading, setLoading] = useAtom(settingsLoadingAtom);
 
   function prettyError(raw: string) {
-    switch (raw) {
-      case "missing_csrf":
-        return t("errors.missingCsrf");
-      case "revoke_failed":
-        return t("errors.revokeFailed");
-      case "sessions_failed":
-        return t("errors.sessionsFailed");
-      case "me_failed":
-        return t("errors.meFailed");
-      case "meta_failed":
-        return t("errors.metaFailed");
-      default:
-        return raw;
-    }
+    const labelKey = errorLabelKeyMap[raw];
+    return labelKey ? t(labelKey) : raw;
   }
 
   useEffect(() => {
+    onCountChange?.(rows.length);
+  }, [onCountChange, rows.length]);
+
+  useEffect(() => {
     let cancelled = false;
+
+    async function refreshSessions() {
+      const sessions = await fetchSessions();
+      if (cancelled) return;
+      setRows(sessions);
+      onCountChange?.(sessions.length);
+    }
 
     async function run() {
       setError(null);
       setLoading(true);
 
       try {
-        // Fetch a fresh CSRF token for session actions.
         const token = await fetchCsrfTokenOrNull();
         if (!cancelled && token) setCsrfToken(token);
       } catch {
@@ -145,8 +113,12 @@ export function SessionsListE2EE({
       }
 
       try {
-        const sessions = await fetchSessions();
-        if (!cancelled) setRows(sessions);
+        await refreshSessions();
+
+        const me = await fetchCurrentSession();
+        if (!cancelled) {
+          setCurrentSessionId(me.sessionId);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "sessions_failed");
@@ -156,12 +128,19 @@ export function SessionsListE2EE({
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [
+    onCountChange,
+    setCsrfToken,
+    setCurrentSessionId,
+    setError,
+    setLoading,
+    setRows,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,10 +148,10 @@ export function SessionsListE2EE({
     async function refresh() {
       try {
         const sessions = await fetchSessions();
-        if (!cancelled) {
-          setError(null);
-          setRows(sessions);
-        }
+        if (cancelled) return;
+        setError(null);
+        setRows(sessions);
+        onCountChange?.(sessions.length);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "sessions_failed");
@@ -192,7 +171,7 @@ export function SessionsListE2EE({
         onSessionsChanged,
       );
     };
-  }, []);
+  }, [onCountChange, setError, setRows]);
 
   async function handleUnlocked(result: {
     csrfToken: string;
@@ -203,9 +182,9 @@ export function SessionsListE2EE({
     setDekKey(result.dekKey);
     setCsrfToken(result.csrfToken);
 
-    // Ensure current session meta exists (nice-to-have; not required for revocation).
     try {
-      const me = await fetchMe();
+      const me = await fetchCurrentSession();
+      setCurrentSessionId(me.sessionId);
       const meta: SessionMeta = { ip: me.ip, userAgent: navigator.userAgent };
       const payload = await encryptJson({ key: result.dekKey, value: meta });
       await upsertSessionMeta({
@@ -220,6 +199,7 @@ export function SessionsListE2EE({
     try {
       const sessions = await fetchSessions();
       setRows(sessions);
+      onCountChange?.(sessions.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "sessions_failed");
     }
@@ -256,6 +236,7 @@ export function SessionsListE2EE({
 
       const sessions = await fetchSessions();
       setRows(sessions);
+      onCountChange?.(sessions.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "revoke_failed");
     }
@@ -282,11 +263,10 @@ export function SessionsListE2EE({
       ) : null}
 
       <div className="space-y-2">
-        {rows.map((s) => (
+        {rows.map((sessionRow) => (
           <SessionRowItem
-            key={s.id}
-            row={s}
-            current={currentSessionId ? s.id === currentSessionId : false}
+            key={sessionRow.id}
+            row={sessionRow}
             dekKey={dekKey}
             onRevoke={revokeSession}
           />
@@ -298,18 +278,16 @@ export function SessionsListE2EE({
 
 function SessionRowItem({
   row,
-  current,
   dekKey,
   onRevoke,
 }: {
   row: SessionRow;
-  current: boolean;
   dekKey: CryptoKey | null;
   onRevoke: (sessionId: string) => void;
 }) {
   const ts = useTranslations("Settings.sessions");
   const t = useTranslations("Settings.sessionsList");
-
+  const [currentSessionId] = useAtom(settingsCurrentSessionIdAtom);
   const [meta, setMeta] = useState<SessionMeta | null>(null);
 
   useEffect(() => {
@@ -333,7 +311,7 @@ function SessionRowItem({
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;
@@ -341,6 +319,7 @@ function SessionRowItem({
   }, [dekKey, row.meta_ciphertext, row.meta_iv]);
 
   const desc = meta ? describeUserAgent(meta.userAgent) : null;
+  const isCurrent = currentSessionId ? row.id === currentSessionId : false;
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background p-3">
@@ -362,7 +341,7 @@ function SessionRowItem({
         </div>
 
         <div className="flex items-center gap-2">
-          {current ? (
+          {isCurrent ? (
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               {ts("current")}
             </p>

@@ -12,12 +12,14 @@ export async function GET(request: NextRequest) {
   }
 
   const metrics = await getUserDashboardMetrics(session.username);
+
   return Response.json(
     {
       ok: true,
       metrics,
     },
     {
+      status: 200,
       headers: {
         "Cache-Control": "no-store",
       },

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog/alert-dialog";
 
 export function SignOutEverywhereDialog({
-  action,
+  onConfirm,
   disabled,
   triggerLabel,
   title,
@@ -19,7 +19,7 @@ export function SignOutEverywhereDialog({
   cancelLabel,
   confirmLabel,
 }: {
-  action: (formData: FormData) => void;
+  onConfirm: () => void | Promise<void>;
   disabled?: boolean;
   triggerLabel: string;
   title: string;
@@ -55,9 +55,10 @@ export function SignOutEverywhereDialog({
               {cancelLabel}
             </Button>
             <form
-              action={action}
-              onSubmit={() => {
+              onSubmit={(event) => {
+                event.preventDefault();
                 setOpen(false);
+                void onConfirm();
               }}
             >
               <Button type="submit" variant="destructive">

@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const metrics = await getUserDashboardMetrics(session.username);
+
   return Response.json(
     {
       ok: true,
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       },
     },
     {
+      status: 200,
       headers: {
         "Cache-Control": "no-store",
       },
