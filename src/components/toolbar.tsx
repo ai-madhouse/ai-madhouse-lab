@@ -24,6 +24,7 @@ import {
   ToolbarNav,
 } from "@/components/roiui/toolbar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Tooltip } from "@/components/ui/tooltip";
 import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
 import { safeParseJson } from "@/lib/utils";
@@ -138,17 +139,24 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
           {navItems.map((item) => {
             const Icon = iconMap[item.key];
             const active = pathname === item.href;
+            const label = t(item.key);
             return (
-              <NavLinkButton
+              <Tooltip
                 key={item.key}
-                href={item.href}
-                data-layout-key={`nav-${item.key}`}
-                active={active}
-                className="shrink-0 gap-2.5 whitespace-nowrap"
+                content={label}
+                side="bottom"
+                className="shrink-0"
               >
-                <Icon className="h-4 w-4" aria-label={t(`${item.key}Icon`)} />
-                {t(item.key)}
-              </NavLinkButton>
+                <NavLinkButton
+                  href={item.href}
+                  data-layout-key={`nav-${item.key}`}
+                  active={active}
+                  aria-label={label}
+                  className="h-10 w-10 justify-center px-0"
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </NavLinkButton>
+              </Tooltip>
             );
           })}
         </ToolbarNav>

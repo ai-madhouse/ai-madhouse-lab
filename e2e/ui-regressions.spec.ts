@@ -92,6 +92,23 @@ test("top nav updates active link and supports keyboard focus state", async ({
   await expect(landingOnAboutPage).toBeFocused();
 });
 
+test("top nav shows localized bottom tooltip for icon-only links", async ({
+  page,
+}) => {
+  await page.goto("/en", { waitUntil: "networkidle" });
+
+  const landingLink = page.locator('[data-layout-key="nav-home"]');
+  await landingLink.hover();
+
+  const tooltip = page.getByRole("tooltip", { name: "Landing" });
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveClass(/top-full/);
+
+  await landingLink.focus();
+  await expect(landingLink).toBeFocused();
+  await expect(tooltip).toBeVisible();
+});
+
 test("locale switcher opens via menu semantics and preserves route/query/hash", async ({
   page,
 }) => {
