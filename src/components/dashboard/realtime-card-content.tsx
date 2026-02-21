@@ -24,20 +24,51 @@ export function RealtimeCardContent({
   const [wsStatus, setWsStatus] = useState<WsStatus>(
     isAuthed ? "connecting" : "disconnected",
   );
+  const [realtimeHealth, setRealtimeHealth] =
+    useState<RealtimeHealth>(initialRealtime);
 
   useEffect(() => {
     if (!isAuthed) {
       setWsStatus("disconnected");
-      return;
-    }
-
-    const url = getRealtimeWsUrl();
-    if (!url) {
-      setWsStatus("disconnected");
+      setRealtimeHealth(null);
       return;
     }
 
     let closed = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    async function refreshRealtimeHealth() {
+      try {
+        const res = await fetch("/api/realtime/health", { cache: "no-store" });
+        if (!res.ok) return;
+        const payload = (await res.json().catch(() => null)) as {
+          ok: true;
+          connectionsTotal?: number;
+          usersConnected?: number;
+        } | null;
+        if (!payload?.ok || closed) return;
+        setRealtimeHealth({
+          ok: true,
+          connectionsTotal: Number(payload.connectionsTotal ?? 0),
+          usersConnected: Number(payload.usersConnected ?? 0),
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    void refreshRealtimeHealth();
+    pollTimer = setInterval(() => {
+      void refreshRealtimeHealth();
+    }, 5_000);
+
+    const url = getRealtimeWsUrl();
+    if (!url) {
+      setWsStatus("disconnected");
+      if (pollTimer) clearInterval(pollTimer);
+      return;
+    }
+
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let retryMs = 1_500;
@@ -52,6 +83,7 @@ export function RealtimeCardContent({
         if (closed) return;
         retryMs = 1_500;
         setWsStatus("connected");
+        void refreshRealtimeHealth();
       };
 
       ws.onclose = () => {
@@ -75,6 +107,7 @@ export function RealtimeCardContent({
     return () => {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollTimer) clearInterval(pollTimer);
       try {
         ws?.close();
       } catch {
@@ -83,10 +116,10 @@ export function RealtimeCardContent({
     };
   }, [isAuthed]);
 
-  const metricsText = initialRealtime?.ok
+  const metricsText = realtimeHealth?.ok
     ? t("realtime.detail", {
-        users: String(initialRealtime.usersConnected ?? 0),
-        conns: String(initialRealtime.connectionsTotal ?? 0),
+        users: String(realtimeHealth.usersConnected ?? 0),
+        conns: String(realtimeHealth.connectionsTotal ?? 0),
       })
     : t("realtime.detailUnavailable");
 
@@ -115,7 +148,12 @@ export function RealtimeCardContent({
       >
         {statusDetail}
       </p>
-      <p className="text-xs text-muted-foreground">{metricsText}</p>
+      <p
+        className="text-xs text-muted-foreground"
+        data-testid="realtime-metrics-detail"
+      >
+        {metricsText}
+      </p>
     </>
   );
 }

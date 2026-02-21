@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { getRealtimeHealthFromDb } from "@/lib/realtime-health";
 
 type NotesEventRow = {
   id: string;
@@ -75,11 +76,23 @@ async function fetchRealtimeHealth() {
       usersConnected?: number;
     } | null;
 
-    return json?.ok ? json : null;
+    if (json?.ok) {
+      return {
+        ok: true as const,
+        connectionsTotal: Number(json.connectionsTotal ?? 0),
+        usersConnected: Number(json.usersConnected ?? 0),
+      };
+    }
   } catch {
-    return null;
+    // fall through
   } finally {
     clearTimeout(timeout);
+  }
+
+  try {
+    return await getRealtimeHealthFromDb();
+  } catch {
+    return null;
   }
 }
 
