@@ -211,6 +211,12 @@ export const sessionsChangedSuccessResponseSchema = z
   })
   .strict();
 
+export const changePasswordSuccessResponseSchema = z
+  .object({
+    ok: z.literal(true),
+  })
+  .strict();
+
 export const livePulseSnapshotResponseSchema = z
   .object({
     ok: z.literal(true),

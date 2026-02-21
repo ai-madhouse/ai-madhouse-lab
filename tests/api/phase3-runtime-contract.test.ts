@@ -12,7 +12,7 @@ let username = "";
 
 let dashboardMetricsGet: typeof import("@/app/api/dashboard/metrics/route").GET;
 let pulseSnapshotGet: typeof import("@/app/api/pulse/snapshot/route").GET;
-let revokeOtherSessionsPost: typeof import("@/app/api/settings/revoke-other-sessions/route").POST;
+let revokeOtherSessionsPost: typeof import("@/app/api/sessions/revoke-others/route").POST;
 let changePasswordPost: typeof import("@/app/api/settings/change-password/route").POST;
 
 function createAuthedRequest(
@@ -42,7 +42,7 @@ describe("phase3 runtime route contracts", () => {
       "@/app/api/pulse/snapshot/route"
     ));
     ({ POST: revokeOtherSessionsPost } = await import(
-      "@/app/api/settings/revoke-other-sessions/route"
+      "@/app/api/sessions/revoke-others/route"
     ));
     ({ POST: changePasswordPost } = await import(
       "@/app/api/settings/change-password/route"
@@ -109,22 +109,19 @@ describe("phase3 runtime route contracts", () => {
     expect(typeof pulseJson.pulse.activeSessions).toBe("number");
   });
 
-  test("/api/settings/revoke-other-sessions revokes secondary sessions", async () => {
+  test("/api/sessions/revoke-others revokes secondary sessions", async () => {
     await createSession({ username });
 
     const before = await listSessionsForUser(username);
     expect(before.length).toBeGreaterThanOrEqual(2);
 
     const res = await revokeOtherSessionsPost(
-      createAuthedRequest(
-        "http://local.test/api/settings/revoke-other-sessions",
-        {
-          method: "POST",
-          headers: {
-            "x-csrf-token": "csrf-test-token",
-          },
+      createAuthedRequest("http://local.test/api/sessions/revoke-others", {
+        method: "POST",
+        headers: {
+          "x-csrf-token": "csrf-test-token",
         },
-      ),
+      }),
     );
 
     expect(res.status).toBe(200);

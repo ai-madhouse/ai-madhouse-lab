@@ -1,6 +1,3 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-
 import { ClearDerivedKekCacheOnMount } from "@/components/auth/clear-derived-kek-cache-on-mount";
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
 import { LoginForm } from "@/components/auth/login-form";
@@ -8,101 +5,14 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  authenticate,
-  isAuthenticated,
-  setAuthCookie,
-  verifyCsrfToken,
-} from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
-import { consumeRateLimit } from "@/lib/rate-limit";
-import { safeNextPath } from "@/lib/redirects";
-import { getClientIp } from "@/lib/request";
-import { loginFormSchema } from "@/lib/schemas/auth";
-import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
 
 type LoginPageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ error?: string; next?: string }>;
 };
-
-async function loginAction(formData: FormData) {
-  "use server";
-
-  const initialLocale = normalizeLocale(String(formData.get("locale") ?? "en"));
-  const initialNextPath = safeNextPath(
-    initialLocale,
-    String(formData.get("next") ?? ""),
-  );
-  const csrfTokenRaw = String(formData.get("csrfToken") ?? "");
-
-  if (!csrfTokenRaw) {
-    redirect(
-      `/${initialLocale}/login?error=csrf&next=${encodeURIComponent(initialNextPath)}`,
-    );
-  }
-
-  const parsed = loginFormSchema.safeParse({
-    locale: initialLocale,
-    next: initialNextPath,
-    username: String(formData.get("username") ?? ""),
-    password: String(formData.get("password") ?? ""),
-    csrfToken: csrfTokenRaw,
-  });
-
-  // Generic error for invalid payload.
-  if (!parsed.success) {
-    redirect(`/${initialLocale}/login?error=1`);
-  }
-
-  const { locale, next, username, csrfToken } = parsed.data;
-  const password = String(formData.get("password") ?? "");
-  const nextPath = safeNextPath(locale, next);
-
-  const hdrs = await headers();
-  const ip = getClientIp(hdrs);
-
-  const limiter = consumeRateLimit({
-    key: `login:${username || "unknown"}`,
-    limit: 10,
-    windowSeconds: 60,
-  });
-
-  if (!limiter.ok) {
-    redirect(
-      `/${locale}/login?error=rate&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  if (!(await verifyCsrfToken(csrfToken))) {
-    redirect(
-      `/${locale}/login?error=csrf&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  if (!(await authenticate(username, password))) {
-    redirect(`/${locale}/login?error=1&next=${encodeURIComponent(nextPath)}`);
-  }
-
-  const userAgent = hdrs.get("user-agent") ?? "";
-  const session = await createSession({ username, ip, userAgent });
-
-  console.log(
-    JSON.stringify({
-      ts: new Date().toISOString(),
-      event: "session_created",
-      username,
-      sessionId: session.id,
-      expiresAt: session.expiresAt,
-      ip,
-      userAgent,
-    }),
-  );
-
-  await setAuthCookie(session.id);
-  redirect(nextPath);
-}
 
 export default async function LoginPage({
   params,
@@ -116,7 +26,7 @@ export default async function LoginPage({
   const t = createTranslator(messages, "Auth");
 
   const isAuthed = await isAuthenticated();
-  const hasError = resolvedSearchParams?.error === "1";
+  const hasError = Boolean(resolvedSearchParams?.error);
   const nextPath = resolvedSearchParams?.next ?? `/${locale}/dashboard`;
 
   return (
@@ -137,7 +47,7 @@ export default async function LoginPage({
 
           <Card>
             <LoginForm
-              action={loginAction}
+              action="/api/auth/login"
               locale={locale}
               nextPath={nextPath}
               hasError={hasError}

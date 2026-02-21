@@ -4,6 +4,7 @@ import type { z } from "zod";
 
 import {
   apiUnauthorizedErrorSchema,
+  changePasswordSuccessResponseSchema,
   csrfEndpointResponseSchema,
   dashboardMetricsResponseSchema,
   livePulseSnapshotResponseSchema,
@@ -121,6 +122,25 @@ export async function signOutEverywhere(csrfToken: string) {
       },
     },
     successSchema: sessionsChangedSuccessResponseSchema,
+  });
+}
+
+export async function changePassword(payload: {
+  csrfToken: string;
+  currentPassword: string;
+  newPassword: string;
+  newPassword2: string;
+}) {
+  return requestJson({
+    path: "/api/settings/change-password",
+    init: {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    successSchema: changePasswordSuccessResponseSchema,
   });
 }
 
