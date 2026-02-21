@@ -19,7 +19,10 @@ function normalizeWsUrl(input: string, origin: string) {
 
 function isLocalHost(hostname: string) {
   return (
-    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
   );
 }
 

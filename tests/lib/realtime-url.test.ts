@@ -81,6 +81,17 @@ describe("getRealtimeWsUrl", () => {
     expect(getRealtimeWsUrl()).toBe("ws://localhost:8787/ws");
   });
 
+  test("defaults to realtime port 8787 on IPv6 localhost", () => {
+    setWindowLocation({
+      protocol: "http:",
+      host: "[::1]:3000",
+      hostname: "[::1]",
+      origin: "http://[::1]:3000",
+    });
+
+    expect(getRealtimeWsUrl()).toBe("ws://[::1]:8787/ws");
+  });
+
   test("defaults to same-origin /ws in non-localhost deployments", () => {
     setWindowLocation({
       protocol: "https:",
