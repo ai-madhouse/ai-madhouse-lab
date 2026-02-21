@@ -202,9 +202,12 @@ The maintainer will commit/push.
 
 When moving to `inreview`, include:
 - Summary of changes (bullet list)
-- Files changed (short list)
-- Commands run + results (lint/test/build)
 - Any follow-ups / risks
+
+Do **not** include in PR/task updates:
+- `Files changed` sections
+- `Validation` sections
+- raw command dumps
 
 ---
 
