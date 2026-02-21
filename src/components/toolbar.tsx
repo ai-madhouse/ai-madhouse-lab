@@ -39,8 +39,6 @@ const iconMap = {
   about: Sparkles,
 } as const;
 
-const sessionsChangedDomEventName = "madhouse:sessions:changed";
-
 export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -104,12 +102,6 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
       onEvent: (event) => {
         if (event.type !== "sessions:changed") {
           return;
-        }
-
-        try {
-          window.dispatchEvent(new Event(sessionsChangedDomEventName));
-        } catch {
-          // ignore
         }
 
         void checkSessionStillValid();

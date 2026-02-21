@@ -21,6 +21,11 @@ const sessionMeResponseSchema = z.object({
 });
 
 export type SessionRow = z.infer<typeof sessionRowSchema>;
+export type SettingsWsStatus = "connecting" | "connected" | "disconnected";
+export type SettingsAuthState =
+  | { kind: "loading" }
+  | { kind: "authenticated" }
+  | { kind: "unauthenticated" };
 
 export const settingsDekKeyAtom = atom<CryptoKey | null>(null);
 export const settingsCsrfTokenAtom = atom<string | null>(null);
@@ -29,20 +34,30 @@ export const settingsCurrentSessionIdAtom = atom<string | null>(null);
 export const settingsErrorAtom = atom<string | null>(null);
 export const settingsMetaWarningAtom = atom(false);
 export const settingsLoadingAtom = atom(true);
+export const settingsWsStatusAtom = atom<SettingsWsStatus>("disconnected");
+export const settingsAuthAtom = atom<SettingsAuthState>({ kind: "loading" });
+export const settingsSessionsCountAtom = atom(
+  (get) => get(settingsRowsAtom).length,
+);
+
+function getApiErrorCode(payload: unknown, fallback: string): string {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return fallback;
+  }
+
+  const errorCode = payload.error;
+  return typeof errorCode === "string" ? errorCode : fallback;
+}
 
 export async function fetchSessions() {
   const res = await fetch("/api/sessions", { cache: "no-store" });
-  const json = await res.json().catch(() => null);
+  const payload = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message =
-      json && typeof json === "object" && "error" in json
-        ? String((json as { error?: unknown }).error ?? "sessions_failed")
-        : "sessions_failed";
-    throw new Error(message);
+    throw new Error(getApiErrorCode(payload, "sessions_failed"));
   }
 
-  const parsed = sessionsResponseSchema.safeParse(json);
+  const parsed = sessionsResponseSchema.safeParse(payload);
   if (!parsed.success) {
     throw new Error("invalid_sessions_response");
   }
@@ -52,20 +67,27 @@ export async function fetchSessions() {
 
 export async function fetchCurrentSession() {
   const res = await fetch("/api/session/me", { cache: "no-store" });
-  const json = await res.json().catch(() => null);
+  const payload = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message =
-      json && typeof json === "object" && "error" in json
-        ? String((json as { error?: unknown }).error ?? "me_failed")
-        : "me_failed";
-    throw new Error(message);
+    throw new Error(getApiErrorCode(payload, "me_failed"));
   }
 
-  const parsed = sessionMeResponseSchema.safeParse(json);
+  const parsed = sessionMeResponseSchema.safeParse(payload);
   if (!parsed.success) {
     throw new Error("invalid_me_response");
   }
 
   return parsed.data;
+}
+
+export async function fetchSettingsSnapshot() {
+  const [sessions, me] = await Promise.all([
+    fetchSessions(),
+    fetchCurrentSession(),
+  ]);
+  return {
+    sessions,
+    currentSessionId: me.sessionId,
+  };
 }

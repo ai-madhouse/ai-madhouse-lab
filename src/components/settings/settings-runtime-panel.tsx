@@ -1,5 +1,6 @@
 "use client";
 
+import { useAtomValue } from "jotai";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { PasswordRequirements } from "@/components/auth/password-requirements";
@@ -20,6 +21,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchCsrfTokenOrThrow } from "@/lib/client/csrf";
+import { ApiClientError, fetchCsrfToken } from "@/lib/runtime/api-client";
+import {
+  settingsAuthAtom,
+  settingsSessionsCountAtom,
+} from "@/lib/runtime/settings-state";
 import { changePasswordFormSchema } from "@/lib/schemas/auth";
 
 type SettingsTab =
@@ -31,15 +37,15 @@ type SettingsTab =
 
 export function SettingsRuntimePanel({
   defaultTab,
-  isAuthed,
 }: {
   defaultTab: SettingsTab;
-  isAuthed: boolean;
 }) {
   const t = useTranslations("Settings");
   const locale = useLocale();
+  const authState = useAtomValue(settingsAuthAtom);
+  const sessionsCount = useAtomValue(settingsSessionsCountAtom);
+  const isAuthed = authState.kind === "authenticated";
 
-  const [sessionsCount, setSessionsCount] = useState(0);
   const [sessionsBusy, setSessionsBusy] = useState<"revoke" | "signout" | null>(
     null,
   );
@@ -59,7 +65,7 @@ export function SettingsRuntimePanel({
 
     setSessionsBusy(kind);
     try {
-      const csrfToken = await fetchCsrfTokenOrThrow();
+      const { token: csrfToken } = await fetchCsrfToken();
       const response = await fetch(pathname, {
         method: "POST",
         headers: {
@@ -74,6 +80,10 @@ export function SettingsRuntimePanel({
       }
 
       if (kind === "signout") {
+        window.location.href = `/${locale}/login`;
+      }
+    } catch (error) {
+      if (error instanceof ApiClientError && error.code === "unauthorized") {
         window.location.href = `/${locale}/login`;
       }
     } finally {
@@ -232,7 +242,7 @@ export function SettingsRuntimePanel({
               })}
             </p>
 
-            <SessionsListE2EE onCountChange={setSessionsCount} />
+            <SessionsListE2EE />
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
