@@ -6,18 +6,15 @@ import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isPulseErrorState, isPulseSuccessState } from "@/lib/live/pulse-state";
+import { ApiClientError, fetchPulseSnapshot } from "@/lib/runtime/api-client";
 import {
-  isPulseErrorState,
-  isPulseSuccessState,
-  type PulsePayload,
-} from "@/lib/live/pulse-state";
-import {
-  fetchPulseSnapshot,
   livePulseAtom,
   livePulseErrorAtom,
   livePulseLoadingAtom,
-} from "@/lib/runtime/live-state";
-import { safeParseJson } from "@/lib/utils";
+  liveWsStatusAtom,
+} from "@/lib/runtime/app-atoms";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 
 function formatWhen(value: string | null) {
   if (!value) return "—";
@@ -26,54 +23,68 @@ function formatWhen(value: string | null) {
   return d.toLocaleString();
 }
 
+const liveRefreshEventTypes = new Set(["sessions:changed", "notes:changed"]);
+
 export function PulseBoard() {
   const t = useTranslations("Live");
 
   const [pulse, setPulse] = useAtom(livePulseAtom);
-  const [, setError] = useAtom(livePulseErrorAtom);
+  const [error, setError] = useAtom(livePulseErrorAtom);
   const [, setLoading] = useAtom(livePulseLoadingAtom);
+  const [, setWsStatus] = useAtom(liveWsStatusAtom);
 
   useEffect(() => {
     let closed = false;
 
-    async function loadInitialPulse() {
-      setLoading(true);
+    async function refreshPulse(withLoadingState: boolean) {
+      if (withLoadingState) {
+        setLoading(true);
+      }
+
       try {
-        const initial = await fetchPulseSnapshot();
+        const nextPulse = await fetchPulseSnapshot();
         if (closed) return;
         setError(null);
-        setPulse(initial);
+        setPulse(nextPulse);
       } catch (err) {
         if (closed) return;
-        setError(err instanceof Error ? err.message : "pulse_failed");
+        if (err instanceof ApiClientError) {
+          setError(err.code);
+        } else {
+          setError(err instanceof Error ? err.message : "pulse_failed");
+        }
       } finally {
-        if (!closed) setLoading(false);
+        if (!closed && withLoadingState) {
+          setLoading(false);
+        }
       }
     }
 
-    void loadInitialPulse();
+    void refreshPulse(true);
 
-    const es = new EventSource("/api/pulse");
+    const pollTimer = setInterval(() => {
+      void refreshPulse(false);
+    }, 5_000);
 
-    es.addEventListener("pulse", (event) => {
-      if (closed) return;
-      const data = safeParseJson<PulsePayload>((event as MessageEvent).data);
-      if (!data) return;
-      setPulse(data);
+    const unsubscribe = subscribeRealtimeWs({
+      onStatus: setWsStatus,
+      onEvent: (event) => {
+        if (!liveRefreshEventTypes.has(event.type)) {
+          return;
+        }
+        void refreshPulse(false);
+      },
     });
-
-    es.onerror = () => {
-      if (closed) return;
-      setError("stream_failed");
-    };
 
     return () => {
       closed = true;
-      es.close();
+      clearInterval(pollTimer);
+      unsubscribe();
+      setWsStatus("disconnected");
     };
-  }, [setError, setLoading, setPulse]);
+  }, [setError, setLoading, setPulse, setWsStatus]);
 
-  const isError = isPulseErrorState(pulse);
+  const isError = isPulseErrorState(pulse) || Boolean(error);
   const current = isPulseSuccessState(pulse) ? pulse : null;
 
   return (
