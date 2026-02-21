@@ -12,9 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { dashboardMetricsAtom } from "@/lib/runtime/dashboard-state";
+import { dashboardMetricsAtom } from "@/lib/runtime/app-atoms";
 
-export function DashboardMetricsGrid({ isAuthed }: { isAuthed: boolean }) {
+export function DashboardMetricsGrid() {
   const t = useTranslations("Dashboard");
   const metrics = useAtomValue(dashboardMetricsAtom);
 
@@ -85,7 +85,7 @@ export function DashboardMetricsGrid({ isAuthed }: { isAuthed: boolean }) {
           <CardDescription>{t("cards.realtime.note")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <RealtimeCardContent isAuthed={isAuthed} />
+          <RealtimeCardContent />
         </CardContent>
       </Card>
     </section>
