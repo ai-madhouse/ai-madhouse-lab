@@ -281,7 +281,7 @@ test("notes create sends string payload fields and persists after reload", async
   await expect(noteButton).toBeVisible();
 });
 
-test("dashboard realtime indicator handles disconnect and reconnect transitions", async ({
+test("live dashboard realtime indicator handles disconnect and reconnect transitions", async ({
   page,
 }) => {
   await page.route("**/api/dashboard/metrics", async (route) => {

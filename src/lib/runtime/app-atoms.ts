@@ -26,5 +26,7 @@ export const dashboardMetricsErrorAtom = atom<string | null>(null);
 export const dashboardRealtimeWsStatusAtom = atom<WsStatus>("disconnected");
 
 export const livePulseAtom = atom<PulsePayload | null>(null);
+export const livePulseLoadingAtom = atom(false);
+export const livePulseErrorAtom = atom<string | null>(null);
 
 export const liveWsStatusAtom = atom<WsStatus>("disconnected");
