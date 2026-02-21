@@ -1,6 +1,6 @@
 "use client";
 
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   Activity,
   LayoutDashboard,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Button } from "@/components/roiui/button";
@@ -26,8 +26,9 @@ import {
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Tooltip } from "@/components/ui/tooltip";
 import { derivedKekCacheAtom } from "@/lib/crypto/derived-kek-cache";
-import { getRealtimeWsUrl } from "@/lib/realtime-url";
-import { safeParseJson } from "@/lib/utils";
+import { ApiClientError, fetchSessionMe } from "@/lib/runtime/api-client";
+import { authSessionAtom } from "@/lib/runtime/app-atoms";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 
 const iconMap = {
   home: Sparkles,
@@ -47,57 +48,80 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
   const t = useTranslations("Nav");
 
   const setDerivedKekCache = useSetAtom(derivedKekCacheAtom);
-
-  const checkingSessionRef = useRef(false);
+  const sessionState = useAtomValue(authSessionAtom);
+  const setSessionState = useSetAtom(authSessionAtom);
+  const isAuthenticated = isAuthed || sessionState.kind === "authenticated";
 
   useEffect(() => {
-    if (!isAuthed) return;
+    let cancelled = false;
 
-    const url = getRealtimeWsUrl();
-    if (!url) return;
-
-    const ws = new WebSocket(url);
-
-    async function checkSessionStillValid() {
-      if (checkingSessionRef.current) return;
-      checkingSessionRef.current = true;
+    async function hydrateSession() {
       try {
-        const res = await fetch("/api/session/me", { cache: "no-store" });
-        if (res.status === 401) {
-          window.location.href = `/${locale}/logout`;
+        const session = await fetchSessionMe();
+        if (!cancelled) {
+          setSessionState({
+            kind: "authenticated",
+            sessionId: session.sessionId,
+          });
         }
-      } catch {
-        // ignore
-      } finally {
-        checkingSessionRef.current = false;
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.code === "unauthorized") {
+          setSessionState({ kind: "unauthenticated" });
+          return;
+        }
+
+        setSessionState({ kind: "unauthenticated" });
       }
     }
 
-    ws.onmessage = (event) => {
-      const data = safeParseJson<{ type?: string }>(String(event.data));
-      if (!data || data.type !== "sessions:changed") return;
-
-      try {
-        window.dispatchEvent(new Event(sessionsChangedDomEventName));
-      } catch {
-        // ignore
-      }
-
-      void checkSessionStillValid();
-    };
+    void hydrateSession();
 
     return () => {
-      try {
-        ws.close();
-      } catch {
-        // ignore
-      }
+      cancelled = true;
     };
-  }, [isAuthed, locale]);
+  }, [setSessionState]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    async function checkSessionStillValid() {
+      try {
+        await fetchSessionMe();
+      } catch (error) {
+        if (error instanceof ApiClientError && error.code === "unauthorized") {
+          setSessionState({ kind: "unauthenticated" });
+          window.location.href = `/${locale}/logout`;
+        }
+      }
+    }
+
+    const unsubscribe = subscribeRealtimeWs({
+      onStatus: () => {},
+      onEvent: (event) => {
+        if (event.type !== "sessions:changed") {
+          return;
+        }
+
+        try {
+          window.dispatchEvent(new Event(sessionsChangedDomEventName));
+        } catch {
+          // ignore
+        }
+
+        void checkSessionStillValid();
+      },
+    });
+
+    return unsubscribe;
+  }, [isAuthenticated, locale, setSessionState]);
 
   const navItems = [
     { key: "home", href: `/${locale}` },
-    ...(isAuthed
+    ...(isAuthenticated
       ? ([
           { key: "dashboard", href: `/${locale}/dashboard` },
           { key: "settings", href: `/${locale}/settings` },
@@ -168,7 +192,7 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
           <LocaleSwitcher mode="code" />
           <ThemeToggle />
 
-          {!isAuthed ? (
+          {!isAuthenticated ? (
             <Button
               variant="outline"
               size="sm"
@@ -187,7 +211,7 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
             className="h-9 w-9 justify-center gap-2 p-0 sm:w-32 sm:px-3"
             data-layout-key="header-auth"
             onClick={() => {
-              if (isAuthed) {
+              if (isAuthenticated) {
                 try {
                   window.localStorage.removeItem("madhouse-notes-undo");
                   window.localStorage.removeItem("madhouse-notes-redo");
@@ -199,16 +223,16 @@ export function Toolbar({ isAuthed = false }: { isAuthed?: boolean }) {
                 setDerivedKekCache({});
               }
 
-              router.push(`/${locale}/${isAuthed ? "logout" : "login"}`);
+              router.push(`/${locale}/${isAuthenticated ? "logout" : "login"}`);
             }}
           >
-            {isAuthed ? (
+            {isAuthenticated ? (
               <LogOut className="h-4 w-4" aria-label={t("logoutIcon")} />
             ) : (
               <LogIn className="h-4 w-4" aria-label={t("loginIcon")} />
             )}
             <span className="hidden truncate sm:inline">
-              {isAuthed ? t("logout") : t("login")}
+              {isAuthenticated ? t("logout") : t("login")}
             </span>
           </Button>
         </ToolbarGroup>

@@ -1,7 +1,6 @@
 import { NotesBoard } from "@/components/notes/notes-board";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { createTranslator } from "@/lib/translator";
 
@@ -15,11 +14,9 @@ export default async function NotesPage({
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Notes");
 
-  const isAuthed = await isAuthenticated();
-
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader isAuthed={isAuthed} />
+      <SiteHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
         <section className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">

@@ -1,159 +1,397 @@
 "use client";
 
+import { useAtomValue, useSetAtom } from "jotai";
+import { Activity, FileText, ShieldCheck, Signal, Users } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { getRealtimeWsUrl } from "@/lib/realtime-url";
+import { buttonClassName } from "@/components/roiui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ApiClientError,
+  fetchCsrfToken,
+  fetchDashboardMetrics,
+  fetchSessionMe,
+  revokeOtherSessions,
+  signOutEverywhere,
+} from "@/lib/runtime/api-client";
+import {
+  authSessionAtom,
+  dashboardMetricsAtom,
+  dashboardRealtimeWsStatusAtom,
+} from "@/lib/runtime/app-atoms";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 
-type RealtimeHealth = {
-  ok: true;
-  connectionsTotal?: number;
-  usersConnected?: number;
-} | null;
+const actionErrorKeyMap: Record<string, string> = {
+  csrf: "csrf",
+  rate: "rate",
+  unauthorized: "unauthorized",
+};
 
-type WsStatus = "connecting" | "connected" | "disconnected";
+function formatActionError(code: string) {
+  return actionErrorKeyMap[code] ?? code;
+}
 
-export function RealtimeCardContent({
-  initialRealtime,
-  isAuthed,
-}: {
-  initialRealtime: RealtimeHealth;
-  isAuthed: boolean;
-}) {
+export function DashboardRuntimePanel({ locale }: { locale: string }) {
   const t = useTranslations("Dashboard");
-  const [wsStatus, setWsStatus] = useState<WsStatus>(
-    isAuthed ? "connecting" : "disconnected",
-  );
-  const [realtimeHealth, setRealtimeHealth] =
-    useState<RealtimeHealth>(initialRealtime);
+
+  const sessionState = useAtomValue(authSessionAtom);
+  const metrics = useAtomValue(dashboardMetricsAtom);
+  const wsStatus = useAtomValue(dashboardRealtimeWsStatusAtom);
+
+  const setSessionState = useSetAtom(authSessionAtom);
+  const setMetrics = useSetAtom(dashboardMetricsAtom);
+  const setWsStatus = useSetAtom(dashboardRealtimeWsStatusAtom);
+
+  const [banner, setBanner] = useState<
+    { kind: "ok"; value: string } | { kind: "error"; value: string } | null
+  >(null);
+
+  const csrfTokenRef = useRef<string | null>(null);
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
-    if (!isAuthed) {
-      setWsStatus("disconnected");
-      setRealtimeHealth(null);
-      return;
-    }
+    let cancelled = false;
 
-    let closed = false;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-    async function refreshRealtimeHealth() {
+    async function hydrate() {
       try {
-        const res = await fetch("/api/realtime/health", { cache: "no-store" });
-        if (!res.ok) return;
-        const payload = (await res.json().catch(() => null)) as {
-          ok: true;
-          connectionsTotal?: number;
-          usersConnected?: number;
-        } | null;
-        if (!payload?.ok || closed) return;
-        setRealtimeHealth({
-          ok: true,
-          connectionsTotal: Number(payload.connectionsTotal ?? 0),
-          usersConnected: Number(payload.usersConnected ?? 0),
-        });
+        const session = await fetchSessionMe();
+        if (!cancelled) {
+          setSessionState({
+            kind: "authenticated",
+            sessionId: session.sessionId,
+          });
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.code === "unauthorized") {
+          setSessionState({ kind: "unauthenticated" });
+          setMetrics(null);
+          setWsStatus("disconnected");
+          return;
+        }
+
+        setSessionState({ kind: "unauthenticated" });
+        setMetrics(null);
+        setWsStatus("disconnected");
+        return;
+      }
+
+      try {
+        const nextMetrics = await fetchDashboardMetrics();
+        if (!cancelled) {
+          setMetrics(nextMetrics);
+        }
       } catch {
-        // ignore
+        if (!cancelled) {
+          setMetrics(null);
+        }
       }
     }
 
-    void refreshRealtimeHealth();
-    pollTimer = setInterval(() => {
-      void refreshRealtimeHealth();
-    }, 5_000);
-
-    const url = getRealtimeWsUrl();
-    if (!url) {
-      setWsStatus("disconnected");
-      if (pollTimer) clearInterval(pollTimer);
-      return;
-    }
-
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let retryMs = 1_500;
-
-    function connect(wsUrl: string) {
-      if (closed) return;
-      setWsStatus("connecting");
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        if (closed) return;
-        retryMs = 1_500;
-        setWsStatus("connected");
-        void refreshRealtimeHealth();
-      };
-
-      ws.onclose = () => {
-        if (closed) return;
-        setWsStatus("disconnected");
-        reconnectTimer = setTimeout(() => {
-          retryMs = Math.min(retryMs * 2, 10_000);
-          connect(wsUrl);
-        }, retryMs);
-      };
-
-      ws.onerror = () => {
-        if (closed) return;
-        // `error` can fire before a follow-up `close`; avoid false negatives
-        // and let `close` drive disconnected state.
-      };
-    }
-
-    connect(url);
+    void hydrate();
 
     return () => {
-      closed = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (pollTimer) clearInterval(pollTimer);
-      try {
-        ws?.close();
-      } catch {
-        // ignore
-      }
+      cancelled = true;
     };
-  }, [isAuthed]);
+  }, [setMetrics, setSessionState, setWsStatus]);
 
-  const metricsText = realtimeHealth?.ok
+  useEffect(() => {
+    if (sessionState.kind !== "authenticated") {
+      setWsStatus("disconnected");
+      return;
+    }
+
+    async function refreshFromApi() {
+      if (refreshingRef.current) {
+        return;
+      }
+
+      refreshingRef.current = true;
+      try {
+        const nextMetrics = await fetchDashboardMetrics();
+        setMetrics(nextMetrics);
+      } catch {
+        // keep last known value
+      } finally {
+        refreshingRef.current = false;
+      }
+    }
+
+    const unsubscribe = subscribeRealtimeWs({
+      onStatus: (status) => {
+        setWsStatus(status);
+      },
+      onEvent: (event) => {
+        if (event.type === "hello") {
+          void refreshFromApi();
+          return;
+        }
+
+        if (
+          event.type === "sessions:changed" ||
+          event.type === "notes:changed"
+        ) {
+          void refreshFromApi();
+        }
+      },
+    });
+
+    return unsubscribe;
+  }, [sessionState.kind, setMetrics, setWsStatus]);
+
+  async function ensureCsrfToken() {
+    if (csrfTokenRef.current) {
+      return csrfTokenRef.current;
+    }
+
+    const res = await fetchCsrfToken();
+    csrfTokenRef.current = res.token;
+    return res.token;
+  }
+
+  async function handleRevokeOtherSessions() {
+    setBanner(null);
+
+    try {
+      const token = await ensureCsrfToken();
+      await revokeOtherSessions(token);
+      const nextMetrics = await fetchDashboardMetrics();
+      setMetrics(nextMetrics);
+      setBanner({ kind: "ok", value: "revoke" });
+    } catch (error) {
+      const code =
+        error instanceof ApiClientError
+          ? formatActionError(error.code)
+          : "request_failed";
+      setBanner({ kind: "error", value: code });
+    }
+  }
+
+  async function handleSignOutEverywhere() {
+    setBanner(null);
+
+    try {
+      const token = await ensureCsrfToken();
+      await signOutEverywhere(token);
+      setSessionState({ kind: "unauthenticated" });
+      window.location.href = `/${locale}/login`;
+    } catch (error) {
+      const code =
+        error instanceof ApiClientError
+          ? formatActionError(error.code)
+          : "request_failed";
+      setBanner({ kind: "error", value: code });
+    }
+  }
+
+  const isAuthed = sessionState.kind === "authenticated";
+
+  const metricsText = metrics?.realtime?.ok
     ? t("realtime.detail", {
-        users: String(realtimeHealth.usersConnected ?? 0),
-        conns: String(realtimeHealth.connectionsTotal ?? 0),
+        users: String(metrics.realtime.usersConnected ?? 0),
+        conns: String(metrics.realtime.connectionsTotal ?? 0),
       })
     : t("realtime.detailUnavailable");
 
-  const statusLabel =
-    wsStatus === "connected"
-      ? t("realtime.ok")
-      : wsStatus === "connecting"
-        ? t("realtime.connecting")
-        : t("realtime.off");
+  const wsLabelByStatus: Record<typeof wsStatus, string> = {
+    connected: t("realtime.ok"),
+    connecting: t("realtime.connecting"),
+    disconnected: t("realtime.off"),
+  };
 
-  const statusDetail =
-    wsStatus === "connected"
-      ? t("realtime.statusConnected")
-      : wsStatus === "connecting"
-        ? t("realtime.statusConnecting")
-        : t("realtime.statusDisconnected");
+  const wsDetailByStatus: Record<typeof wsStatus, string> = {
+    connected: t("realtime.statusConnected"),
+    connecting: t("realtime.statusConnecting"),
+    disconnected: t("realtime.statusDisconnected"),
+  };
 
   return (
     <>
-      <p className="text-3xl font-semibold" data-testid="realtime-status-label">
-        {statusLabel}
-      </p>
-      <p
-        className="text-xs text-muted-foreground"
-        data-testid="realtime-status-detail"
+      {banner?.kind === "ok" ? (
+        <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-3 text-sm text-emerald-700">
+          {t("status.ok", { ok: banner.value })}
+        </div>
+      ) : null}
+
+      {banner?.kind === "error" ? (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          {t("status.error", { error: banner.value })}
+        </div>
+      ) : null}
+
+      <section
+        className="grid gap-6 md:grid-cols-4"
+        data-layout-key="dashboard-metrics"
       >
-        {statusDetail}
-      </p>
-      <p
-        className="text-xs text-muted-foreground"
-        data-testid="realtime-metrics-detail"
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("cards.sessions.label")}
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription>{t("cards.sessions.note")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">
+              {metrics ? metrics.activeSessions : "–"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("cards.notes.label")}
+              </CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription>{t("cards.notes.note")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">
+              {metrics ? metrics.notesCount : "–"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("cards.activity.label")}
+              </CardTitle>
+              <Signal className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription>{t("cards.activity.note")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">
+              {metrics ? metrics.notesEventsLastDay : "–"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="dashboard-realtime-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("cards.realtime.label")}
+              </CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription>{t("cards.realtime.note")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p
+              className="text-3xl font-semibold"
+              data-testid="realtime-status-label"
+            >
+              {wsLabelByStatus[wsStatus]}
+            </p>
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="realtime-status-detail"
+            >
+              {wsDetailByStatus[wsStatus]}
+            </p>
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="realtime-metrics-detail"
+            >
+              {metricsText}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section
+        className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
+        data-layout-key="dashboard-actions"
       >
-        {metricsText}
-      </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("next.title")}</CardTitle>
+            <CardDescription>{t("next.subtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Link href={`/${locale}/notes`} className={buttonClassName({})}>
+              {t("next.notes")}
+            </Link>
+            <Link
+              href={`/${locale}/live`}
+              className={buttonClassName({ variant: "outline" })}
+            >
+              {t("next.live")}
+            </Link>
+            <Link
+              href={`/${locale}/settings`}
+              className={buttonClassName({ variant: "outline" })}
+            >
+              {t("next.settings")}
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-secondary/40">
+          <CardHeader>
+            <CardTitle>{t("security.title")}</CardTitle>
+            <CardDescription>{t("security.subtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="rounded-2xl border border-border/60 bg-background p-4">
+              <p className="text-sm font-medium">{t("security.csp.title")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("security.csp.description")}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={buttonClassName({
+                  variant: "outline",
+                  size: "sm",
+                })}
+                disabled={!isAuthed}
+                onClick={handleRevokeOtherSessions}
+              >
+                {t("security.actions.revokeOthers")}
+              </button>
+
+              <button
+                type="button"
+                className={buttonClassName({
+                  variant: "destructive",
+                  size: "sm",
+                })}
+                disabled={!isAuthed}
+                onClick={handleSignOutEverywhere}
+              >
+                {t("security.actions.signOutEverywhere")}
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              <ShieldCheck className="mr-2 inline h-4 w-4" />
+              {t("security.footer")}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
     </>
   );
 }

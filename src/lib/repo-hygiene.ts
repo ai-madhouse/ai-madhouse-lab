@@ -14,6 +14,7 @@ export const FORBIDDEN_TRACKED_PATH_PREFIXES = [
   "coverage/",
   ".nyc_output/",
   "artifacts/",
+  ".pr-addendum.md",
 ] as const;
 
 export const TASK_BRANCH_PATTERN =
