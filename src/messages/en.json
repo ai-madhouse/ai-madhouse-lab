@@ -361,7 +361,7 @@
   "Live": {
     "eyebrow": "Right now",
     "title": "Live view",
-    "subtitle": "Live signals pulled from your real account data (not lorem ipsum).",
+    "subtitle": "Live signals pulled from your real account data.",
     "boardTitle": "Live signals",
     "boardSubtitle": "Updates every few seconds. If this page sits open on two devices, you should see it move together.",
     "icon": "Activity",

@@ -361,7 +361,7 @@
   "Live": {
     "eyebrow": "Dabar",
     "title": "Tiesioginis vaizdas",
-    "subtitle": "Gyvi signalai iš tavo paskyros duomenų (ne atsitiktiniai skaičiai).",
+    "subtitle": "Gyvi signalai iš tavo paskyros duomenų.",
     "boardTitle": "Gyvi signalai",
     "boardSubtitle": "Atnaujinama kas kelias sekundes. Atidaryk dviejuose įrenginiuose — turėtų sinchronizuotis.",
     "icon": "Aktyvumas",
