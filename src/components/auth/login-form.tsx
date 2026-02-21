@@ -31,7 +31,7 @@ export function LoginForm({
   noAccountText,
   registerLinkText,
 }: {
-  action: (formData: FormData) => void;
+  action: string;
   locale: string;
   nextPath: string;
   hasError: boolean;

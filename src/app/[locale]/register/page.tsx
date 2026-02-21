@@ -1,6 +1,3 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-
 import { ClearDerivedKekCacheOnMount } from "@/components/auth/clear-derived-kek-cache-on-mount";
 import { ClearNotesHistoryOnMount } from "@/components/auth/clear-notes-history-on-mount";
 import { RegisterForm } from "@/components/auth/register-form";
@@ -8,110 +5,14 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  clearAuthCookie,
-  isAuthenticated,
-  setAuthCookie,
-  verifyCsrfToken,
-} from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
-import { consumeRateLimit } from "@/lib/rate-limit";
-import { safeNextPath } from "@/lib/redirects";
-import { getClientIp } from "@/lib/request";
-import { registerFormSchema } from "@/lib/schemas/auth";
-import { createSession } from "@/lib/sessions";
 import { createTranslator } from "@/lib/translator";
-import { createUser } from "@/lib/users";
 
 type RegisterPageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ error?: string; next?: string }>;
 };
-
-async function registerAction(formData: FormData) {
-  "use server";
-
-  const initialLocale = normalizeLocale(String(formData.get("locale") ?? "en"));
-  const initialNextPath = safeNextPath(
-    initialLocale,
-    String(formData.get("next") ?? ""),
-  );
-  const csrfTokenRaw = String(formData.get("csrfToken") ?? "");
-
-  if (!csrfTokenRaw) {
-    redirect(
-      `/${initialLocale}/register?error=csrf&next=${encodeURIComponent(initialNextPath)}`,
-    );
-  }
-
-  const parsed = registerFormSchema.safeParse({
-    locale: initialLocale,
-    next: initialNextPath,
-    username: String(formData.get("username") ?? ""),
-    password: String(formData.get("password") ?? ""),
-    password2: String(formData.get("password2") ?? ""),
-    csrfToken: csrfTokenRaw,
-  });
-
-  if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message ?? "invalid";
-    redirect(`/${initialLocale}/register?error=${encodeURIComponent(msg)}`);
-  }
-
-  const { locale, next, username, csrfToken } = parsed.data;
-  const password = String(formData.get("password") ?? "");
-
-  const hdrs = await headers();
-  const ip = getClientIp(hdrs);
-
-  const nextPath = safeNextPath(locale, next);
-
-  const limiter = consumeRateLimit({
-    key: `register:${username || "unknown"}`,
-    limit: 10,
-    windowSeconds: 60,
-  });
-
-  if (!limiter.ok) {
-    redirect(
-      `/${locale}/register?error=rate&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  if (!(await verifyCsrfToken(csrfToken))) {
-    redirect(
-      `/${locale}/register?error=csrf&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  try {
-    await createUser({ username, password });
-  } catch {
-    redirect(
-      `/${locale}/register?error=exists&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  // Clear any existing cookie, then create a fresh session.
-  await clearAuthCookie();
-
-  const userAgent = hdrs.get("user-agent") ?? "";
-  const session = await createSession({ username, ip, userAgent });
-  await setAuthCookie(session.id);
-
-  console.log(
-    JSON.stringify({
-      ts: new Date().toISOString(),
-      event: "user_registered",
-      username,
-      sessionId: session.id,
-      ip,
-      userAgent,
-    }),
-  );
-
-  redirect(nextPath);
-}
 
 export default async function RegisterPage({
   params,
@@ -148,7 +49,7 @@ export default async function RegisterPage({
 
           <Card>
             <RegisterForm
-              action={registerAction}
+              action="/api/auth/register"
               locale={locale}
               nextPath={nextPath}
               error={err}

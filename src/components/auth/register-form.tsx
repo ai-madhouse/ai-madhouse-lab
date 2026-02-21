@@ -31,7 +31,7 @@ export function RegisterForm({
   haveAccountText,
   signInText,
 }: {
-  action: (formData: FormData) => void;
+  action: string;
   locale: string;
   nextPath: string;
   error: string | undefined;

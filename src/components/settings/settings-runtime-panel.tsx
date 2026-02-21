@@ -250,7 +250,7 @@ export function SettingsRuntimePanel({
                 disabled={!isAuthed || sessionsBusy !== null}
                 onClick={() => {
                   void callSettingsAction(
-                    "/api/settings/revoke-other-sessions",
+                    "/api/sessions/revoke-others",
                     "revoke",
                   );
                 }}
@@ -260,7 +260,7 @@ export function SettingsRuntimePanel({
               <SignOutEverywhereDialog
                 onConfirm={() =>
                   callSettingsAction(
-                    "/api/settings/signout-everywhere",
+                    "/api/sessions/signout-everywhere",
                     "signout",
                   )
                 }
