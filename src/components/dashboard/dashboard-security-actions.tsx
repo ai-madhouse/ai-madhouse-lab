@@ -1,43 +1,44 @@
 "use client";
 
+import { useAtomValue } from "jotai";
 import { useLocale } from "next-intl";
 import { useState } from "react";
 
 import { buttonClassName } from "@/components/roiui/button";
-import { fetchCsrfTokenOrThrow } from "@/lib/client/csrf";
+import {
+  fetchCsrfToken,
+  revokeOtherSessions,
+  signOutEverywhere,
+} from "@/lib/runtime/api-client";
+import { authSessionAtom } from "@/lib/runtime/app-atoms";
 
 export function DashboardSecurityActions({
-  isAuthed,
   revokeLabel,
   signOutLabel,
 }: {
-  isAuthed: boolean;
   revokeLabel: string;
   signOutLabel: string;
 }) {
   const locale = useLocale();
+  const sessionState = useAtomValue(authSessionAtom);
+  const isAuthed = sessionState.kind === "authenticated";
   const [busy, setBusy] = useState<"revoke" | "signout" | null>(null);
 
-  async function callApi(pathname: string, nextBusy: "revoke" | "signout") {
+  async function callApi(nextBusy: "revoke" | "signout") {
     if (!isAuthed || busy) return;
 
     setBusy(nextBusy);
     try {
-      const csrfToken = await fetchCsrfTokenOrThrow();
-      const response = await fetch(pathname, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-csrf-token": csrfToken,
-        },
-        body: "{}",
-      });
+      const csrf = await fetchCsrfToken();
+      const csrfToken = csrf.token;
 
-      if (!response.ok) {
-        throw new Error("action_failed");
+      if (nextBusy === "revoke") {
+        await revokeOtherSessions(csrfToken);
+      } else {
+        await signOutEverywhere(csrfToken);
       }
 
-      if (pathname.includes("signout-everywhere")) {
+      if (nextBusy === "signout") {
         window.location.href = `/${locale}/login`;
       }
     } catch {
@@ -57,7 +58,7 @@ export function DashboardSecurityActions({
         })}
         disabled={!isAuthed || busy !== null}
         onClick={() => {
-          void callApi("/api/settings/revoke-other-sessions", "revoke");
+          void callApi("revoke");
         }}
       >
         {revokeLabel}
@@ -71,7 +72,7 @@ export function DashboardSecurityActions({
         })}
         disabled={!isAuthed || busy !== null}
         onClick={() => {
-          void callApi("/api/settings/signout-everywhere", "signout");
+          void callApi("signout");
         }}
       >
         {signOutLabel}

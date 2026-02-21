@@ -1,19 +1,22 @@
 "use client";
 
-import { useAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
-import { getRealtimeWsUrl } from "@/lib/realtime-url";
 import {
+  ApiClientError,
+  fetchDashboardMetrics,
+} from "@/lib/runtime/api-client";
+import {
+  authSessionAtom,
   dashboardMetricsAtom,
   dashboardMetricsErrorAtom,
   dashboardMetricsLoadingAtom,
-  dashboardWsStatusAtom,
-  fetchDashboardMetrics,
-} from "@/lib/runtime/dashboard-state";
-import { safeParseJson } from "@/lib/utils";
+  dashboardRealtimeWsStatusAtom,
+} from "@/lib/runtime/app-atoms";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 
-const refreshTypes = new Set(["sessions:changed", "notes:changed"]);
+const refreshTypes = new Set(["sessions:changed", "notes:changed"] as const);
 
 const statusLabelKeyMap = {
   connected: "realtime.ok",
@@ -27,15 +30,53 @@ const statusDetailKeyMap = {
   disconnected: "realtime.statusDisconnected",
 } as const;
 
-export function RealtimeCardContent({ isAuthed }: { isAuthed: boolean }) {
+export function RealtimeCardContent() {
   const t = useTranslations("Dashboard");
-
-  const [metrics, setMetrics] = useAtom(dashboardMetricsAtom);
-  const [, setLoading] = useAtom(dashboardMetricsLoadingAtom);
-  const [, setError] = useAtom(dashboardMetricsErrorAtom);
-  const [wsStatus, setWsStatus] = useAtom(dashboardWsStatusAtom);
+  const sessionState = useAtomValue(authSessionAtom);
+  const metrics = useAtomValue(dashboardMetricsAtom);
+  const wsStatus = useAtomValue(dashboardRealtimeWsStatusAtom);
+  const setMetrics = useSetAtom(dashboardMetricsAtom);
+  const setLoading = useSetAtom(dashboardMetricsLoadingAtom);
+  const setError = useSetAtom(dashboardMetricsErrorAtom);
+  const setWsStatus = useSetAtom(dashboardRealtimeWsStatusAtom);
+  const isAuthed = sessionState.kind === "authenticated";
 
   useEffect(() => {
+    let closed = false;
+
+    async function refreshMetrics({ silent }: { silent: boolean }) {
+      if (!silent) {
+        setLoading(true);
+      }
+
+      try {
+        const next = await fetchDashboardMetrics();
+        if (closed) {
+          return;
+        }
+
+        setError(null);
+        setMetrics(next);
+      } catch (error) {
+        if (closed) {
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.code === "unauthorized") {
+          setMetrics(null);
+          setWsStatus("disconnected");
+          setError(null);
+          return;
+        }
+
+        setError(error instanceof Error ? error.message : "metrics_failed");
+      } finally {
+        if (!silent && !closed) {
+          setLoading(false);
+        }
+      }
+    }
+
     if (!isAuthed) {
       setMetrics(null);
       setWsStatus("disconnected");
@@ -44,103 +85,27 @@ export function RealtimeCardContent({ isAuthed }: { isAuthed: boolean }) {
       return;
     }
 
-    let closed = false;
-
-    async function refreshMetrics() {
-      setLoading(true);
-      try {
-        const next = await fetchDashboardMetrics();
-        if (closed) return;
-        setError(null);
-        setMetrics(next);
-      } catch (err) {
-        if (closed) return;
-        setError(err instanceof Error ? err.message : "metrics_failed");
-      } finally {
-        if (!closed) setLoading(false);
-      }
-    }
-
-    void refreshMetrics();
+    void refreshMetrics({ silent: false });
 
     const pollTimer = setInterval(() => {
-      void refreshMetrics();
+      void refreshMetrics({ silent: true });
     }, 5_000);
+
+    const unsubscribeWs = subscribeRealtimeWs({
+      onStatus: setWsStatus,
+      onEvent: (event) => {
+        if (event.type === "hello" || refreshTypes.has(event.type)) {
+          void refreshMetrics({ silent: true });
+        }
+      },
+    });
 
     return () => {
       closed = true;
       clearInterval(pollTimer);
+      unsubscribeWs();
     };
   }, [isAuthed, setError, setLoading, setMetrics, setWsStatus]);
-
-  useEffect(() => {
-    if (!isAuthed) {
-      setWsStatus("disconnected");
-      return;
-    }
-
-    const url = getRealtimeWsUrl();
-    if (!url) {
-      setWsStatus("disconnected");
-      return;
-    }
-
-    let closed = false;
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let retryMs = 1_500;
-
-    async function refreshMetrics() {
-      try {
-        const next = await fetchDashboardMetrics();
-        if (closed) return;
-        setMetrics(next);
-      } catch {
-        // ignore refresh failures; polling handles retries
-      }
-    }
-
-    function connect(wsUrl: string) {
-      if (closed) return;
-      setWsStatus("connecting");
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        if (closed) return;
-        retryMs = 1_500;
-        setWsStatus("connected");
-        void refreshMetrics();
-      };
-
-      ws.onclose = () => {
-        if (closed) return;
-        setWsStatus("disconnected");
-        reconnectTimer = setTimeout(() => {
-          retryMs = Math.min(retryMs * 2, 10_000);
-          connect(wsUrl);
-        }, retryMs);
-      };
-
-      ws.onmessage = (event) => {
-        const data = safeParseJson<{ type?: string }>(String(event.data));
-        if (!data?.type || !refreshTypes.has(data.type)) return;
-        void refreshMetrics();
-      };
-    }
-
-    connect(url);
-
-    return () => {
-      closed = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      try {
-        ws?.close();
-      } catch {
-        // ignore
-      }
-    };
-  }, [isAuthed, setMetrics, setWsStatus]);
 
   const metricsText = metrics?.realtime?.ok
     ? t("realtime.detail", {

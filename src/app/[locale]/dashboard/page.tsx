@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { isAuthenticated } from "@/lib/auth";
 import { getMessages, normalizeLocale } from "@/lib/i18n";
 import { createTranslator } from "@/lib/translator";
 
@@ -30,14 +29,13 @@ export default async function DashboardPage({
 
   const messages = await getMessages(locale);
   const t = createTranslator(messages, "Dashboard");
-  const isAuthed = await isAuthenticated();
 
   const okMessage = resolvedSearchParams?.ok;
   const errorMessage = resolvedSearchParams?.error;
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader isAuthed={isAuthed} />
+      <SiteHeader />
       <main
         className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12"
         data-layout-root="dashboard-layout"
@@ -63,7 +61,7 @@ export default async function DashboardPage({
           </div>
         ) : null}
 
-        <DashboardMetricsGrid isAuthed={isAuthed} />
+        <DashboardMetricsGrid />
 
         <section
           className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
@@ -107,7 +105,6 @@ export default async function DashboardPage({
               </div>
 
               <DashboardSecurityActions
-                isAuthed={isAuthed}
                 revokeLabel={t("security.actions.revokeOthers")}
                 signOutLabel={t("security.actions.signOutEverywhere")}
               />
