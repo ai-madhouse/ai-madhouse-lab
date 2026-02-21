@@ -22,6 +22,7 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
 import { E2EEDekUnlockCard } from "@/components/crypto/e2ee-dek-unlock-card";
 import { NoteBodyEditor } from "@/components/notes/note-body-editor";
+import { NoteMarkdownContent } from "@/components/notes/note-markdown-content";
 import { Button } from "@/components/roiui/button";
 import { Input } from "@/components/roiui/input";
 import { Toolbar, ToolbarGroup } from "@/components/roiui/toolbar";
@@ -423,6 +424,7 @@ export function NotesBoard() {
 
   const viewDialogTitleId = useId();
   const editDialogTitleId = useId();
+  const createPreviewDialogTitleId = useId();
 
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
   const viewingNote =
@@ -433,6 +435,7 @@ export function NotesBoard() {
   const [editingNote, setEditingNote] = useState<NoteSnapshot | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingBody, setEditingBody] = useState("");
+  const [creationPreviewOpen, setCreationPreviewOpen] = useState(false);
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -612,6 +615,7 @@ export function NotesBoard() {
 
       setTitle("");
       setBody("");
+      setCreationPreviewOpen(false);
       await refreshRef.current?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to create");
@@ -816,6 +820,13 @@ export function NotesBoard() {
             </Button>
             <Button
               variant="outline"
+              onClick={() => setCreationPreviewOpen(true)}
+              disabled={(!title.trim() && !body.trim()) || !dekKey}
+            >
+              Preview
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => {
                 void refreshRef.current?.();
               }}
@@ -844,6 +855,66 @@ export function NotesBoard() {
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </CardContent>
       </Card>
+
+      <ModalDialog
+        open={creationPreviewOpen}
+        onOpenChange={setCreationPreviewOpen}
+        labelledBy={createPreviewDialogTitleId}
+        className="m-auto w-[min(96vw,64rem)] max-h-[min(90vh,56rem)] overflow-y-auto"
+      >
+        <div className="divide-y divide-border/70">
+          <div className="flex items-start justify-between gap-4 p-6">
+            <div className="space-y-1">
+              <h2
+                id={createPreviewDialogTitleId}
+                className="text-lg font-semibold"
+              >
+                Create preview
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                This is how the note body formatting will appear.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0"
+              onClick={() => setCreationPreviewOpen(false)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
+          <div className="space-y-4 p-6">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">
+                {title.trim() || "Untitled"}
+              </h3>
+              <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-background p-4">
+                <NoteMarkdownContent body={body} />
+              </div>
+            </div>
+            <Toolbar className="justify-end gap-2">
+              <ToolbarGroup>
+                <Button
+                  variant="outline"
+                  onClick={() => setCreationPreviewOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    void createNote();
+                  }}
+                  disabled={!title.trim() || !dekKey}
+                >
+                  Create
+                </Button>
+              </ToolbarGroup>
+            </Toolbar>
+          </div>
+        </div>
+      </ModalDialog>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -1066,15 +1137,7 @@ export function NotesBoard() {
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Body</h3>
                 <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-background p-4">
-                  {viewingNote.body.trim() ? (
-                    <p className="whitespace-pre-wrap text-sm leading-6">
-                      {viewingNote.body}
-                    </p>
-                  ) : (
-                    <p className="text-sm italic text-muted-foreground">
-                      Empty note.
-                    </p>
-                  )}
+                  <NoteMarkdownContent body={viewingNote.body} />
                 </div>
               </div>
             </div>
