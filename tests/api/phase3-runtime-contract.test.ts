@@ -116,15 +116,12 @@ describe("phase3 runtime route contracts", () => {
     expect(before.length).toBeGreaterThanOrEqual(2);
 
     const res = await revokeOtherSessionsPost(
-      createAuthedRequest(
-        "http://local.test/api/sessions/revoke-others",
-        {
-          method: "POST",
-          headers: {
-            "x-csrf-token": "csrf-test-token",
-          },
+      createAuthedRequest("http://local.test/api/sessions/revoke-others", {
+        method: "POST",
+        headers: {
+          "x-csrf-token": "csrf-test-token",
         },
-      ),
+      }),
     );
 
     expect(res.status).toBe(200);

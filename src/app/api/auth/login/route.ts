@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const { locale, next, username, csrfToken } = parsed.data;
-  const password = String(formData.get("password") ?? "");
+  const { locale, next, username, password, csrfToken } = parsed.data;
   const nextPath = safeNextPath(locale, next);
 
   const limiter = consumeRateLimit({

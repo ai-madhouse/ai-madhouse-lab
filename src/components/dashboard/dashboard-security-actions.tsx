@@ -5,8 +5,8 @@ import { useLocale } from "next-intl";
 import { useState } from "react";
 
 import { buttonClassName } from "@/components/roiui/button";
+import { fetchCsrfTokenOrThrow } from "@/lib/client/csrf";
 import {
-  fetchCsrfToken,
   revokeOtherSessions,
   signOutEverywhere,
 } from "@/lib/runtime/api-client";
@@ -29,16 +29,11 @@ export function DashboardSecurityActions({
 
     setBusy(nextBusy);
     try {
-      const csrf = await fetchCsrfToken();
-      const csrfToken = csrf.token;
-
+      const csrfToken = await fetchCsrfTokenOrThrow();
       if (nextBusy === "revoke") {
         await revokeOtherSessions(csrfToken);
       } else {
         await signOutEverywhere(csrfToken);
-      }
-
-      if (nextBusy === "signout") {
         window.location.href = `/${locale}/login`;
       }
     } catch {

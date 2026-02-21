@@ -148,4 +148,53 @@ describe("internal API contracts: auth boundary routes", () => {
     expect(location.searchParams.get("error")).toBe("csrf");
     expect(location.searchParams.get("next")).toBe("/en/dashboard");
   });
+
+  test("/api/auth/login invalid credentials sanitize external next to locale dashboard fallback", async () => {
+    const loginRes = await loginPost(
+      createFormPostRequest({
+        url: "http://local.test/api/auth/login",
+        form: {
+          locale: "en",
+          next: "https://evil.example/steal-session",
+          username: "missing-user",
+          password: "wrong-password",
+          csrfToken: "csrf-test-token",
+        },
+        cookie: "madhouse_csrf=csrf-test-token",
+      }),
+    );
+
+    expect(loginRes.status).toBe(307);
+    const location = getRedirectLocation(loginRes);
+    expect(location.pathname).toBe("/en/login");
+    expect(location.searchParams.get("error")).toBe("1");
+    expect(location.searchParams.get("next")).toBe("/en/dashboard");
+  });
+
+  test("/api/auth/register duplicate user normalizes locale and blocks cross-locale next escape", async () => {
+    const username = `register-dupe-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+    const password = "Password123!";
+    await createUser({ username, password });
+
+    const registerRes = await registerPost(
+      createFormPostRequest({
+        url: "http://local.test/api/auth/register",
+        form: {
+          locale: "xx",
+          next: "/ru/dashboard",
+          username,
+          password,
+          password2: password,
+          csrfToken: "csrf-test-token",
+        },
+        cookie: "madhouse_csrf=csrf-test-token",
+      }),
+    );
+
+    expect(registerRes.status).toBe(307);
+    const location = getRedirectLocation(registerRes);
+    expect(location.pathname).toBe("/en/register");
+    expect(location.searchParams.get("error")).toBe("exists");
+    expect(location.searchParams.get("next")).toBe("/en/dashboard");
+  });
 });

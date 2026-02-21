@@ -16,19 +16,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => null)) as {
-    csrfToken?: unknown;
-    currentPassword?: unknown;
-    newPassword?: unknown;
-    newPassword2?: unknown;
-  } | null;
-
-  const parsed = changePasswordFormSchema.safeParse({
-    csrfToken: String(body?.csrfToken ?? ""),
-    currentPassword: String(body?.currentPassword ?? ""),
-    newPassword: String(body?.newPassword ?? ""),
-    newPassword2: String(body?.newPassword2 ?? ""),
-  });
+  const body = await request.json().catch(() => null);
+  const parsed = changePasswordFormSchema.safeParse(body);
 
   if (!parsed.success) {
     const firstIssue = parsed.error.issues[0]?.message ?? "invalid";

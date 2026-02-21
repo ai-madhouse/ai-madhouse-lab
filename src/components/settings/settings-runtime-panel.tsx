@@ -21,11 +21,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchCsrfTokenOrThrow } from "@/lib/client/csrf";
-import { ApiClientError, fetchCsrfToken } from "@/lib/runtime/api-client";
 import {
-  settingsAuthAtom,
-  settingsSessionsCountAtom,
-} from "@/lib/runtime/settings-state";
+  ApiClientError,
+  changePassword,
+  revokeOtherSessions,
+  signOutEverywhere,
+} from "@/lib/runtime/api-client";
+import { settingsAuthAtom, settingsSessionsCountAtom } from "@/lib/runtime/settings-state";
 import { changePasswordFormSchema } from "@/lib/schemas/auth";
 
 type SettingsTab =
@@ -57,30 +59,17 @@ export function SettingsRuntimePanel({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordOk, setPasswordOk] = useState(false);
 
-  async function callSettingsAction(
-    pathname: string,
-    kind: "revoke" | "signout",
-  ) {
+  async function callSettingsAction(kind: "revoke" | "signout") {
     if (!isAuthed || sessionsBusy !== null) return;
 
     setSessionsBusy(kind);
     try {
-      const { token: csrfToken } = await fetchCsrfToken();
-      const response = await fetch(pathname, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-csrf-token": csrfToken,
-        },
-        body: "{}",
-      });
-
-      if (!response.ok) {
-        throw new Error("sessions_action_failed");
-      }
-
+      const csrfToken = await fetchCsrfTokenOrThrow();
       if (kind === "signout") {
+        await signOutEverywhere(csrfToken);
         window.location.href = `/${locale}/login`;
+      } else {
+        await revokeOtherSessions(csrfToken);
       }
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "unauthorized") {
@@ -114,31 +103,18 @@ export function SettingsRuntimePanel({
 
     setPasswordBusy(true);
     try {
-      const response = await fetch("/api/settings/change-password", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(parsed.data),
-      });
-
-      const json = (await response.json().catch(() => null)) as
-        | { ok: true }
-        | { ok: false; error?: string }
-        | null;
-
-      if (!response.ok || !json || !json.ok) {
-        throw new Error(
-          (json && "error" in json && json.error) || "password_failed",
-        );
-      }
+      await changePassword(parsed.data);
 
       setCurrentPassword("");
       setNewPassword("");
       setNewPassword2("");
       setPasswordOk(true);
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : "password_failed");
+      if (err instanceof ApiClientError) {
+        setPasswordError(err.code);
+      } else {
+        setPasswordError("password_failed");
+      }
     } finally {
       setPasswordBusy(false);
     }
@@ -249,21 +225,13 @@ export function SettingsRuntimePanel({
                 variant="outline"
                 disabled={!isAuthed || sessionsBusy !== null}
                 onClick={() => {
-                  void callSettingsAction(
-                    "/api/sessions/revoke-others",
-                    "revoke",
-                  );
+                  void callSettingsAction("revoke");
                 }}
               >
                 {t("sessions.revokeOthers")}
               </Button>
               <SignOutEverywhereDialog
-                onConfirm={() =>
-                  callSettingsAction(
-                    "/api/sessions/signout-everywhere",
-                    "signout",
-                  )
-                }
+                onConfirm={() => callSettingsAction("signout")}
                 disabled={!isAuthed || sessionsBusy !== null}
                 triggerLabel={t("sessions.signOutEverywhere")}
                 title={t("sessions.signOutEverywhereDialog.title")}
