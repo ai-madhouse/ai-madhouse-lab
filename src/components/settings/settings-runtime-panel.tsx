@@ -27,7 +27,10 @@ import {
   revokeOtherSessions,
   signOutEverywhere,
 } from "@/lib/runtime/api-client";
-import { settingsAuthAtom, settingsSessionsCountAtom } from "@/lib/runtime/settings-state";
+import {
+  settingsAuthAtom,
+  settingsSessionsCountAtom,
+} from "@/lib/runtime/settings-state";
 import { changePasswordFormSchema } from "@/lib/schemas/auth";
 
 type SettingsTab =
