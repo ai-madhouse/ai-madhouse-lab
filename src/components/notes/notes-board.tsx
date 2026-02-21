@@ -139,15 +139,6 @@ function formatCreatedAt(iso: string) {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 
-function buildBodyPreview(body: string, maxLength = 240) {
-  const text = body.trim();
-  if (!text) return "";
-
-  const singleLine = text.replace(/\s+/g, " ");
-  if (singleLine.length <= maxLength) return singleLine;
-  return `${singleLine.slice(0, maxLength).trimEnd()}…`;
-}
-
 // (moved into E2EEDekUnlockCard)
 
 // (moved into E2EEDekUnlockCard)
@@ -1120,7 +1111,6 @@ function NoteCard({
   style?: CSSProperties;
 }) {
   const title = note.title.trim() || "Untitled";
-  const preview = buildBodyPreview(note.body);
   const pointerStartRef = useRef<{
     id: number;
     clientX: number;
@@ -1205,15 +1195,13 @@ function NoteCard({
           />
         </div>
 
-        {preview ? (
-          <p className="relative text-sm leading-6 text-muted-foreground">
-            {preview}
-          </p>
-        ) : (
-          <p className="relative text-sm italic text-muted-foreground">
-            Empty note.
-          </p>
-        )}
+        <div className="relative max-h-28 overflow-hidden">
+          <NoteMarkdownContent
+            body={note.body}
+            maxBlocks={3}
+            className="text-muted-foreground"
+          />
+        </div>
 
         <p className="relative text-xs text-muted-foreground">
           {formatCreatedAt(note.created_at)}
