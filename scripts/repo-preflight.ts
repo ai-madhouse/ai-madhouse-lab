@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import type { Stats } from "node:fs";
 import { lstat } from "node:fs/promises";
 import { EOL } from "node:os";
 import {
@@ -44,7 +45,18 @@ async function validate() {
   }
 
   for (const filePath of tracked) {
-    const stats = await lstat(filePath);
+    let stats: Stats;
+    try {
+      stats = await lstat(filePath);
+    } catch {
+      issues.push({
+        title: "Tracked file is missing in worktree",
+        detail: filePath,
+        fix: "Run `git restore -- <path>` or `git rm --cached <path>` to reconcile index/worktree state.",
+      });
+      continue;
+    }
+
     if (stats.uid === 0) {
       issues.push({
         title: "Root-owned tracked file detected",

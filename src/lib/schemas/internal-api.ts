@@ -180,3 +180,68 @@ export const cspReportE2EEnabledResponseSchema = z
     last: cspReportE2EEntrySchema.nullable(),
   })
   .strict();
+
+export const realtimeHealthSuccessResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    connectionsTotal: z.number().int().nonnegative().optional(),
+    usersConnected: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+export const dashboardMetricsResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    metrics: z
+      .object({
+        activeSessions: z.number().int().nonnegative(),
+        notesCount: z.number().int().nonnegative(),
+        notesEventsLastHour: z.number().int().nonnegative(),
+        notesEventsLastDay: z.number().int().nonnegative(),
+        lastNotesActivityAt: z.string().nullable(),
+        realtime: realtimeHealthSuccessResponseSchema.nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const sessionsChangedSuccessResponseSchema = z
+  .object({
+    ok: z.literal(true),
+  })
+  .strict();
+
+export const livePulseSnapshotResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    pulse: z
+      .object({
+        ts: z.number().int().nonnegative(),
+        activeSessions: z.number().int().nonnegative(),
+        notesCount: z.number().int().nonnegative(),
+        notesEventsLastHour: z.number().int().nonnegative(),
+        notesEventsLastDay: z.number().int().nonnegative(),
+        lastNotesActivityAt: z.string().nullable(),
+        realtime: realtimeHealthSuccessResponseSchema.nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const realtimeWsHelloSchema = z
+  .object({
+    type: z.literal("hello"),
+  })
+  .strict();
+
+export const realtimeWsSessionsChangedSchema = z
+  .object({
+    type: z.literal("sessions:changed"),
+  })
+  .strict();
+
+export const realtimeWsNotesChangedSchema = z
+  .object({
+    type: z.literal("notes:changed"),
+  })
+  .strict();
