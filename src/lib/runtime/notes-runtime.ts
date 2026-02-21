@@ -7,11 +7,11 @@ import {
   type NotesEvent,
   type NotesEventKind,
 } from "@/lib/notes-e2ee/model";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 import {
   notesHistoryGetSuccessResponseSchema,
   notesHistoryPostSuccessResponseSchema,
 } from "@/lib/schemas/internal-api";
-import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 
 export type NotesHistoryRow = {
   id: string;
@@ -106,9 +106,7 @@ export async function postNotesHistoryEvent({
 
 const encryptedHistoryKinds = new Set<NotesEventKind>(["create", "update"]);
 
-function isEncryptedHistoryRow(
-  row: NotesHistoryRow,
-): row is NotesHistoryRow & {
+function isEncryptedHistoryRow(row: NotesHistoryRow): row is NotesHistoryRow & {
   payload_iv: string;
   payload_ciphertext: string;
 } {

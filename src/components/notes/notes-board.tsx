@@ -44,7 +44,7 @@ import {
   type NotesBoardOrder,
   toUniqueStringArray,
 } from "@/lib/notes-board-order";
-import { type NoteSnapshot } from "@/lib/notes-e2ee/model";
+import type { NoteSnapshot } from "@/lib/notes-e2ee/model";
 import {
   fetchNotesRuntimeSnapshot,
   postNotesHistoryEvent,

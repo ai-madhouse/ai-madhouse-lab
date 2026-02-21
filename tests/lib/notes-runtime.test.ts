@@ -3,8 +3,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   decryptNotesHistory,
   fetchNotesHistory,
-  postNotesHistoryEvent,
   type NotesHistoryRow,
+  postNotesHistoryEvent,
 } from "@/lib/runtime/notes-runtime";
 
 const originalFetch = globalThis.fetch;
