@@ -2,6 +2,7 @@ import {
   type InlineNode,
   parseNotesMarkdown,
 } from "@/lib/notes-markdown-render";
+import { cn } from "@/lib/utils";
 
 function createUniqueKeyFactory() {
   const counts = new Map<string, number>();
@@ -50,16 +51,33 @@ function renderInline(nodes: InlineNode[]) {
   });
 }
 
-export function NoteMarkdownContent({ body }: { body: string }) {
+type NoteMarkdownContentProps = {
+  body: string;
+  maxBlocks?: number;
+  className?: string;
+};
+
+export function NoteMarkdownContent({
+  body,
+  maxBlocks,
+  className,
+}: NoteMarkdownContentProps) {
   const blocks = parseNotesMarkdown(body);
   if (blocks.length === 0) {
     return <p className="text-sm italic text-muted-foreground">Empty note.</p>;
   }
 
+  const visibleBlocks =
+    typeof maxBlocks === "number" && maxBlocks > 0
+      ? blocks.slice(0, maxBlocks)
+      : blocks;
+  const isTruncated = visibleBlocks.length < blocks.length;
   const keyForBlock = createUniqueKeyFactory();
   return (
-    <div className="space-y-3 text-sm leading-6 text-foreground">
-      {blocks.map((block) => {
+    <div
+      className={cn("space-y-3 text-sm leading-6 text-foreground", className)}
+    >
+      {visibleBlocks.map((block) => {
         const key = keyForBlock(JSON.stringify(block));
 
         if (block.type === "heading") {
@@ -140,6 +158,11 @@ export function NoteMarkdownContent({ body }: { body: string }) {
           </pre>
         );
       })}
+      {isTruncated ? (
+        <p className="text-sm italic text-muted-foreground" aria-hidden="true">
+          …
+        </p>
+      ) : null}
     </div>
   );
 }

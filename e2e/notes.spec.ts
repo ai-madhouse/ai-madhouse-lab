@@ -159,6 +159,80 @@ test("notes: CRUD smoke (create/edit/delete)", async ({ page }) => {
   await expect(noteOpenButton(page, editedTitle)).toHaveCount(0);
 });
 
+test("notes: markdown format parity across preview, card, and body", async ({
+  page,
+}) => {
+  const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
+  const passphrase = "CorrectHorseBatteryStaple1!";
+  const seed = Date.now().toString(36);
+  const title = `pw format ${seed}`;
+  const body = [
+    "**bold** [site](https://example.com) `inline` code",
+    "- list item",
+    "> quoted line",
+  ].join("\n");
+
+  await gotoNotes(page, locale);
+  await ensureNotesUnlocked(page, passphrase);
+
+  await page.getByRole("textbox", { name: "Title" }).fill(title);
+  await page.getByRole("textbox", { name: "Body (Markdown)" }).fill(body);
+
+  await page.getByRole("button", { name: /^Preview$/ }).click();
+  const createPreviewDialog = page.getByRole("dialog", {
+    name: "Create preview",
+  });
+  await expect(createPreviewDialog).toBeVisible();
+  await expect(
+    createPreviewDialog.locator("strong", { hasText: "bold" }),
+  ).toBeVisible();
+  await expect(
+    createPreviewDialog.locator("a[href='https://example.com']"),
+  ).toBeVisible();
+  await expect(
+    createPreviewDialog.locator("ul li", { hasText: "list item" }),
+  ).toBeVisible();
+  await expect(
+    createPreviewDialog.locator("blockquote", { hasText: "quoted line" }),
+  ).toBeVisible();
+  await expect(
+    createPreviewDialog.locator("code", { hasText: "inline" }),
+  ).toBeVisible();
+  await createPreviewDialog
+    .getByRole("button", { name: /^Close$/ })
+    .last()
+    .click();
+
+  await page
+    .getByRole("button", { name: /^Create$/ })
+    .first()
+    .click();
+  const card = noteCard(page, title);
+  await expect(noteOpenButton(page, title)).toBeVisible();
+  await expect(card.locator("strong", { hasText: "bold" })).toBeVisible();
+  await expect(card.locator("a[href='https://example.com']")).toBeVisible();
+  await expect(card.locator("ul li", { hasText: "list item" })).toBeVisible();
+  await expect(
+    card.locator("blockquote", { hasText: "quoted line" }),
+  ).toBeVisible();
+  await expect(card.locator("code", { hasText: "inline" })).toBeVisible();
+
+  await noteOpenButton(page, title).click();
+  const viewDialog = page.getByRole("dialog", { name: title });
+  await expect(viewDialog).toBeVisible();
+  await expect(viewDialog.locator("strong", { hasText: "bold" })).toBeVisible();
+  await expect(
+    viewDialog.locator("a[href='https://example.com']"),
+  ).toBeVisible();
+  await expect(
+    viewDialog.locator("ul li", { hasText: "list item" }),
+  ).toBeVisible();
+  await expect(
+    viewDialog.locator("blockquote", { hasText: "quoted line" }),
+  ).toBeVisible();
+  await expect(viewDialog.locator("code", { hasText: "inline" })).toBeVisible();
+});
+
 test("notes: pin, edit, delete, reorder persists", async ({ page }) => {
   const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
 
