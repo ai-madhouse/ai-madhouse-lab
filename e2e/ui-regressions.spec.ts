@@ -284,14 +284,24 @@ test("notes create sends string payload fields and persists after reload", async
 test("dashboard realtime indicator handles disconnect and reconnect transitions", async ({
   page,
 }) => {
-  await page.route("**/api/realtime/health", async (route) => {
+  await page.route("**/api/dashboard/metrics", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
-        usersConnected: 1,
-        connectionsTotal: 1,
+        metrics: {
+          activeSessions: 1,
+          notesCount: 1,
+          notesEventsLastHour: 1,
+          notesEventsLastDay: 1,
+          lastNotesActivityAt: new Date().toISOString(),
+          realtime: {
+            ok: true,
+            usersConnected: 1,
+            connectionsTotal: 1,
+          },
+        },
       }),
     });
   });

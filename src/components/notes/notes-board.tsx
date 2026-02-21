@@ -17,6 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useAtom } from "jotai";
 import { Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
@@ -50,6 +51,18 @@ import {
   type NotesEventKind,
 } from "@/lib/notes-e2ee/model";
 import { getRealtimeWsUrl } from "@/lib/realtime-url";
+import {
+  notesCanRedoAtom,
+  notesCanUndoAtom,
+  notesCsrfTokenAtom,
+  notesDekKeyAtom,
+  notesErrorAtom,
+  notesEventsAtom,
+  notesListAtom,
+  notesLoadingAtom,
+  notesRedoTargetEventIdAtom,
+  notesUndoTargetEventIdAtom,
+} from "@/lib/runtime/notes-state";
 import { cn, safeParseJson } from "@/lib/utils";
 
 type NotesHistoryRow = {
@@ -260,23 +273,23 @@ async function decryptHistory({
 }
 
 export function NotesBoard() {
-  const [csrfToken, setCsrfToken] = useState<string>("");
-  const [dekKey, setDekKey] = useState<CryptoKey | null>(null);
+  const [csrfToken, setCsrfToken] = useAtom(notesCsrfTokenAtom);
+  const [dekKey, setDekKey] = useAtom(notesDekKeyAtom);
 
-  const [notes, setNotes] = useState<NoteSnapshot[]>([]);
-  const [events, setEvents] = useState<NotesEvent[]>([]);
+  const [notes, setNotes] = useAtom(notesListAtom);
+  const [events, setEvents] = useAtom(notesEventsAtom);
 
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const [undoTargetEventId, setUndoTargetEventId] = useState<string | null>(
-    null,
+  const [canUndo, setCanUndo] = useAtom(notesCanUndoAtom);
+  const [canRedo, setCanRedo] = useAtom(notesCanRedoAtom);
+  const [undoTargetEventId, setUndoTargetEventId] = useAtom(
+    notesUndoTargetEventIdAtom,
   );
-  const [redoTargetEventId, setRedoTargetEventId] = useState<string | null>(
-    null,
+  const [redoTargetEventId, setRedoTargetEventId] = useAtom(
+    notesRedoTargetEventIdAtom,
   );
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useAtom(notesLoadingAtom);
+  const [error, setError] = useAtom(notesErrorAtom);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -476,7 +489,17 @@ export function NotesBoard() {
         setLoading(false);
       }
     };
-  }, [dekKey]);
+  }, [
+    dekKey,
+    setCanRedo,
+    setCanUndo,
+    setError,
+    setEvents,
+    setLoading,
+    setNotes,
+    setRedoTargetEventId,
+    setUndoTargetEventId,
+  ]);
 
   async function handleUnlocked(result: {
     csrfToken: string;
