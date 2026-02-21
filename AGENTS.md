@@ -216,3 +216,453 @@ Bad guesses we explicitly avoid in this repo:
 - editing `main`
 - silently skipping gates
 - leaving tasks stuck in `inprogress` with no active work
+
+---
+
+## Full Production Checklist (authoritative, merged verbatim)
+
+# Production‑Grade TypeScript + React + Next.js (React Compiler) — AI Coding Patterns & Migration Checklist
+
+> Purpose: a pragmatic, enforceable checklist of patterns to generate **production‑grade** code, **avoid anti‑patterns**, and support **safe migrations** in a TypeScript + React + Next.js codebase that relies on **React Compiler** (so *avoid manual memoization hooks such as* `useMemo`/`useCallback` when they would only be used for render optimization).
+
+---
+
+## 0) Global Rules (hard constraints)
+
+- [ ] **No code duplication**: do not create “helper” files that just re‑export, mirror, or restate existing logic. Prefer extracting shared logic into a single module and reusing it.
+- [ ] **No long branching**: avoid `if/else` chains or `switch` with **> 3 outcomes**.
+  - Use a **lookup map** (object/`Map`) for O(1) average lookup, or use **polymorphism/strategy** or **discriminated unions** with exhaustive handling.
+- [ ] **React Compiler aware**:
+  - Do **not** add `useMemo`, `useCallback`, or “memoize everything” patterns for render performance.
+  - Use hooks only for *behavior*: state, effects, refs, context, external subscriptions—not for micro‑optimizing render.
+- [ ] **No comment spam**: only add TSDoc where it helps people understand *intent, constraints, invariants, side effects, or tricky behavior*. (Guidelines below.)
+- [ ] **Prefer correctness + clarity over cleverness**:
+  - Small functions, clear names, explicit types at boundaries, predictable control flow, and great error messages.
+
+---
+
+## 1) Project Health Baseline (TypeScript/Quality)
+
+**Pattern: type boundaries**
+- ✅ Type/validate at module boundaries: network, storage, env, user input.
+- ✅ Inside core logic: rely on typed values.
+
+## 2) TypeScript Patterns (and anti‑patterns)
+
+### 2.1 Discriminated unions + exhaustive handling (preferred)
+Use for state machines, API result shapes, and UI states.
+
+```ts
+type LoadState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "success"; data: string[] }
+  | { kind: "error"; message: string };
+
+function assertNever(x: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(x)}`);
+}
+
+function renderLabel(s: LoadState): string {
+  switch (s.kind) {
+    case "idle":
+    case "loading":
+      return "Loading…";
+    case "success":
+      return `${s.data.length} items`;
+    case "error":
+      return s.message;
+    default:
+      return assertNever(s);
+  }
+}
+```
+
+**Anti‑pattern:** boolean flags (`isLoading`, `hasError`, `isEmpty`) that can conflict.
+
+---
+
+### 2.2 Result pattern for domain operations (avoid throw‑as‑control‑flow)
+```ts
+type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+
+function parseAge(input: string): Result<number> {
+  const n = Number(input);
+  if (!Number.isFinite(n) || n < 0) return { ok: false, error: "Invalid age" };
+  return { ok: true, value: n };
+}
+```
+
+**Use throws for programmer errors**, not expected user/input failures.
+
+---
+
+### 2.3 “Narrow at the edge”: `unknown` → validated types
+**Anti‑pattern:** `JSON.parse()` as `any`.
+
+```ts
+function parseJson<T>(raw: string, validate: (x: unknown) => T): T {
+  const value: unknown = JSON.parse(raw);
+  return validate(value);
+}
+```
+
+---
+
+### 2.4 Avoid deep optional chaining soup
+Prefer early returns and clear guard functions.
+
+```ts
+function isNonEmptyString(x: unknown): x is string {
+  return typeof x === "string" && x.trim().length > 0;
+}
+```
+
+---
+
+## 3) Control Flow Pattern: Avoid >3 branches (use lookup maps / strategies)
+
+### 3.1 Lookup map (O(1) average) — preferred for “many outcomes”
+**Instead of** long `switch`/`if`.
+
+```ts
+type Status = "draft" | "active" | "paused" | "archived";
+
+const statusLabel: Record<Status, string> = {
+  draft: "Draft",
+  active: "Active",
+  paused: "Paused",
+  archived: "Archived",
+};
+
+function labelForStatus(s: Status) {
+  return statusLabel[s]; // O(1) average
+}
+```
+
+### 3.2 Command handler map (business logic)
+```ts
+type Action =
+  | { kind: "rename"; name: string }
+  | { kind: "archive" }
+  | { kind: "restore" }
+  | { kind: "setOwner"; ownerId: string };
+
+type ActionHandler = (a: any) => Promise<void>;
+
+const handlers: Record<Action["kind"], ActionHandler> = {
+  rename: async (a: Extract<Action, { kind: "rename" }>) => { /* ... */ },
+  archive: async () => { /* ... */ },
+  restore: async () => { /* ... */ },
+  setOwner: async (a: Extract<Action, { kind: "setOwner" }>) => { /* ... */ },
+};
+
+async function runAction(action: Action) {
+  // one dispatch, no long branching
+  const handler = handlers[action.kind] as (a: Action) => Promise<void>;
+  return handler(action);
+}
+```
+
+### 3.3 Strategy objects (useful when behavior is complex)
+```ts
+interface PricingStrategy {
+  computeTotal(cents: number): number;
+}
+
+class StandardPricing implements PricingStrategy {
+  computeTotal(cents: number) { return cents; }
+}
+
+class DiscountPricing implements PricingStrategy {
+  constructor(private readonly percent: number) {}
+  computeTotal(cents: number) { return Math.round(cents * (1 - this.percent)); }
+}
+```
+
+---
+
+## 4) React Patterns (React Compiler friendly)
+
+### 4.1 Components: keep them pure
+- [ ] Prefer **pure rendering** from props/state.
+- [ ] Use `useEffect` only for **imperative side effects** (subscriptions, timers, non-React APIs).
+- [ ] Do **not** create derived state from props unless unavoidable.
+
+**Anti‑pattern:** Derived state + effect sync
+```tsx
+// ❌ Avoid: duplicated source of truth
+const [filtered, setFiltered] = useState(items);
+useEffect(() => setFiltered(items.filter(...)), [items]);
+```
+
+**Pattern:** derive during render
+```tsx
+// ✅ Prefer: derive on the fly (React Compiler will optimize where appropriate)
+const filtered = items.filter(/* ... */);
+```
+
+### 4.2 Don’t sprinkle useMemo/useCallback
+- ✅ Only introduce memoization when a **measurable** issue exists AND React Compiler does not cover it for the scenario.
+- ✅ If you must keep a stable function identity for an external API (rare), document why.
+
+```tsx
+// ✅ Example: stable callback only when required by an external imperative API
+// (Not for render optimization)
+```
+
+### 4.3 Keep state minimal and local
+- [ ] Prefer local component state.
+- [ ] Lift state up only when it must be shared.
+- [ ] Avoid “global state by default”. Use context for cross-cutting concerns (theme, auth), and a state library only when it truly simplifies.
+
+### 4.4 Stable keys in lists
+**Anti‑pattern:** index as key
+```tsx
+{items.map((x, i) => <Row key={i} item={x} />)} // ❌
+```
+
+**Pattern**
+```tsx
+{items.map((x) => <Row key={x.id} item={x} />)} // ✅
+```
+
+### 4.5 Error boundaries & empty states
+- [ ] Add `error.tsx`/`not-found.tsx` in Next routes where useful.
+- [ ] Prefer explicit “empty states” in UI logic.
+
+---
+
+## 5) Next.js Patterns (App Router oriented)
+
+### 5.1 Server vs Client components (separation)
+- [ ] Use `"use client"` only when needed (stateful UI, effects, browser-only APIs).
+- [ ] Keep client boundaries small; pass serializable props.
+
+### 5.2 Data fetching
+- [ ] Fetch on the server whenever possible.
+- [ ] Prefer route handlers for mutations.
+- [ ] Use caching intentionally (revalidate, tags) and document behavior when surprising.
+
+### 5.3 Validation: validate input using Zod on the client input and on the server api request
+
+---
+
+## 6) Migration Checklist
+
+### 6.1 Planning & inventory
+- [ ] Identify “entry points”: pages/routes, shared components, domain modules.
+- [ ] Classify modules:
+  - [ ] **Pure** (no side effects) → easiest to migrate first
+  - [ ] **UI** (React) → needs component-by-component migration
+  - [ ] **Edge** (API/IO) → validate + refactor carefully
+
+### 6.2 Step-by-step migration loop (repeatable)
+For each module/feature:
+- [ ] Write/port tests for current behavior (or snapshot API responses)
+- [ ] Convert types first (TS errors as guide)
+- [ ] Replace long branching with lookup maps/strategies (see §3)
+- [ ] Remove duplicated logic by extracting a single shared helper
+- [ ] Align folder structure + naming conventions
+- [ ] Ensure error handling and empty states exist
+- [ ] Run lint + tests + typecheck before moving on
+
+### 6.3 React/Next specific migration tasks
+- [ ] Move data fetching to server
+- [ ] Shrink client components to interactive islands
+- [ ] Replace derived state + effects with pure derivations
+- [ ] Avoid `useMemo`/`useCallback` additions (React Compiler)
+- [ ] Introduce route-level `error.tsx` and `loading.tsx` where helpful
+
+### 6.4 Verification gates (must pass)
+- [ ] `bun test`
+- [ ] `bun lint`
+- [ ] E2E for top user journeys
+
+---
+
+## 7) Readability & Maintainability Rules (day-to-day)
+
+### 7.1 File and module design
+- [ ] One primary responsibility per module.
+- [ ] Expose a small public surface (export fewer things).
+- [ ] Prefer feature-based folders: `features/<feature>/...` over “types/utils/components” dumping grounds.
+
+### 7.2 Naming
+- [ ] Prefer **verbs** for functions (`getUser`, `calculateTotal`).
+- [ ] Prefer **nouns** for values/types (`User`, `InvoiceTotal`).
+- [ ] Avoid abbreviations unless widely understood.
+
+### 7.3 Function shape
+- [ ] Keep functions small; one level of abstraction per function.
+- [ ] Early returns over nested conditionals.
+- [ ] Avoid “boolean parameter” traps:
+  - `doThing(true)` is unclear → use options object or separate functions.
+
+```ts
+// ✅ options object is self-documenting
+function fetchUsers(opts: { includeDisabled: boolean }) { /* ... */ }
+```
+
+### 7.4 Error handling
+- [ ] Prefer typed errors or `Result` for expected failures. Do not throw expected errors.
+- [ ] Provide actionable messages (what failed, which id, which constraint).
+
+---
+
+## 8) Anti‑patterns to Eliminate (with fixes)
+
+### 8.1 “God components”
+**Problem:** huge components mixing data fetching, business rules, and UI.
+- ✅ Fix: split into server wrapper + client interactive subcomponent + domain helpers.
+
+### 8.2 “Effect-driven” UI
+**Problem:** `useEffect` chains that set state that triggers more effects.
+- ✅ Fix: derive in render; move side effects to the edge; use server fetch.
+
+### 8.3 Hidden coupling via re-exports and duplicate modules
+**Problem:** `index.ts` barrels that hide dependencies or duplicate APIs.
+- ✅ Fix: explicit imports for important modules; avoid duplicating modules across features.
+
+### 8.4 Switch/if explosion
+**Problem:** `switch(action.type)` with many cases.
+- ✅ Fix: handler map or strategy (§3).
+
+### 8.5 Over-abstracted utilities
+**Problem:** generic helpers that obscure intent (`applySomething<T>(...)`).
+- ✅ Fix: create domain-specific functions with clear names.
+
+---
+
+## 9) Pragmatic TSDoc Guide (concise, useful, not spammy)
+
+### 9.1 When to write TSDoc (✅ do)
+Write TSDoc for:
+- [ ] **Public APIs** used across modules (shared hooks, services, domain functions)
+- [ ] **Non-obvious behavior** (invariants, edge cases, performance constraints, side effects)
+- [ ] **Why** something exists (tradeoffs, constraints, external requirements)
+
+### 9.2 When NOT to write TSDoc (❌ don’t)
+Avoid TSDoc for:
+- [ ] Obvious functions (`add`, `toString`, trivial getters)
+- [ ] Restating types already clear from signatures
+- [ ] Repeating what the code says line-by-line
+
+### 9.3 TSDoc style rules (keep it short)
+- [ ] First line: **one-sentence summary** (imperative voice).
+- [ ] Add `@remarks` only if there’s non-obvious context.
+- [ ] Add `@example` only when usage is not obvious.
+- [ ] Document side effects and error cases (`@throws`) only when relevant.
+- [ ] Prefer “what/why”, not “how”.
+
+### 9.4 Templates
+
+**Function (domain)**
+```ts
+/**
+ * Compute the invoice total in cents.
+ *
+ * @remarks
+ * Applies line-item taxes and rounds half-up per local regulation.
+ *
+ * @throws If any line item has a negative quantity.
+ */
+export function computeInvoiceTotal(input: Invoice): number {
+  // ...
+}
+```
+
+**React component**
+```tsx
+/**
+ * Render a compact user card with name, avatar, and status.
+ *
+ * @remarks
+ * This component is presentational; it performs no data fetching.
+ */
+export function UserCard(props: { user: User }) {
+  // ...
+}
+```
+
+**Custom hook**
+```ts
+/**
+ * Subscribe to the current online/offline status.
+ *
+ * @remarks
+ * Uses the browser `online`/`offline` events; returns `true` on the server.
+ */
+export function useOnlineStatus(): boolean {
+  // ...
+}
+```
+
+**Type / interface**
+```ts
+/** A stable identifier for a user in the primary datastore. */
+export type UserId = string & { readonly __brand: "UserId" };
+```
+
+### 9.5 Comment hygiene checklist
+- [ ] No “explain every line” comments.
+- [ ] No stale comments: update docs when behavior changes.
+- [ ] Prefer renaming code over commenting unclear names.
+
+---
+
+## 10) Quick Pre-flight Checklist (copy/paste)
+
+- [ ] I validated all external inputs at the boundary (`unknown` → typed).
+- [ ] I avoided `useMemo`/`useCallback` (React Compiler project).
+- [ ] I avoided `if/else` or `switch` with >3 outcomes; used a map/strategy.
+- [ ] I did not duplicate logic or create redundant files.
+- [ ] I kept components pure; side effects only where necessary.
+- [ ] I added TSDoc only for public/non-obvious APIs (no spam).
+- [ ] I ran typecheck + lint + tests (or ensured these steps exist).
+- [ ] I improved readability: small functions, clear naming, minimal state.
+
+---
+
+## 11) Appendix: Example refactor — from switch explosion to handler map
+
+**Before (❌)**
+```ts
+switch (event.type) {
+  case "a": return handleA(event);
+  case "b": return handleB(event);
+  case "c": return handleC(event);
+  case "d": return handleD(event);
+  case "e": return handleE(event);
+  default: throw new Error("Unknown event");
+}
+```
+
+**After (✅)**
+```ts
+type Event =
+  | { type: "a"; payload: A }
+  | { type: "b"; payload: B }
+  | { type: "c"; payload: C }
+  | { type: "d"; payload: D }
+  | { type: "e"; payload: E };
+
+const eventHandlers: Record<Event["type"], (e: any) => void> = {
+  a: (e: Extract<Event, { type: "a" }>) => handleA(e),
+  b: (e: Extract<Event, { type: "b" }>) => handleB(e),
+  c: (e: Extract<Event, { type: "c" }>) => handleC(e),
+  d: (e: Extract<Event, { type: "d" }>) => handleD(e),
+  e: (e: Extract<Event, { type: "e" }>) => handleE(e),
+};
+
+export function dispatchEvent(e: Event) {
+  return (eventHandlers[e.type] as (x: Event) => void)(e);
+}
+```
+
+---
+
+### Notes (interpretation of constraints)
+- “Use functions map for O(1)”: interpret as **lookup maps** (object/`Map`) and **handler tables** for branching reduction and fast dispatch.
+- “No duplicated code files”: avoid boilerplate “adapter” modules that mirror existing exports; centralize shared logic.
+- React Compiler: treat memoization hooks as **opt-in exceptions**, not a default tool.
