@@ -108,11 +108,19 @@ export function RealtimeCardContent() {
     };
   }, [isAuthed, setError, setLoading, setMetrics, setWsStatus]);
 
+  const shouldHideZeroMetricsWhileConnected =
+    wsStatus === "connected" &&
+    metrics?.realtime?.ok &&
+    (metrics.realtime.usersConnected ?? 0) === 0 &&
+    (metrics.realtime.connectionsTotal ?? 0) === 0;
+
   const metricsText = metrics?.realtime?.ok
-    ? t("realtime.detail", {
-        users: String(metrics.realtime.usersConnected ?? 0),
-        conns: String(metrics.realtime.connectionsTotal ?? 0),
-      })
+    ? shouldHideZeroMetricsWhileConnected
+      ? t("realtime.detailUnavailable")
+      : t("realtime.detail", {
+          users: String(metrics.realtime.usersConnected ?? 0),
+          conns: String(metrics.realtime.connectionsTotal ?? 0),
+        })
     : t("realtime.detailUnavailable");
 
   return (

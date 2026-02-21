@@ -381,6 +381,7 @@ test("live dashboard realtime indicator handles disconnect and reconnect transit
     "This browser is connected to realtime.",
   );
   await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
+  await expect(metricsDetail).not.toHaveText("0 user(s), 0 connection(s)");
   await page.evaluate(() => {
     const sockets = (
       window as Window & {
@@ -404,6 +405,7 @@ test("live dashboard realtime indicator handles disconnect and reconnect transit
     "This browser is connected to realtime.",
   );
   await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
+  await expect(metricsDetail).not.toHaveText("0 user(s), 0 connection(s)");
   await expect
     .poll(async () => await statusDetail.textContent(), { timeout: 1_000 })
     .toBe("This browser is connected to realtime.");

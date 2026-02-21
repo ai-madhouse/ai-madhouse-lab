@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { getRealtimeHealthFromDb } from "@/lib/realtime-health";
+import { getRealtimeHealth } from "@/lib/realtime-health";
 
 type NotesEventRow = {
   id: string;
@@ -55,47 +55,6 @@ function applyNotesEventsForStats(events: NotesEventRow[]) {
   };
 }
 
-async function fetchRealtimeHealth() {
-  // Keep in sync with realtime-client.ts: REALTIME_URL is the source of truth.
-  const baseUrl = (process.env.REALTIME_URL || "http://127.0.0.1:8787").trim();
-  const url = `${baseUrl.replace(/\/$/, "")}/health`;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 500);
-
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    if (!res.ok) return null;
-    const json = (await res.json().catch(() => null)) as {
-      ok: true;
-      connectionsTotal?: number;
-      usersConnected?: number;
-    } | null;
-
-    if (json?.ok) {
-      return {
-        ok: true as const,
-        connectionsTotal: Number(json.connectionsTotal ?? 0),
-        usersConnected: Number(json.usersConnected ?? 0),
-      };
-    }
-  } catch {
-    // fall through
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  try {
-    return await getRealtimeHealthFromDb();
-  } catch {
-    return null;
-  }
-}
-
 export async function getUserDashboardMetrics(username: string) {
   const db = await getDb();
 
@@ -146,7 +105,7 @@ export async function getUserDashboardMetrics(username: string) {
     (latestRes.rows[0] as unknown as { created_at?: string })?.created_at ??
     null;
 
-  const realtime = await fetchRealtimeHealth();
+  const realtime = await getRealtimeHealth();
 
   return {
     activeSessions,
