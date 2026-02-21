@@ -61,4 +61,43 @@ describe("internal API contracts: /api/realtime/health", () => {
     expect(json.connectionsTotal).toBeGreaterThanOrEqual(1);
     expect(json.usersConnected).toBeGreaterThanOrEqual(1);
   });
+
+  test("success contract prefers runtime health values when available", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      if (typeof input === "string" && input.endsWith("/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            connectionsTotal: 7,
+            usersConnected: 3,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      return originalFetch(input as never, init);
+    }) as typeof globalThis.fetch;
+
+    try {
+      const res = await realtimeHealthGet(
+        createAuthedRequest("http://local.test/api/realtime/health"),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        ok: true,
+        connectionsTotal: 7,
+        usersConnected: 3,
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import type { NextRequest } from "next/server";
 
-import { getRealtimeHealthFromDb } from "@/lib/realtime-health";
+import { getRealtimeHealth } from "@/lib/realtime-health";
 import { requireSessionFromRequest } from "@/lib/server/request-session";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,14 @@ export async function GET(request: NextRequest) {
     return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const realtime = await getRealtimeHealthFromDb();
+  const realtime = await getRealtimeHealth();
+  if (!realtime) {
+    return Response.json(
+      { ok: false, error: "realtime unavailable" },
+      { status: 503 },
+    );
+  }
+
   return Response.json(realtime, {
     status: 200,
     headers: {
