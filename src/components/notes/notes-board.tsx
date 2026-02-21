@@ -37,20 +37,19 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Separator } from "@/components/ui/separator";
-import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
+import { encryptJson } from "@/lib/crypto/webcrypto";
 import {
   arrayMove,
   mergeNoteOrderIds,
   type NotesBoardOrder,
   toUniqueStringArray,
 } from "@/lib/notes-board-order";
+import type { NoteSnapshot } from "@/lib/notes-e2ee/model";
 import {
-  applyNotesEvents,
-  type NoteSnapshot,
-  type NotesEvent,
-  type NotesEventKind,
-} from "@/lib/notes-e2ee/model";
-import { getRealtimeWsUrl } from "@/lib/realtime-url";
+  fetchNotesRuntimeSnapshot,
+  postNotesHistoryEvent,
+  subscribeNotesRuntime,
+} from "@/lib/runtime/notes-runtime";
 import {
   notesCanRedoAtom,
   notesCanUndoAtom,
@@ -64,16 +63,6 @@ import {
   notesUndoTargetEventIdAtom,
 } from "@/lib/runtime/notes-state";
 import { cn, safeParseJson } from "@/lib/utils";
-
-type NotesHistoryRow = {
-  id: string;
-  created_at: string;
-  kind: NotesEventKind;
-  note_id: string;
-  target_event_id: string | null;
-  payload_iv: string | null;
-  payload_ciphertext: string | null;
-};
 
 const NOTES_PINS_STORAGE_KEY = "madhouse-notes-pins";
 const NOTES_ORDER_STORAGE_KEY = "madhouse-notes-order";
@@ -164,113 +153,6 @@ function buildBodyPreview(body: string, maxLength = 240) {
 // (moved into E2EEDekUnlockCard)
 
 // (moved into E2EEDekUnlockCard)
-
-async function fetchHistory() {
-  const res = await fetch("/api/notes-history", { cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; events: NotesHistoryRow[] }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error(
-      (json && "error" in json && json.error) || "history failed",
-    );
-  }
-
-  return (json && "events" in json && json.events) || [];
-}
-
-async function postHistoryEvent({
-  csrfToken,
-  kind,
-  noteId,
-  targetEventId,
-  payload,
-}: {
-  csrfToken: string;
-  kind: NotesEventKind;
-  noteId: string;
-  targetEventId?: string;
-  payload?: { payload_iv: string; payload_ciphertext: string };
-}) {
-  const res = await fetch("/api/notes-history", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-csrf-token": csrfToken,
-    },
-    body: JSON.stringify({
-      kind,
-      note_id: noteId,
-      target_event_id: targetEventId ?? null,
-      payload_iv: payload?.payload_iv ?? null,
-      payload_ciphertext: payload?.payload_ciphertext ?? null,
-    }),
-  });
-
-  const json = (await res.json().catch(() => null)) as
-    | { ok: true; id: string }
-    | { ok: false; error?: string }
-    | null;
-
-  if (!res.ok) {
-    throw new Error(
-      (json && "error" in json && json.error) || "failed to write event",
-    );
-  }
-
-  if (!json || !("id" in json) || !json.id) {
-    throw new Error("missing event id");
-  }
-
-  return json.id;
-}
-
-// (replaced with proper UI in E2EEDekUnlockCard)
-
-async function decryptHistory({
-  key,
-  history,
-}: {
-  key: CryptoKey;
-  history: NotesHistoryRow[];
-}) {
-  const decrypted: NotesEvent[] = [];
-
-  for (const row of history) {
-    const ev: NotesEvent = {
-      id: row.id,
-      created_at: row.created_at,
-      kind: row.kind,
-      note_id: row.note_id,
-      target_event_id: row.target_event_id,
-      payload_iv: row.payload_iv,
-      payload_ciphertext: row.payload_ciphertext,
-    };
-
-    if (
-      (row.kind === "create" || row.kind === "update") &&
-      row.payload_iv &&
-      row.payload_ciphertext
-    ) {
-      try {
-        ev.note = await decryptJson<NoteSnapshot>({
-          key,
-          payload_iv: row.payload_iv,
-          payload_ciphertext: row.payload_ciphertext,
-        });
-      } catch {
-        // ignore
-      }
-    }
-
-    decrypted.push(ev);
-  }
-
-  const state = applyNotesEvents(decrypted);
-  return { decrypted, state };
-}
 
 export function NotesBoard() {
   const [csrfToken, setCsrfToken] = useAtom(notesCsrfTokenAtom);
@@ -471,20 +353,15 @@ export function NotesBoard() {
       setError(null);
       setLoading(true);
       try {
-        const history = await fetchHistory();
-        const { decrypted, state } = await decryptHistory({
-          key: dekKey,
-          history,
-        });
-
-        setEvents(decrypted);
-        setNotes(state.notes);
-        setCanUndo(state.canUndo);
-        setCanRedo(state.canRedo);
-        setUndoTargetEventId(state.undoTargetEventId);
-        setRedoTargetEventId(state.redoTargetEventId);
+        const snapshot = await fetchNotesRuntimeSnapshot(dekKey);
+        setEvents(snapshot.events);
+        setNotes(snapshot.notes);
+        setCanUndo(snapshot.canUndo);
+        setCanRedo(snapshot.canRedo);
+        setUndoTargetEventId(snapshot.undoTargetEventId);
+        setRedoTargetEventId(snapshot.redoTargetEventId);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "failed to load history");
+        setError(err instanceof Error ? err.message : "history_failed");
       } finally {
         setLoading(false);
       }
@@ -511,20 +388,15 @@ export function NotesBoard() {
     setError(null);
     setLoading(true);
     try {
-      const history = await fetchHistory();
-      const { decrypted, state } = await decryptHistory({
-        key: result.dekKey,
-        history,
-      });
-
-      setEvents(decrypted);
-      setNotes(state.notes);
-      setCanUndo(state.canUndo);
-      setCanRedo(state.canRedo);
-      setUndoTargetEventId(state.undoTargetEventId);
-      setRedoTargetEventId(state.redoTargetEventId);
+      const snapshot = await fetchNotesRuntimeSnapshot(result.dekKey);
+      setEvents(snapshot.events);
+      setNotes(snapshot.notes);
+      setCanUndo(snapshot.canUndo);
+      setCanRedo(snapshot.canRedo);
+      setUndoTargetEventId(snapshot.undoTargetEventId);
+      setRedoTargetEventId(snapshot.redoTargetEventId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "failed to init");
+      setError(err instanceof Error ? err.message : "history_failed");
     } finally {
       setLoading(false);
     }
@@ -580,31 +452,9 @@ export function NotesBoard() {
   }, []);
 
   useEffect(() => {
-    // Primary: same-origin SSE stream (works over SSH tunnels / no extra port).
-    // Secondary: realtime websocket server (optional).
-
-    const es = new EventSource("/api/notes-stream");
-
-    es.addEventListener("notes:changed", () => {
+    return subscribeNotesRuntime(() => {
       void refreshRef.current?.();
     });
-
-    // Optional ws (if you expose/forward the realtime port).
-    const url = getRealtimeWsUrl();
-    const ws = url ? new WebSocket(url) : null;
-
-    if (ws) {
-      ws.onmessage = (event) => {
-        const data = safeParseJson<{ type?: string }>(String(event.data));
-        if (!data || data.type !== "notes:changed") return;
-        void refreshRef.current?.();
-      };
-    }
-
-    return () => {
-      es.close();
-      ws?.close();
-    };
   }, []);
 
   async function createNote() {
@@ -629,7 +479,7 @@ export function NotesBoard() {
 
     try {
       const payload = await encryptJson({ key: dekKey, value: snapshot });
-      await postHistoryEvent({
+      await postNotesHistoryEvent({
         csrfToken,
         kind: "create",
         noteId: snapshot.id,
@@ -658,7 +508,7 @@ export function NotesBoard() {
 
     try {
       const payload = await encryptJson({ key: dekKey, value: note });
-      await postHistoryEvent({
+      await postNotesHistoryEvent({
         csrfToken,
         kind: "update",
         noteId: note.id,
@@ -681,7 +531,7 @@ export function NotesBoard() {
     }
 
     try {
-      await postHistoryEvent({ csrfToken, kind: "delete", noteId });
+      await postNotesHistoryEvent({ csrfToken, kind: "delete", noteId });
       await refreshRef.current?.();
       return true;
     } catch (err) {
@@ -713,7 +563,7 @@ export function NotesBoard() {
     }
 
     try {
-      await postHistoryEvent({
+      await postNotesHistoryEvent({
         csrfToken,
         kind: "undo",
         noteId,
@@ -741,7 +591,7 @@ export function NotesBoard() {
     }
 
     try {
-      await postHistoryEvent({
+      await postNotesHistoryEvent({
         csrfToken,
         kind: "redo",
         noteId,
