@@ -284,6 +284,18 @@ test("notes create sends string payload fields and persists after reload", async
 test("dashboard realtime indicator handles disconnect and reconnect transitions", async ({
   page,
 }) => {
+  await page.route("**/api/realtime/health", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        usersConnected: 1,
+        connectionsTotal: 1,
+      }),
+    });
+  });
+
   await page.addInitScript(() => {
     const wsInstances: MockWebSocket[] = [];
     Object.defineProperty(window, "__mockRealtimeWsInstances", {
@@ -348,6 +360,7 @@ test("dashboard realtime indicator handles disconnect and reconnect transitions"
   const realtimeCard = page.getByTestId("dashboard-realtime-card");
   const statusLabel = realtimeCard.getByTestId("realtime-status-label");
   const statusDetail = realtimeCard.getByTestId("realtime-status-detail");
+  const metricsDetail = realtimeCard.getByTestId("realtime-metrics-detail");
 
   await expect(realtimeCard).toBeVisible();
   await expect(statusDetail).toContainText(
@@ -357,6 +370,7 @@ test("dashboard realtime indicator handles disconnect and reconnect transitions"
   await expect(statusDetail).toHaveText(
     "This browser is connected to realtime.",
   );
+  await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
   await page.evaluate(() => {
     const sockets = (
       window as Window & {
@@ -379,6 +393,7 @@ test("dashboard realtime indicator handles disconnect and reconnect transitions"
   await expect(statusDetail).toHaveText(
     "This browser is connected to realtime.",
   );
+  await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
   await expect
     .poll(async () => await statusDetail.textContent(), { timeout: 1_000 })
     .toBe("This browser is connected to realtime.");
