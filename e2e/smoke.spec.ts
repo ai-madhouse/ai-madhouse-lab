@@ -71,3 +71,18 @@ test("Theme toggle does not shift the logout button", async ({ page }) => {
   expect(dx).toBeLessThanOrEqual(0.5);
   expect(dw).toBeLessThanOrEqual(0.5);
 });
+
+test("settings smoke: sessions tab renders", async ({ page }) => {
+  const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
+
+  await page.goto(`/${locale}/settings?tab=sessions`, {
+    waitUntil: "domcontentloaded",
+  });
+
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Sessions" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByText(/^Active sessions:/)).toBeVisible();
+});

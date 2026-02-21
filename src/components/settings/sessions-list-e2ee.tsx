@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -11,7 +11,9 @@ import { decryptJson, encryptJson } from "@/lib/crypto/webcrypto";
 import {
   fetchCurrentSession,
   fetchSessions,
+  fetchSettingsSnapshot,
   type SessionRow,
+  settingsAuthAtom,
   settingsCsrfTokenAtom,
   settingsCurrentSessionIdAtom,
   settingsDekKeyAtom,
@@ -19,7 +21,9 @@ import {
   settingsLoadingAtom,
   settingsMetaWarningAtom,
   settingsRowsAtom,
+  settingsWsStatusAtom,
 } from "@/lib/runtime/settings-state";
+import { subscribeRealtimeWs } from "@/lib/runtime/ws-client";
 import { describeUserAgent } from "@/lib/user-agent";
 
 type SessionMeta = {
@@ -67,20 +71,19 @@ async function upsertSessionMeta({
   }
 }
 
-export function SessionsListE2EE({
-  onCountChange,
-}: {
-  onCountChange?: (count: number) => void;
-}) {
+export function SessionsListE2EE() {
   const t = useTranslations("Settings.sessionsList");
 
   const [dekKey, setDekKey] = useAtom(settingsDekKeyAtom);
   const [csrfToken, setCsrfToken] = useAtom(settingsCsrfTokenAtom);
   const [rows, setRows] = useAtom(settingsRowsAtom);
-  const [, setCurrentSessionId] = useAtom(settingsCurrentSessionIdAtom);
+  const setCurrentSessionId = useSetAtom(settingsCurrentSessionIdAtom);
+  const authState = useAtomValue(settingsAuthAtom);
+  const setAuthState = useSetAtom(settingsAuthAtom);
   const [error, setError] = useAtom(settingsErrorAtom);
   const [metaWarning, setMetaWarning] = useAtom(settingsMetaWarningAtom);
   const [loading, setLoading] = useAtom(settingsLoadingAtom);
+  const setWsStatus = useSetAtom(settingsWsStatusAtom);
 
   function prettyError(raw: string) {
     const labelKey = errorLabelKeyMap[raw];
@@ -88,22 +91,12 @@ export function SessionsListE2EE({
   }
 
   useEffect(() => {
-    onCountChange?.(rows.length);
-  }, [onCountChange, rows.length]);
-
-  useEffect(() => {
     let cancelled = false;
-
-    async function refreshSessions() {
-      const sessions = await fetchSessions();
-      if (cancelled) return;
-      setRows(sessions);
-      onCountChange?.(sessions.length);
-    }
 
     async function run() {
       setError(null);
       setLoading(true);
+      setAuthState({ kind: "loading" });
 
       try {
         const token = await fetchCsrfTokenOrNull();
@@ -113,15 +106,22 @@ export function SessionsListE2EE({
       }
 
       try {
-        await refreshSessions();
-
-        const me = await fetchCurrentSession();
+        const snapshot = await fetchSettingsSnapshot();
         if (!cancelled) {
-          setCurrentSessionId(me.sessionId);
+          setRows(snapshot.sessions);
+          setCurrentSessionId(snapshot.currentSessionId);
+          setAuthState({ kind: "authenticated" });
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "sessions_failed");
+          const message =
+            err instanceof Error ? err.message : "sessions_failed";
+          setError(message);
+          setAuthState(
+            message === "unauthorized"
+              ? { kind: "unauthenticated" }
+              : { kind: "authenticated" },
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -134,7 +134,7 @@ export function SessionsListE2EE({
       cancelled = true;
     };
   }, [
-    onCountChange,
+    setAuthState,
     setCsrfToken,
     setCurrentSessionId,
     setError,
@@ -143,35 +143,29 @@ export function SessionsListE2EE({
   ]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (authState.kind !== "authenticated") {
+      return () => {};
+    }
 
-    async function refresh() {
+    async function refreshFromRealtime() {
       try {
         const sessions = await fetchSessions();
-        if (cancelled) return;
         setError(null);
         setRows(sessions);
-        onCountChange?.(sessions.length);
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "sessions_failed");
-        }
+        setError(err instanceof Error ? err.message : "sessions_failed");
       }
     }
 
-    function onSessionsChanged() {
-      void refresh();
-    }
-
-    window.addEventListener("madhouse:sessions:changed", onSessionsChanged);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(
-        "madhouse:sessions:changed",
-        onSessionsChanged,
-      );
-    };
-  }, [onCountChange, setError, setRows]);
+    return subscribeRealtimeWs({
+      onStatus: setWsStatus,
+      onEvent: (event) => {
+        if (event.type === "sessions:changed") {
+          void refreshFromRealtime();
+        }
+      },
+    });
+  }, [authState.kind, setError, setRows, setWsStatus]);
 
   async function handleUnlocked(result: {
     csrfToken: string;
@@ -199,7 +193,6 @@ export function SessionsListE2EE({
     try {
       const sessions = await fetchSessions();
       setRows(sessions);
-      onCountChange?.(sessions.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "sessions_failed");
     }
@@ -236,7 +229,6 @@ export function SessionsListE2EE({
 
       const sessions = await fetchSessions();
       setRows(sessions);
-      onCountChange?.(sessions.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "revoke_failed");
     }
