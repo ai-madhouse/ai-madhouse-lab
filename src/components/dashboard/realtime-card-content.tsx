@@ -65,7 +65,8 @@ export function RealtimeCardContent({
 
       ws.onerror = () => {
         if (closed) return;
-        setWsStatus("disconnected");
+        // `error` can fire before a follow-up `close`; avoid false negatives
+        // and let `close` drive disconnected state.
       };
     }
 
