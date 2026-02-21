@@ -5,24 +5,12 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  isPulseErrorState,
+  isPulseSuccessState,
+  type PulsePayload,
+} from "@/lib/live/pulse-state";
 import { safeParseJson } from "@/lib/utils";
-
-type PulsePayload =
-  | {
-      ts: number;
-      activeSessions: number;
-      notesCount: number;
-      notesEventsLastHour: number;
-      notesEventsLastDay: number;
-      lastNotesActivityAt: string | null;
-      realtime: {
-        ok: true;
-        connectionsTotal?: number;
-        usersConnected?: number;
-      } | null;
-      error?: undefined;
-    }
-  | { ts: number; error: string };
 
 function formatWhen(value: string | null) {
   if (!value) return "—";
@@ -34,10 +22,7 @@ function formatWhen(value: string | null) {
 export function PulseBoard() {
   const t = useTranslations("Live");
 
-  const [pulse, setPulse] = useState<PulsePayload>({
-    ts: Date.now(),
-    error: "loading",
-  });
+  const [pulse, setPulse] = useState<PulsePayload | null>(null);
 
   useEffect(() => {
     let closed = false;
@@ -62,7 +47,8 @@ export function PulseBoard() {
     };
   }, []);
 
-  const isOk = !("error" in pulse && pulse.error);
+  const isError = isPulseErrorState(pulse);
+  const current = isPulseSuccessState(pulse) ? pulse : null;
 
   return (
     <Card className="bg-secondary/40">
@@ -77,7 +63,7 @@ export function PulseBoard() {
         <p className="text-sm text-muted-foreground">{t("boardSubtitle")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!isOk ? (
+        {isError ? (
           <div
             className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
             role="alert"
@@ -96,7 +82,7 @@ export function PulseBoard() {
               {t("metrics.sessions.label")}
             </p>
             <p className="text-2xl font-semibold">
-              {"error" in pulse ? "—" : pulse.activeSessions}
+              {current ? current.activeSessions : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
               {t("metrics.sessions.note")}
@@ -112,7 +98,7 @@ export function PulseBoard() {
               {t("metrics.notes.label")}
             </p>
             <p className="text-2xl font-semibold">
-              {"error" in pulse ? "—" : pulse.notesCount}
+              {current ? current.notesCount : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
               {t("metrics.notes.note")}
@@ -128,7 +114,7 @@ export function PulseBoard() {
               {t("metrics.writes.label")}
             </p>
             <p className="text-2xl font-semibold">
-              {"error" in pulse ? "—" : pulse.notesEventsLastHour}
+              {current ? current.notesEventsLastHour : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
               {t("metrics.writes.note")}
@@ -140,7 +126,7 @@ export function PulseBoard() {
               {t("metrics.lastActivity.label")}
             </p>
             <p className="text-sm font-medium">
-              {"error" in pulse ? "—" : formatWhen(pulse.lastNotesActivityAt)}
+              {current ? formatWhen(current.lastNotesActivityAt) : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
               {t("metrics.lastActivity.note")}
@@ -149,7 +135,9 @@ export function PulseBoard() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          {t("footer", { ts: new Date(pulse.ts).toLocaleTimeString() })}
+          {t("footer", {
+            ts: new Date(pulse?.ts ?? Date.now()).toLocaleTimeString(),
+          })}
         </p>
       </CardContent>
     </Card>
