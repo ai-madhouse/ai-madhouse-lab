@@ -52,8 +52,11 @@ const nextConfig: NextConfig = {
 
       externals.push(
         (
-          _context: unknown,
-          request: string | undefined,
+          {
+            request,
+          }: {
+            request?: string;
+          },
           callback: (error: Error | null, result?: string) => void,
         ) => {
           if (
