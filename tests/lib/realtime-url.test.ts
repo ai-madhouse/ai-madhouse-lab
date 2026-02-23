@@ -7,11 +7,15 @@ function setWindowLocation({
   host,
   hostname,
   origin,
+  realtimeUrl,
+  realtimePort,
 }: {
   protocol: string;
   host: string;
   hostname: string;
   origin: string;
+  realtimeUrl?: string;
+  realtimePort?: string;
 }) {
   Object.defineProperty(globalThis, "window", {
     value: {
@@ -20,6 +24,18 @@ function setWindowLocation({
         host,
         hostname,
         origin,
+      },
+    },
+    configurable: true,
+  });
+
+  Object.defineProperty(globalThis, "document", {
+    value: {
+      documentElement: {
+        dataset: {
+          realtimeUrl: realtimeUrl || "",
+          realtimePort: realtimePort || "",
+        },
       },
     },
     configurable: true,
@@ -35,6 +51,10 @@ afterEach(() => {
   clearRealtimeEnv();
   // Keep tests isolated from browser globals.
   Object.defineProperty(globalThis, "window", {
+    value: undefined,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "document", {
     value: undefined,
     configurable: true,
   });
@@ -58,6 +78,19 @@ describe("getRealtimeWsUrl", () => {
     expect(getRealtimeWsUrl()).toBe("wss://realtime.example.test/ws");
   });
 
+  test("prefers runtime realtime URL hint from document dataset", () => {
+    process.env.NEXT_PUBLIC_REALTIME_URL = "https://ignored.example.test";
+    setWindowLocation({
+      protocol: "https:",
+      host: "app.example.test",
+      hostname: "app.example.test",
+      origin: "https://app.example.test",
+      realtimeUrl: "https://runtime.example.test",
+    });
+
+    expect(getRealtimeWsUrl()).toBe("wss://runtime.example.test/ws");
+  });
+
   test("uses NEXT_PUBLIC_REALTIME_PORT when provided", () => {
     process.env.NEXT_PUBLIC_REALTIME_PORT = "9443";
     setWindowLocation({
@@ -68,6 +101,19 @@ describe("getRealtimeWsUrl", () => {
     });
 
     expect(getRealtimeWsUrl()).toBe("wss://app.example.test:9443/ws");
+  });
+
+  test("prefers runtime realtime port hint from document dataset", () => {
+    process.env.NEXT_PUBLIC_REALTIME_PORT = "9443";
+    setWindowLocation({
+      protocol: "https:",
+      host: "app.example.test",
+      hostname: "app.example.test",
+      origin: "https://app.example.test",
+      realtimePort: "9999",
+    });
+
+    expect(getRealtimeWsUrl()).toBe("wss://app.example.test:9999/ws");
   });
 
   test("defaults to localhost realtime port in local development", () => {

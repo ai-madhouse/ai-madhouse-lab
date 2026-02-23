@@ -30,4 +30,32 @@ describe("CSP policy", () => {
     expect(csp).not.toContain("'unsafe-inline'");
     expect(csp).not.toContain("'unsafe-eval'");
   });
+
+  test("adds localhost realtime websocket source for localhost request origins", () => {
+    const csp = buildCsp({
+      nonce: "abc",
+      requestOrigin: "http://localhost:3005",
+    });
+    expect(csp).toContain("connect-src");
+    expect(csp).toContain("ws://localhost:8787");
+  });
+
+  test("adds explicit realtime source from NEXT_PUBLIC_REALTIME_URL", () => {
+    const previous = process.env.NEXT_PUBLIC_REALTIME_URL;
+    process.env.NEXT_PUBLIC_REALTIME_URL = "https://realtime.example.test";
+
+    try {
+      const csp = buildCsp({
+        nonce: "abc",
+        requestOrigin: "https://app.example.test",
+      });
+      expect(csp).toContain("wss://realtime.example.test");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.NEXT_PUBLIC_REALTIME_URL;
+      } else {
+        process.env.NEXT_PUBLIC_REALTIME_URL = previous;
+      }
+    }
+  });
 });

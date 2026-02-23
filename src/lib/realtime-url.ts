@@ -26,16 +26,27 @@ function isLocalHost(hostname: string) {
   );
 }
 
+function getRuntimeHint() {
+  if (typeof document === "undefined") return { url: "", port: "" };
+  const root = document.documentElement;
+  const url = root?.dataset?.realtimeUrl?.trim() || "";
+  const port = root?.dataset?.realtimePort?.trim() || "";
+  return { url, port };
+}
+
 export function getRealtimeWsUrl() {
   if (typeof window === "undefined") return null;
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const explicitUrl = process.env.NEXT_PUBLIC_REALTIME_URL?.trim();
+  const runtimeHint = getRuntimeHint();
+  const explicitUrl =
+    runtimeHint.url || process.env.NEXT_PUBLIC_REALTIME_URL?.trim() || "";
   if (explicitUrl) {
     return normalizeWsUrl(explicitUrl, window.location.origin);
   }
 
-  const explicitPort = process.env.NEXT_PUBLIC_REALTIME_PORT?.trim();
+  const explicitPort =
+    runtimeHint.port || process.env.NEXT_PUBLIC_REALTIME_PORT?.trim() || "";
   if (explicitPort) {
     return `${protocol}://${window.location.hostname}:${explicitPort}/ws`;
   }

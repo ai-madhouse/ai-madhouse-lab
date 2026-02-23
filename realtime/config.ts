@@ -1,3 +1,5 @@
+import path from "node:path";
+
 function getEnv(name: string) {
   return process.env[name]?.trim() || "";
 }
@@ -5,6 +7,9 @@ function getEnv(name: string) {
 export const REALTIME_PORT = Number(getEnv("REALTIME_PORT") || "8787");
 export const REALTIME_SECRET =
   getEnv("REALTIME_SECRET") || "dev-realtime-secret";
-export const DB_PATH = getEnv("DB_PATH") || "data/app.db";
+const configuredDbPath = getEnv("DB_PATH");
+export const DB_PATH = path.resolve(
+  configuredDbPath || path.join(process.cwd(), "data", "app.db"),
+);
 
 export { getEnv };

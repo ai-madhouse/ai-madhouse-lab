@@ -11,6 +11,8 @@ export async function GET() {
   // will submit a stale token and fail CSRF verification.
   const existing = (await cookies()).get(csrfCookieName)?.value;
   const token = existing || generateCsrfToken();
+  const secureCookie =
+    process.env.NODE_ENV === "production" && process.env.E2E_TEST !== "1";
 
   const response = NextResponse.json({ ok: true, token });
 
@@ -18,7 +20,7 @@ export async function GET() {
     response.cookies.set(csrfCookieName, token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: secureCookie,
       path: "/",
       maxAge: 60 * 60 * 2,
     });
