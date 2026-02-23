@@ -15,6 +15,19 @@ export function removeSocket(username: string, ws: Ws) {
   if (set.size === 0) socketsByUser.delete(username);
 }
 
+export function hasSocketForSession(
+  socketsByUser: Map<string, Set<Ws>>,
+  username: string,
+  sessionId: string,
+) {
+  const set = socketsByUser.get(username);
+  if (!set) return false;
+  for (const ws of set) {
+    if (ws.data.sessionId === sessionId) return true;
+  }
+  return false;
+}
+
 export function broadcast(username: string, payload: unknown) {
   const set = socketsByUser.get(username);
   if (!set) return;

@@ -32,6 +32,27 @@ describe("realtime connection metrics", () => {
     expect(stats).toEqual({ connectionsTotal: 3, usersConnected: 2 });
   });
 
+  test("deduplicates concurrent register calls for the same connection identity", async () => {
+    const dbPath = path.join(
+      os.tmpdir(),
+      `ai-madhouse-lab-realtime-dedup-${Date.now()}.db`,
+    );
+    const db = createClient({ url: `file:${dbPath}` });
+
+    await ensureRealtimeConnectionsTable(db);
+
+    await Promise.all([
+      registerRealtimeConnection(db, { id: "session-1", username: "alice" }),
+      registerRealtimeConnection(db, { id: "session-1", username: "alice" }),
+    ]);
+    await registerRealtimeConnection(db, { id: "session-2", username: "bob" });
+
+    expect(await countRealtimeConnections(db, 120)).toEqual({
+      connectionsTotal: 2,
+      usersConnected: 2,
+    });
+  });
+
   test("touch keeps connections fresh; prune removes stale rows", async () => {
     const dbPath = path.join(
       os.tmpdir(),
