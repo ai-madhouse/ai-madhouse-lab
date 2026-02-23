@@ -613,3 +613,40 @@ test("live dashboard realtime renders numeric metrics while websocket is still o
     .toBe("This browser is connected to realtime.");
   await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
 });
+
+test("authenticated realtime connection shows non-zero numeric metrics in live runtime", async ({
+  page,
+}) => {
+  await registerAndLandOnDashboard(page, { locale: "en" });
+
+  const realtimeCard = page.getByTestId("dashboard-realtime-card");
+  const statusDetail = realtimeCard.getByTestId("realtime-status-detail");
+  const metricsDetail = realtimeCard.getByTestId("realtime-metrics-detail");
+
+  await expect(realtimeCard).toBeVisible();
+  await expect
+    .poll(() => statusDetail.textContent(), { timeout: 12_000 })
+    .toBe("This browser is connected to realtime.");
+
+  await expect(metricsDetail).not.toHaveText("Connection metrics unavailable.");
+  await expect
+    .poll(() => metricsDetail.textContent(), { timeout: 12_000 })
+    .toMatch(/^\d+ user\(s\), \d+ connection\(s\)$/);
+
+  const metricsText = await metricsDetail.textContent();
+  expect(metricsText).not.toBeNull();
+  if (!metricsText) {
+    throw new Error("Expected realtime metrics text");
+  }
+  expect(metricsText).not.toBe("0 user(s), 0 connection(s)");
+
+  const parsed = metricsText.match(/^(\d+) user\(s\), (\d+) connection\(s\)$/);
+  expect(parsed).not.toBeNull();
+  if (!parsed) {
+    throw new Error(
+      `Expected numeric realtime metrics, received: ${metricsText}`,
+    );
+  }
+  expect(Number(parsed[1])).toBeGreaterThan(0);
+  expect(Number(parsed[2])).toBeGreaterThan(0);
+});

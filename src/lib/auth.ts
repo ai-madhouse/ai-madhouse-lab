@@ -7,6 +7,10 @@ import { normalizeUsername, verifyCredentials } from "@/lib/users";
 
 export const authCookieName = "madhouse_auth";
 
+function shouldUseSecureCookies() {
+  return process.env.NODE_ENV === "production" && process.env.E2E_TEST !== "1";
+}
+
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
   if (secret && secret.length >= 16) return secret;
@@ -53,7 +57,7 @@ export function decodeAndVerifySessionCookie(value?: string | null) {
 }
 
 export async function setAuthCookie(sessionId: string) {
-  const secure = process.env.NODE_ENV === "production";
+  const secure = shouldUseSecureCookies();
   const cookieStore = await cookies();
 
   cookieStore.set(authCookieName, encodeSessionCookie(sessionId), {
@@ -70,7 +74,7 @@ export async function clearAuthCookie() {
   cookieStore.set(authCookieName, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     path: "/",
     expires: new Date(0),
   });

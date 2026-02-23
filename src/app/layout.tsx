@@ -50,9 +50,22 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "en";
+  const realtimeUrl =
+    process.env.NEXT_PUBLIC_REALTIME_URL?.trim() ||
+    process.env.REALTIME_URL?.trim() ||
+    "";
+  const realtimePort =
+    process.env.NEXT_PUBLIC_REALTIME_PORT?.trim() ||
+    process.env.REALTIME_PORT?.trim() ||
+    "";
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      data-realtime-url={realtimeUrl}
+      data-realtime-port={realtimePort}
+    >
       <body className={`${nunito.variable} ${plexMono.variable} min-h-screen`}>
         <ThemeProvider
           attribute="class"

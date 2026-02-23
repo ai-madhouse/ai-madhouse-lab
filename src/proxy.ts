@@ -10,6 +10,52 @@ function createNonce() {
   return crypto.randomBytes(16).toString("base64url");
 }
 
+function parseLocalHost(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
+function toWsOrigin(input: string, baseOrigin: string) {
+  try {
+    const url = new URL(input, baseOrigin);
+    if (url.protocol === "http:") url.protocol = "ws:";
+    if (url.protocol === "https:") url.protocol = "wss:";
+    if (url.protocol !== "ws:" && url.protocol !== "wss:") return null;
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return null;
+  }
+}
+
+function getRealtimeConnectSource(baseOrigin: string) {
+  const explicitUrl = process.env.NEXT_PUBLIC_REALTIME_URL?.trim();
+  if (explicitUrl) return toWsOrigin(explicitUrl, baseOrigin);
+
+  const explicitPort = process.env.NEXT_PUBLIC_REALTIME_PORT?.trim();
+  if (explicitPort) {
+    try {
+      const origin = new URL(baseOrigin);
+      const protocol = origin.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${origin.hostname}:${explicitPort}`;
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const origin = new URL(baseOrigin);
+    if (!parseLocalHost(origin.hostname)) return null;
+    const protocol = origin.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${origin.hostname}:8787`;
+  } catch {
+    return null;
+  }
+}
+
 function getSentrySecurityCspEndpoint(): string | null {
   const dsn = (process.env.SENTRY_DSN || "").trim();
   if (!dsn) return null;
@@ -28,7 +74,13 @@ function getSentrySecurityCspEndpoint(): string | null {
   }
 }
 
-export function buildCsp({ nonce }: { nonce: string }) {
+export function buildCsp({
+  nonce,
+  requestOrigin,
+}: {
+  nonce: string;
+  requestOrigin?: string;
+}) {
   // "nonce-..." is the hook Next.js uses to automatically add nonce attributes
   // to framework scripts/bundles/styles during dynamic SSR.
   //
@@ -40,7 +92,15 @@ export function buildCsp({ nonce }: { nonce: string }) {
   const sentryEndpoint = getSentrySecurityCspEndpoint();
   const sentryHost = sentryEndpoint ? new URL(sentryEndpoint).origin : null;
 
-  const connectSrc = ["'self'", ...(sentryHost ? [sentryHost] : [])].join(" ");
+  const realtimeSource = requestOrigin
+    ? getRealtimeConnectSource(requestOrigin)
+    : null;
+  const connectSources = new Set<string>([
+    "'self'",
+    ...(sentryHost ? [sentryHost] : []),
+    ...(realtimeSource ? [realtimeSource] : []),
+  ]);
+  const connectSrc = Array.from(connectSources).join(" ");
 
   const reportUris = [
     // Always keep local endpoint as a fallback.
@@ -74,7 +134,7 @@ export function buildCsp({ nonce }: { nonce: string }) {
 
 export function applySecurityHeaders(
   response: NextResponse,
-  opts?: { nonce?: string; csp?: string },
+  opts?: { nonce?: string; csp?: string; requestOrigin?: string },
 ) {
   // Minimal, production-safe defaults. Prefer enforcing these at the edge too.
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -90,7 +150,9 @@ export function applySecurityHeaders(
 
   if (process.env.NODE_ENV === "production") {
     const effectiveNonce = opts?.nonce ?? createNonce();
-    const csp = opts?.csp ?? buildCsp({ nonce: effectiveNonce });
+    const csp =
+      opts?.csp ??
+      buildCsp({ nonce: effectiveNonce, requestOrigin: opts?.requestOrigin });
 
     // Map endpoint-name -> URL for Reporting API.
     const sentryEndpoint = getSentrySecurityCspEndpoint();
@@ -129,7 +191,9 @@ export async function proxy(request: NextRequest) {
   // Only needed in production (dev HMR often relies on eval/inline).
   const nonce =
     process.env.NODE_ENV === "production" ? createNonce() : undefined;
-  const csp = nonce ? buildCsp({ nonce }) : undefined;
+  const csp = nonce
+    ? buildCsp({ nonce, requestOrigin: request.nextUrl.origin })
+    : undefined;
 
   const rawCookie = request.cookies.get(authCookieName)?.value;
   const sessionId = decodeAndVerifySessionCookie(rawCookie);
@@ -153,7 +217,11 @@ export async function proxy(request: NextRequest) {
     if (decision.setLocaleCookie) {
       setLocaleCookie(response, decision.setLocaleCookie);
     }
-    return applySecurityHeaders(response, { nonce, csp });
+    return applySecurityHeaders(response, {
+      nonce,
+      csp,
+      requestOrigin: request.nextUrl.origin,
+    });
   }
 
   const requestHeaders = new Headers(request.headers);
@@ -167,7 +235,11 @@ export async function proxy(request: NextRequest) {
   if (decision.setLocaleCookie) {
     setLocaleCookie(response, decision.setLocaleCookie);
   }
-  return applySecurityHeaders(response, { nonce, csp });
+  return applySecurityHeaders(response, {
+    nonce,
+    csp,
+    requestOrigin: request.nextUrl.origin,
+  });
 }
 
 export const config = {
