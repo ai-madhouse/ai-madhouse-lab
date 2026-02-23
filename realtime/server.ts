@@ -13,7 +13,9 @@ import {
   countRealtimeConnections,
   ensureRealtimeConnectionsTable,
   pruneRealtimeConnections,
+  registerRealtimeConnection,
   touchRealtimeConnection,
+  unregisterRealtimeConnection,
 } from "./realtime-connections";
 import { json } from "./responses";
 import { startSessionChecker } from "./session-checker";
@@ -131,12 +133,17 @@ Bun.serve<WsData>({
   websocket: {
     open: (ws) => {
       addSocket(ws.data.username, ws);
-      void touchRealtimeConnection(db, ws.data.connectionId).catch(() => null);
+      void registerRealtimeConnection(db, {
+        id: ws.data.connectionId,
+        username: ws.data.username,
+      }).catch(() => null);
       ws.send(JSON.stringify({ type: "hello" }));
     },
     close: (ws) => {
       removeSocket(ws.data.username, ws);
-      void touchRealtimeConnection(db, ws.data.connectionId).catch(() => null);
+      void unregisterRealtimeConnection(db, ws.data.connectionId).catch(
+        () => null,
+      );
     },
     message: (_ws, _msg) => {
       // no-op (client is read-only)

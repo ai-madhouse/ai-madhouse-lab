@@ -1,8 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { randomUUID } from "node:crypto";
 
 import { NextRequest } from "next/server";
 
 import { encodeSessionCookie } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { createSession, listSessionsForUser } from "@/lib/sessions";
 import { createUser, verifyCredentials } from "@/lib/users";
 
@@ -75,6 +77,12 @@ describe("phase3 runtime route contracts", () => {
   });
 
   test("/api/dashboard/metrics + /api/pulse/snapshot success contracts", async () => {
+    const db = await getDb();
+    await db.execute({
+      sql: "insert into realtime_connections(id, username, connected_at, last_seen_at) values(?, ?, datetime('now'), datetime('now'))",
+      args: [randomUUID(), username],
+    });
+
     const metricsRes = await dashboardMetricsGet(
       createAuthedRequest("http://local.test/api/dashboard/metrics"),
     );
@@ -87,10 +95,20 @@ describe("phase3 runtime route contracts", () => {
         notesEventsLastHour: number;
         notesEventsLastDay: number;
         lastNotesActivityAt: string | null;
+        realtime: {
+          ok: true;
+          usersConnected?: number;
+          connectionsTotal?: number;
+        } | null;
       };
     };
     expect(metricsJson.ok).toBe(true);
     expect(typeof metricsJson.metrics.activeSessions).toBe("number");
+    expect(metricsJson.metrics.realtime?.ok).toBe(true);
+    expect((metricsJson.metrics.realtime?.usersConnected ?? 0) >= 1).toBe(true);
+    expect((metricsJson.metrics.realtime?.connectionsTotal ?? 0) >= 1).toBe(
+      true,
+    );
 
     const pulseRes = await pulseSnapshotGet(
       createAuthedRequest("http://local.test/api/pulse/snapshot"),

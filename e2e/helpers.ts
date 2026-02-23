@@ -47,6 +47,9 @@ export async function signInFromLoginPage({
   await page.goto(`/${locale}/login?next=${encodeURIComponent(targetNext)}`, {
     waitUntil: "domcontentloaded",
   });
+  await expect(
+    page.locator('input[name="csrfToken"][type="hidden"]'),
+  ).toHaveValue(/.+/);
 
   await page.locator('input[name="username"]').fill(username);
   await page.locator('input[name="password"]').first().fill(password);
