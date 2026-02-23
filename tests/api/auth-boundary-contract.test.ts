@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 import { NextRequest } from "next/server";
 
-import { createUser } from "@/lib/users";
+import { createUser, getUserByUsername } from "@/lib/users";
 
 let csrfValid = true;
 let loginPost: typeof import("@/app/api/auth/login/route").POST;
@@ -196,5 +196,45 @@ describe("internal API contracts: auth boundary routes", () => {
     expect(location.pathname).toBe("/en/register");
     expect(location.searchParams.get("error")).toBe("exists");
     expect(location.searchParams.get("next")).toBe("/en/dashboard");
+  });
+
+  test("/api/auth/login rejects csrf supplied only via URL query", async () => {
+    const loginRes = await loginPost(
+      createFormPostRequest({
+        url: "http://local.test/api/auth/login?username=query-user&password=Password123!&csrfToken=csrf-test-token",
+        form: {
+          locale: "en",
+          next: "/en/dashboard",
+        },
+        cookie: "madhouse_csrf=csrf-test-token",
+      }),
+    );
+
+    expect(loginRes.status).toBe(307);
+    const location = getRedirectLocation(loginRes);
+    expect(location.pathname).toBe("/en/login");
+    expect(location.searchParams.get("error")).toBe("csrf");
+    expect(location.searchParams.get("next")).toBe("/en/dashboard");
+  });
+
+  test("/api/auth/register rejects credentials supplied only via URL query", async () => {
+    const queryUsername = `query-only-${Date.now().toString().slice(-6)}`;
+    const registerRes = await registerPost(
+      createFormPostRequest({
+        url: `http://local.test/api/auth/register?username=${queryUsername}&password=Password123!&password2=Password123!&csrfToken=csrf-test-token`,
+        form: {
+          locale: "en",
+          next: "/en/dashboard",
+        },
+        cookie: "madhouse_csrf=csrf-test-token",
+      }),
+    );
+
+    expect(registerRes.status).toBe(307);
+    const location = getRedirectLocation(registerRes);
+    expect(location.pathname).toBe("/en/register");
+    expect(location.searchParams.get("error")).toBe("csrf");
+    expect(location.searchParams.get("next")).toBe("/en/dashboard");
+    expect(await getUserByUsername(queryUsername)).toBeNull();
   });
 });
