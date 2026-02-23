@@ -26,6 +26,51 @@ test("can register, see settings, and sign out", async ({ page }) => {
   expect(await sessionMeStatusFromBrowser(page)).toBe(401);
 });
 
+test("auth credentials and csrf are submitted in body, not URL query", async ({
+  page,
+}) => {
+  const locale = "en";
+  const { username, password } = uniqueUser();
+
+  await page.goto(`/${locale}/register`, { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password").fill(password);
+
+  const registerReqPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/auth/register",
+  );
+
+  await page.getByRole("button", { name: "Create account" }).click();
+  const registerReq = await registerReqPromise;
+  const registerUrl = new URL(registerReq.url());
+  expect(registerUrl.searchParams.get("username")).toBeNull();
+  expect(registerUrl.searchParams.get("password")).toBeNull();
+  expect(registerUrl.searchParams.get("password2")).toBeNull();
+  expect(registerUrl.searchParams.get("csrfToken")).toBeNull();
+
+  await signOutFromHeader(page, locale);
+  await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+
+  const loginReqPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/auth/login",
+  );
+
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const loginReq = await loginReqPromise;
+  const loginUrl = new URL(loginReq.url());
+  expect(loginUrl.searchParams.get("username")).toBeNull();
+  expect(loginUrl.searchParams.get("password")).toBeNull();
+  expect(loginUrl.searchParams.get("csrfToken")).toBeNull();
+  await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
+});
+
 test("register rejects tampered csrf token", async ({ page }) => {
   const locale = "en";
   const { username, password } = uniqueUser();
