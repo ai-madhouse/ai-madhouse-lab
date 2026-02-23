@@ -184,8 +184,8 @@ export const cspReportE2EEnabledResponseSchema = z
 export const realtimeHealthSuccessResponseSchema = z
   .object({
     ok: z.literal(true),
-    connectionsTotal: z.number().int().nonnegative().optional(),
-    usersConnected: z.number().int().nonnegative().optional(),
+    connectionsTotal: z.number().int().nonnegative(),
+    usersConnected: z.number().int().nonnegative(),
   })
   .strict();
 

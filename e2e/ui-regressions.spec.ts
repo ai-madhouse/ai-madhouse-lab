@@ -411,7 +411,7 @@ test("live dashboard realtime indicator handles disconnect and reconnect transit
     .toBe("This browser is connected to realtime.");
 });
 
-test("live dashboard hides stale connected 0/0 and refreshes to real realtime metrics", async ({
+test("live dashboard shows realtime numeric metrics (never unavailable) and refreshes to live totals", async ({
   page,
 }) => {
   let metricsCallCount = 0;
@@ -504,13 +504,16 @@ test("live dashboard hides stale connected 0/0 and refreshes to real realtime me
 
   await expect(realtimeCard).toBeVisible();
   await expect(statusLabel).toHaveText("Connected");
-  await expect(metricsDetail).not.toHaveText("0 user(s), 0 connection(s)");
+  await expect(metricsDetail).not.toHaveText("Connection metrics unavailable.");
+  await expect
+    .poll(() => metricsDetail.textContent(), { timeout: 5_000 })
+    .toMatch(/^\d+ user\(s\), \d+ connection\(s\)$/);
   await expect
     .poll(() => metricsDetail.textContent(), { timeout: 5_000 })
     .toBe("1 user(s), 1 connection(s)");
 });
 
-test("live dashboard realtime does not show stale 0/0 while websocket is still opening", async ({
+test("live dashboard realtime renders numeric metrics while websocket is still opening", async ({
   page,
 }) => {
   let metricsCallCount = 0;
@@ -603,8 +606,8 @@ test("live dashboard realtime does not show stale 0/0 while websocket is still o
 
   await expect(realtimeCard).toBeVisible();
   await expect(statusDetail).toHaveText("Opening realtime websocket...");
-  await expect(metricsDetail).toHaveText("Connection metrics unavailable.");
-  await expect(metricsDetail).not.toHaveText("0 user(s), 0 connection(s)");
+  await expect(metricsDetail).toHaveText("0 user(s), 0 connection(s)");
+  await expect(metricsDetail).not.toHaveText("Connection metrics unavailable.");
   await expect
     .poll(() => statusDetail.textContent(), { timeout: 5_000 })
     .toBe("This browser is connected to realtime.");
