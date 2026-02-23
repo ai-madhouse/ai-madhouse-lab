@@ -62,7 +62,24 @@ describe("internal API contracts: /api/realtime/health", () => {
     expect(json.usersConnected).toBeGreaterThanOrEqual(1);
   });
 
-  test("success contract prefers runtime health values when available", async () => {
+  test("success contract keeps realtime totals DB-backed when runtime reports drifted values", async () => {
+    const db = await getDb();
+    await db.execute({
+      sql: "insert into realtime_connections(id, username, connected_at, last_seen_at) values(?, ?, datetime('now'), datetime('now'))",
+      args: [randomUUID(), username],
+    });
+    const expectedRes = await db.execute({
+      sql: "select count(*) as connectionsTotal, count(distinct username) as usersConnected from realtime_connections where last_seen_at >= datetime('now', '-120 seconds')",
+    });
+    const expectedRow = expectedRes.rows[0] as
+      | {
+          connectionsTotal?: number | string | null;
+          usersConnected?: number | string | null;
+        }
+      | undefined;
+    const expectedConnectionsTotal = Number(expectedRow?.connectionsTotal ?? 0);
+    const expectedUsersConnected = Number(expectedRow?.usersConnected ?? 0);
+
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (
       input: string | URL | Request,
@@ -72,8 +89,8 @@ describe("internal API contracts: /api/realtime/health", () => {
         return new Response(
           JSON.stringify({
             ok: true,
-            connectionsTotal: 7,
-            usersConnected: 3,
+            connectionsTotal: 777,
+            usersConnected: 333,
           }),
           {
             status: 200,
@@ -97,8 +114,8 @@ describe("internal API contracts: /api/realtime/health", () => {
         usersConnected: number;
       };
       expect(json.ok).toBe(true);
-      expect(json.connectionsTotal).toBeGreaterThanOrEqual(7);
-      expect(json.usersConnected).toBeGreaterThanOrEqual(3);
+      expect(json.connectionsTotal).toBe(expectedConnectionsTotal);
+      expect(json.usersConnected).toBe(expectedUsersConnected);
     } finally {
       globalThis.fetch = originalFetch;
     }
