@@ -60,6 +60,7 @@ export function RegisterForm({
 
         <form
           action={action}
+          method="post"
           className="space-y-4"
           onSubmit={(e) => {
             const form = e.currentTarget;
