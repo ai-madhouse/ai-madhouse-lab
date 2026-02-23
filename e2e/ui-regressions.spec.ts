@@ -509,3 +509,104 @@ test("live dashboard hides stale connected 0/0 and refreshes to real realtime me
     .poll(() => metricsDetail.textContent(), { timeout: 5_000 })
     .toBe("1 user(s), 1 connection(s)");
 });
+
+test("live dashboard realtime does not show stale 0/0 while websocket is still opening", async ({
+  page,
+}) => {
+  let metricsCallCount = 0;
+  await page.route("**/api/dashboard/metrics", async (route) => {
+    metricsCallCount += 1;
+
+    const realtime =
+      metricsCallCount === 1
+        ? {
+            ok: true,
+            usersConnected: 0,
+            connectionsTotal: 0,
+          }
+        : {
+            ok: true,
+            usersConnected: 1,
+            connectionsTotal: 1,
+          };
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        metrics: {
+          activeSessions: 1,
+          notesCount: 1,
+          notesEventsLastHour: 1,
+          notesEventsLastDay: 1,
+          lastNotesActivityAt: new Date().toISOString(),
+          realtime,
+        },
+      }),
+    });
+  });
+
+  await page.addInitScript(() => {
+    class MockWebSocket {
+      static readonly CONNECTING = 0;
+      static readonly OPEN = 1;
+      static readonly CLOSING = 2;
+      static readonly CLOSED = 3;
+
+      readonly url: string;
+      readyState = MockWebSocket.CONNECTING;
+      onopen: ((this: WebSocket, ev: Event) => unknown) | null = null;
+      onclose: ((this: WebSocket, ev: CloseEvent) => unknown) | null = null;
+      onerror: ((this: WebSocket, ev: Event) => unknown) | null = null;
+      onmessage: ((this: WebSocket, ev: MessageEvent) => unknown) | null = null;
+
+      constructor(url: string) {
+        this.url = url;
+
+        setTimeout(() => {
+          this.readyState = MockWebSocket.OPEN;
+          this.onopen?.call(this as unknown as WebSocket, new Event("open"));
+          this.onmessage?.call(
+            this as unknown as WebSocket,
+            new MessageEvent("message", {
+              data: JSON.stringify({ type: "hello" }),
+            }),
+          );
+        }, 1_200);
+      }
+
+      close() {
+        this.readyState = MockWebSocket.CLOSED;
+      }
+
+      send(_data: string | Blob | ArrayBuffer | ArrayBufferView) {}
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() {
+        return true;
+      }
+    }
+
+    Object.defineProperty(window, "WebSocket", {
+      value: MockWebSocket,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  await registerAndLandOnDashboard(page, { locale: "en" });
+
+  const realtimeCard = page.getByTestId("dashboard-realtime-card");
+  const statusDetail = realtimeCard.getByTestId("realtime-status-detail");
+  const metricsDetail = realtimeCard.getByTestId("realtime-metrics-detail");
+
+  await expect(realtimeCard).toBeVisible();
+  await expect(statusDetail).toHaveText("Opening realtime websocket...");
+  await expect(metricsDetail).toHaveText("Connection metrics unavailable.");
+  await expect(metricsDetail).not.toHaveText("0 user(s), 0 connection(s)");
+  await expect
+    .poll(() => statusDetail.textContent(), { timeout: 5_000 })
+    .toBe("This browser is connected to realtime.");
+  await expect(metricsDetail).toHaveText("1 user(s), 1 connection(s)");
+});

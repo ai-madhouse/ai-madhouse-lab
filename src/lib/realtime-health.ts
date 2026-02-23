@@ -73,24 +73,14 @@ export async function getRealtimeHealthFromDb(): Promise<RealtimeHealth> {
 }
 
 export async function getRealtimeHealth(): Promise<RealtimeHealth | null> {
-  const runtimeHealth = await getRealtimeHealthFromRuntime();
   const dbHealth = await getRealtimeHealthFromDb().catch(() => null);
 
-  if (runtimeHealth && dbHealth) {
-    return {
-      ok: true,
-      connectionsTotal: Math.max(
-        runtimeHealth.connectionsTotal,
-        dbHealth.connectionsTotal,
-      ),
-      usersConnected: Math.max(
-        runtimeHealth.usersConnected,
-        dbHealth.usersConnected,
-      ),
-    };
-  }
-  if (runtimeHealth) return runtimeHealth;
+  // Dashboard/runtime reads should use the same SQLite source-of-truth whenever
+  // possible to avoid drift between bootstrap and WS-triggered refreshes.
   if (dbHealth) return dbHealth;
+
+  const runtimeHealth = await getRealtimeHealthFromRuntime();
+  if (runtimeHealth) return runtimeHealth;
 
   return null;
 }
