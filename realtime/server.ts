@@ -1,5 +1,3 @@
-import crypto from "node:crypto";
-
 import { createClient } from "@libsql/client";
 
 import {
@@ -20,7 +18,13 @@ import {
 import { json } from "./responses";
 import { startSessionChecker } from "./session-checker";
 import { getSession } from "./sessions";
-import { addSocket, broadcast, removeSocket, socketsByUser } from "./sockets";
+import {
+  addSocket,
+  broadcast,
+  hasSocketForSession,
+  removeSocket,
+  socketsByUser,
+} from "./sockets";
 import type { PublishBody, WsData } from "./types";
 
 const db = createClient({ url: `file:${DB_PATH}` });
@@ -62,10 +66,6 @@ setInterval(() => {
   })();
 }, sessionCheckIntervalMs);
 
-function randomConnectionId() {
-  return crypto.randomBytes(24).toString("base64url");
-}
-
 Bun.serve<WsData>({
   port: REALTIME_PORT,
   fetch: async (req, server) => {
@@ -105,7 +105,7 @@ Bun.serve<WsData>({
         data: {
           username: session.username,
           sessionId,
-          connectionId: randomConnectionId(),
+          connectionId: sessionId,
         },
       });
 
@@ -141,6 +141,11 @@ Bun.serve<WsData>({
     },
     close: (ws) => {
       removeSocket(ws.data.username, ws);
+      if (
+        hasSocketForSession(socketsByUser, ws.data.username, ws.data.sessionId)
+      ) {
+        return;
+      }
       void unregisterRealtimeConnection(db, ws.data.connectionId).catch(
         () => null,
       );
