@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 
 import { encodeSessionCookie } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { realtimeHealthSuccessResponseSchema } from "@/lib/schemas/internal-api";
 import { createSession } from "@/lib/sessions";
 
 let realtimeHealthGet: typeof import("@/app/api/realtime/health/route").GET;
@@ -60,6 +61,20 @@ describe("internal API contracts: /api/realtime/health", () => {
     expect(json.ok).toBe(true);
     expect(json.connectionsTotal).toBeGreaterThanOrEqual(1);
     expect(json.usersConnected).toBeGreaterThanOrEqual(1);
+  });
+
+  test("contract treats explicit zero totals as valid and omitted totals as invalid", () => {
+    const zeroCounts = realtimeHealthSuccessResponseSchema.safeParse({
+      ok: true,
+      connectionsTotal: 0,
+      usersConnected: 0,
+    });
+    const missingCounts = realtimeHealthSuccessResponseSchema.safeParse({
+      ok: true,
+    });
+
+    expect(zeroCounts.success).toBe(true);
+    expect(missingCounts.success).toBe(false);
   });
 
   test("success contract keeps realtime totals DB-backed when runtime reports drifted values", async () => {
