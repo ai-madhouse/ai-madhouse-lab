@@ -33,6 +33,34 @@ function createFormPostRequest({
   });
 }
 
+function createQueryOnlyPostRequest({
+  url,
+  query,
+  cookie,
+}: {
+  url: string;
+  query: Record<string, string>;
+  cookie?: string;
+}) {
+  const withQuery = new URL(url);
+  for (const [key, value] of Object.entries(query)) {
+    withQuery.searchParams.set(key, value);
+  }
+
+  const headers = new Headers({
+    "content-type": "application/x-www-form-urlencoded",
+  });
+  if (cookie) {
+    headers.set("cookie", cookie);
+  }
+
+  return new NextRequest(withQuery.toString(), {
+    method: "POST",
+    headers,
+    body: "",
+  });
+}
+
 function getRedirectLocation(response: Response) {
   const location = response.headers.get("location");
   expect(location).toBeTruthy();
@@ -198,13 +226,16 @@ describe("internal API contracts: auth boundary routes", () => {
     expect(location.searchParams.get("next")).toBe("/en/dashboard");
   });
 
-  test("/api/auth/login rejects csrf supplied only via URL query", async () => {
+  test("/api/auth/login ignores query-carried credentials/csrf and requires body payload", async () => {
     const loginRes = await loginPost(
-      createFormPostRequest({
-        url: "http://local.test/api/auth/login?username=query-user&password=Password123!&csrfToken=csrf-test-token",
-        form: {
+      createQueryOnlyPostRequest({
+        url: "http://local.test/api/auth/login",
+        query: {
           locale: "en",
           next: "/en/dashboard",
+          username: "query-user",
+          password: "query-password",
+          csrfToken: "query-csrf",
         },
         cookie: "madhouse_csrf=csrf-test-token",
       }),
@@ -217,14 +248,18 @@ describe("internal API contracts: auth boundary routes", () => {
     expect(location.searchParams.get("next")).toBe("/en/dashboard");
   });
 
-  test("/api/auth/register rejects credentials supplied only via URL query", async () => {
+  test("/api/auth/register ignores query-carried credentials/csrf and requires body payload", async () => {
     const queryUsername = `query-only-${Date.now().toString().slice(-6)}`;
     const registerRes = await registerPost(
-      createFormPostRequest({
-        url: `http://local.test/api/auth/register?username=${queryUsername}&password=Password123!&password2=Password123!&csrfToken=csrf-test-token`,
-        form: {
+      createQueryOnlyPostRequest({
+        url: "http://local.test/api/auth/register",
+        query: {
           locale: "en",
           next: "/en/dashboard",
+          username: queryUsername,
+          password: "Password123!",
+          password2: "Password123!",
+          csrfToken: "query-csrf",
         },
         cookie: "madhouse_csrf=csrf-test-token",
       }),

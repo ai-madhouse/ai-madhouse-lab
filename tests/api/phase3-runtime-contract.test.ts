@@ -127,6 +127,61 @@ describe("phase3 runtime route contracts", () => {
     expect(typeof pulseJson.pulse.activeSessions).toBe("number");
   });
 
+  test("/api/dashboard/metrics prefers non-zero db realtime metrics over stale runtime 0/0", async () => {
+    const db = await getDb();
+    const originalFetch = globalThis.fetch;
+
+    await db.execute({
+      sql: "insert into realtime_connections(id, username, last_seen_at) values(?, ?, datetime('now'))",
+      args: [`phase3-realtime-${Date.now()}`, username],
+    });
+
+    globalThis.fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url = String(input);
+      if (url.endsWith("/health")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            connectionsTotal: 0,
+            usersConnected: 0,
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+      return originalFetch(input, init);
+    }) as typeof globalThis.fetch;
+
+    try {
+      const metricsRes = await dashboardMetricsGet(
+        createAuthedRequest("http://local.test/api/dashboard/metrics"),
+      );
+      expect(metricsRes.status).toBe(200);
+      const metricsJson = (await metricsRes.json()) as {
+        ok: true;
+        metrics: {
+          realtime: {
+            ok: true;
+            usersConnected: number;
+            connectionsTotal: number;
+          };
+        };
+      };
+
+      expect(metricsJson.ok).toBe(true);
+      expect(metricsJson.metrics.realtime.ok).toBe(true);
+      expect(metricsJson.metrics.realtime.usersConnected).toBeGreaterThan(0);
+      expect(metricsJson.metrics.realtime.connectionsTotal).toBeGreaterThan(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("/api/sessions/revoke-others revokes secondary sessions", async () => {
     await createSession({ username });
 
