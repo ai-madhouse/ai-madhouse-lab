@@ -49,7 +49,7 @@ export async function signInFromLoginPage({
   });
   await expect(
     page.locator('input[name="csrfToken"][type="hidden"]'),
-  ).toHaveValue(/.+/);
+  ).toHaveValue(/\S+/);
 
   await page.locator('input[name="username"]').fill(username);
   await page.locator('input[name="password"]').first().fill(password);

@@ -10,6 +10,15 @@ import {
   uniqueUser,
 } from "./helpers";
 
+const SENSITIVE_QUERY_FIELDS = ["csrfToken", "username", "password"] as const;
+
+function assertNoSensitiveQueryParams(rawUrl: string) {
+  const parsed = new URL(rawUrl);
+  for (const field of SENSITIVE_QUERY_FIELDS) {
+    expect(parsed.searchParams.has(field)).toBe(false);
+  }
+}
+
 test("can register, see settings, and sign out", async ({ page }) => {
   const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
 
@@ -26,49 +35,61 @@ test("can register, see settings, and sign out", async ({ page }) => {
   expect(await sessionMeStatusFromBrowser(page)).toBe(401);
 });
 
-test("auth credentials and csrf are submitted in body, not URL query", async ({
+test("register submits credentials/csrf in POST body only", async ({
   page,
 }) => {
   const locale = "en";
   const { username, password } = uniqueUser();
+  let registerRequestUrl = "";
+  let registerRequestMethod = "";
+
+  await page.route("**/api/auth/register*", async (route) => {
+    const request = route.request();
+    registerRequestUrl = request.url();
+    registerRequestMethod = request.method();
+    await route.continue();
+  });
 
   await page.goto(`/${locale}/register`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Confirm password").fill(password);
-
-  const registerReqPromise = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      new URL(request.url()).pathname === "/api/auth/register",
-  );
-
   await page.getByRole("button", { name: "Create account" }).click();
-  const registerReq = await registerReqPromise;
-  const registerUrl = new URL(registerReq.url());
-  expect(registerUrl.searchParams.get("username")).toBeNull();
-  expect(registerUrl.searchParams.get("password")).toBeNull();
-  expect(registerUrl.searchParams.get("password2")).toBeNull();
-  expect(registerUrl.searchParams.get("csrfToken")).toBeNull();
+  await expect(page).toHaveURL(new RegExp(`/${locale}/(dashboard|login)`));
 
-  await signOutFromHeader(page, locale);
-  await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password", { exact: true }).fill(password);
+  expect(registerRequestMethod).toBe("POST");
+  expect(registerRequestUrl).toContain("/api/auth/register");
+  assertNoSensitiveQueryParams(registerRequestUrl);
+  assertNoSensitiveQueryParams(page.url());
+});
 
-  const loginReqPromise = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      new URL(request.url()).pathname === "/api/auth/login",
+test("login submits credentials/csrf in POST body only", async ({ page }) => {
+  const { locale, username, password } = await registerAndLandOnDashboard(
+    page,
+    { locale: "en" },
   );
+  await signOutFromHeader(page, locale);
 
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  const loginReq = await loginReqPromise;
-  const loginUrl = new URL(loginReq.url());
-  expect(loginUrl.searchParams.get("username")).toBeNull();
-  expect(loginUrl.searchParams.get("password")).toBeNull();
-  expect(loginUrl.searchParams.get("csrfToken")).toBeNull();
-  await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
+  let loginRequestUrl = "";
+  let loginRequestMethod = "";
+  await page.route("**/api/auth/login*", async (route) => {
+    const request = route.request();
+    loginRequestUrl = request.url();
+    loginRequestMethod = request.method();
+    await route.continue();
+  });
+
+  await signInFromLoginPage({
+    page,
+    locale,
+    username,
+    password,
+  });
+
+  expect(loginRequestMethod).toBe("POST");
+  expect(loginRequestUrl).toContain("/api/auth/login");
+  assertNoSensitiveQueryParams(loginRequestUrl);
+  assertNoSensitiveQueryParams(page.url());
 });
 
 test("register rejects tampered csrf token", async ({ page }) => {
@@ -174,8 +195,23 @@ test("login rejects tampered csrf token then succeeds with fresh token", async (
   await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password", { exact: true }).fill(password);
+  let tamperedOnce = false;
+  await page.route("**/api/auth/login*", async (route) => {
+    const request = route.request();
+    if (tamperedOnce) {
+      await route.continue();
+      return;
+    }
 
-  await setFormCsrfToken(page, "tampered-login-csrf");
+    tamperedOnce = true;
+    const postData = request.postData() ?? "";
+    const body = new URLSearchParams(postData);
+    body.set("csrfToken", "tampered-login-csrf");
+
+    await route.continue({
+      postData: body.toString(),
+    });
+  });
 
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/${locale}/login\\?error=csrf`));
