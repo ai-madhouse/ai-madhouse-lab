@@ -1,58 +1,28 @@
-Continue this vibe-kanban task (id: b69d57af-12c7-46b7-af2d-c80fb413259e): fix(e2e): resolve windows teardown EBUSY + locale-stable auth selectors; enforce tmp cleanup
+Continue VK task c585580b-d912-407c-b0e4-776dad3a3c91.
 
-Read AGENTS.md from repo root in this worktree and follow it as authoritative.
+Goals:
+1) Investigate and document exact root cause of PR89 invalid content merge.
+2) Patch automation scripts so:
+   - VK sections are updated structurally (no blind bottom append)
+   - timeline includes full lifecycle events with seconds
+   - updater scripts never add/remove/move 🧀
+3) Implement actual Playwright fixes for the reported failures.
+4) Run full gates including bun run e2e.
+5) Push branch and run /usr/local/bin/openclaw-codex-handoff.sh to open corrective PR (expected PR #90 next).
 
-Task description:
-## Goal
-- Fix the reported Playwright failures from the provided error log.
-- Ensure `bun run e2e` passes end-to-end for this task scope.
-- Ensure no `/tmp` directory remains after e2e completes (not only `/tmp/e2e/*`).
+Hard constraints:
+- Do NOT create/edit/merge PR manually with gh.
+- Update VK checkboxes live across Acceptance/Gates/Progress.
+- Keep task description rich; do not drop sections.
+- Keep links as full visible URLs in PR/VK fields.
 
-## Context
-- Reported failure #1 (Windows teardown):
-  - `EBUSY: resource busy or locked, unlink ... tmp/e2e/<run>/app.db` in `e2e/global-teardown.ts` on `rmSync(tmpDir, { recursive: true, force: true })`.
-- Reported failure #2 (locale-sensitive selector):
-  - `e2e/ui-regressions.spec.ts` fails at RU locale timeout waiting for `getByLabel('Username')` in `e2e/helpers.ts`.
-- Requested execution target:
-  - Validate with full `bun run e2e` (not subset).
+Validation commands required:
+- bun run lint
+- bun test
+- bun run build
+- bun run e2e
 
-## Approach
-- Reproduce both failures and identify lock holder/order-of-shutdown in teardown path.
-- Implement focused teardown hardening that releases holders before deletion (retries only as safety net).
-- Replace locale-sensitive auth selectors with stable selectors where needed.
-- Keep changes minimal and avoid unrelated refactors.
-
-## Acceptance
-- [ ] `bun run e2e` passes fully in this branch.
-- [ ] Teardown no longer fails with `EBUSY` in the reported path.
-- [ ] Auth/register flow is locale-stable (including RU) and no longer depends on English-only labels.
-- [ ] No `/tmp` directory remains after e2e completion.
-- [ ] Root cause summary and verification evidence are documented in task notes.
-
-## Gates
-- [ ] bun run lint
-- [ ] bun test
-- [ ] bun run build
-- [ ] bun run e2e
-
-## Notes
-- Deliverables expected from implementation:
-  - Code changes.
-  - Short root-cause summary for both failures.
-  - Exact command outputs for lint/test/build/e2e.
-  - Explicit post-run confirmation that `/tmp` was removed.
-- PR/task hygiene:
-  - Codex must NOT create/edit/merge PRs manually.
-  - Use automation-owned handoff after push: `/usr/local/bin/openclaw-codex-handoff.sh`.
-  - Update checklist incrementally in real time across ALL three sections: Acceptance, Gates, Progress.
-  - Never revert completed `[x]` back to `[ ]`.
-
-Constraints:
-- Work only in this worktree/branch.
-- Do NOT push.
-- One commit then stop.
-- Do NOT create or edit PRs manually; automation owns PR creation/title/body/labels.
-- Update checklist incrementally in real time across ALL three sections (Progress, Acceptance, Gates): as soon as any specific item is verified complete, mark only that exact item [x] immediately.
-- Never uncheck completed items.
-- Run bun run lint && bun test && bun run build && bun run e2e before finalizing.
-- When implementation + gates are complete, run /usr/local/bin/openclaw-codex-handoff.sh right after push for automation-owned PR handoff.
+At completion:
+- Ensure task timeline has: worktree/branch prepared, commit created+pushed, status transitions, PR opened, labels applied.
+- Append concise root-cause note in Notes.
+- Push changes, then run handoff script.
