@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, withSqliteBusyRetry } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 
 export type UserRow = {
@@ -8,6 +8,21 @@ export type UserRow = {
 };
 
 export { normalizeUsername } from "@/lib/validation/users";
+
+export class UserAlreadyExistsError extends Error {
+  constructor() {
+    super("user already exists");
+    this.name = "UserAlreadyExistsError";
+  }
+}
+
+function isUniqueUsernameConstraint(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("UNIQUE constraint failed: users.username") ||
+    message.includes("SQLITE_CONSTRAINT")
+  );
+}
 
 export async function getUserByUsername(
   username: string,
@@ -32,10 +47,19 @@ export async function createUser({
   const db = await getDb();
   const passwordHash = hashPassword(password);
 
-  await db.execute({
-    sql: "insert into users(username, password_hash) values(?,?)",
-    args: [username, passwordHash],
-  });
+  try {
+    await withSqliteBusyRetry(() =>
+      db.execute({
+        sql: "insert into users(username, password_hash) values(?,?)",
+        args: [username, passwordHash],
+      }),
+    );
+  } catch (error) {
+    if (isUniqueUsernameConstraint(error)) {
+      throw new UserAlreadyExistsError();
+    }
+    throw error;
+  }
 
   const user = await getUserByUsername(username);
   if (!user) throw new Error("user insert failed");
@@ -65,8 +89,10 @@ export async function updateUserPassword({
   const db = await getDb();
   const passwordHash = hashPassword(newPassword);
 
-  await db.execute({
-    sql: "update users set password_hash = ? where username = ?",
-    args: [passwordHash, username],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "update users set password_hash = ? where username = ?",
+      args: [passwordHash, username],
+    }),
+  );
 }

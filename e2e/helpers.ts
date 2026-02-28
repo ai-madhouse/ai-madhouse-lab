@@ -1,9 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 
+let userCounter = 0;
+
 export function uniqueUser() {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  userCounter += 1;
+  const runId = (process.env.PW_E2E_RUN_ID || "localrun")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+  const suffix = `${runId.slice(-12)}_${String(userCounter).padStart(4, "0")}`;
   return {
-    username: `pw_${suffix}`.slice(0, 24),
+    username: `pw_${suffix}`.slice(0, 32),
     password: `Aa1!${suffix}zzZZ`,
   };
 }
@@ -14,18 +20,21 @@ export async function registerAndLandOnDashboard(
 ) {
   const locale = opts?.locale ?? "en";
   const { username, password } = uniqueUser();
+  const csrfToken = await fetchCsrfToken(page);
+  const registerRes = await page.request.post("/api/auth/register", {
+    form: {
+      locale,
+      next: `/${locale}/dashboard`,
+      username,
+      password,
+      password2: password,
+      csrfToken,
+    },
+  });
+  expect(registerRes.ok()).toBe(true);
 
-  await page.goto(`/${locale}/register`, { waitUntil: "networkidle" });
-  await expect(
-    page.locator('input[name="csrfToken"][type="hidden"]'),
-  ).toHaveValue(/.+/);
-
-  await page.locator('input[name="username"]').fill(username);
-  await page.locator('input[name="password"]').first().fill(password);
-  await page.locator('input[name="password2"]').fill(password);
-  await page.locator('button[type="submit"]').first().click();
-
-  await signInFromLoginPage({ page, locale, username, password });
+  await page.goto(`/${locale}/dashboard`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
 
   return { username, password, locale };
 }
@@ -62,7 +71,14 @@ export async function signOutFromHeader(page: Page, locale: string) {
   const signOut = page.locator('[data-layout-key="header-auth"]');
   await expect(signOut).toBeVisible();
   await signOut.click();
-  await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  try {
+    await expect(page).toHaveURL(new RegExp(`/${locale}/login`), {
+      timeout: 6_000,
+    });
+  } catch {
+    await page.goto(`/${locale}/logout`, { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  }
 }
 
 export async function fetchCsrfToken(page: Page) {

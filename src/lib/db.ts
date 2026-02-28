@@ -7,6 +7,34 @@ const DEFAULT_DB_PATH = path.join(process.cwd(), "data", "app.db");
 
 let clientSingleton: Client | null = null;
 
+function isSqliteBusyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("SQLITE_BUSY") || message.includes("database is locked")
+  );
+}
+
+export async function withSqliteBusyRetry<T>(
+  operation: () => Promise<T>,
+  opts?: { retries?: number; delayMs?: number },
+): Promise<T> {
+  const retries = opts?.retries ?? 6;
+  const delayMs = opts?.delayMs ?? 30;
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isSqliteBusyError(error) || attempt >= retries) {
+        throw error;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, delayMs * (attempt + 1)),
+      );
+    }
+  }
+}
+
 function ensureDirForFile(filePath: string) {
   mkdirSync(path.dirname(filePath), { recursive: true });
 }
@@ -18,6 +46,8 @@ function resolveDbPath(rawPath: string | undefined) {
 }
 
 async function migrate(client: Client) {
+  await client.execute("PRAGMA journal_mode = WAL");
+  await client.execute("PRAGMA busy_timeout = 5000");
   await client.execute("PRAGMA foreign_keys = ON");
 
   await client.execute(

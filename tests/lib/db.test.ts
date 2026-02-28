@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { createClient } from "@libsql/client";
+import { withSqliteBusyRetry } from "@/lib/db";
 
 describe("db", () => {
   test("sanity: can create/open sqlite db and read/write", async () => {
@@ -31,5 +32,19 @@ describe("db", () => {
     expect(note?.id).toBe("n1");
     expect(note?.title).toBe("Hello");
     expect(note?.body).toBe("World");
+  });
+
+  test("withSqliteBusyRetry retries transient SQLITE_BUSY failures", async () => {
+    let calls = 0;
+    const value = await withSqliteBusyRetry(async () => {
+      calls += 1;
+      if (calls < 3) {
+        throw new Error("SQLITE_BUSY: database is locked");
+      }
+      return "ok";
+    });
+
+    expect(value).toBe("ok");
+    expect(calls).toBe(3);
   });
 });

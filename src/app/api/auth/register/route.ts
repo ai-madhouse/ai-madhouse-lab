@@ -10,7 +10,7 @@ import { safeNextPath } from "@/lib/redirects";
 import { getClientIp } from "@/lib/request";
 import { registerFormSchema } from "@/lib/schemas/auth";
 import { createSession } from "@/lib/sessions";
-import { createUser } from "@/lib/users";
+import { createUser, UserAlreadyExistsError } from "@/lib/users";
 
 function redirectToRegister({
   request,
@@ -98,7 +98,16 @@ export async function POST(request: NextRequest) {
 
   try {
     await createUser({ username, password });
-  } catch {
+  } catch (error) {
+    if (!(error instanceof UserAlreadyExistsError)) {
+      return redirectToRegister({
+        request,
+        locale,
+        error: "1",
+        nextPath,
+      });
+    }
+
     return redirectToRegister({
       request,
       locale,
