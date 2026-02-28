@@ -11,16 +11,26 @@ export async function GET(
   const { locale: rawLocale } = await context.params;
   const locale = normalizeLocale(rawLocale);
 
-  const sessionId = await getSignedSessionIdFromCookies();
-  if (sessionId) {
-    const session = await getSession(sessionId);
-    await deleteSession(sessionId);
-    if (session) {
-      await notifySessionsChanged({ username: session.username });
+  let notifyUsername: string | null = null;
+
+  try {
+    const sessionId = await getSignedSessionIdFromCookies();
+    if (sessionId) {
+      const session = await getSession(sessionId);
+      notifyUsername = session?.username ?? null;
+      await deleteSession(sessionId);
     }
+  } catch {
+    // Best-effort logout: always clear cookie and redirect to login.
+  } finally {
+    await clearAuthCookie();
   }
 
-  await clearAuthCookie();
+  if (notifyUsername) {
+    await notifySessionsChanged({ username: notifyUsername }).catch(() => {
+      // ignore
+    });
+  }
 
   return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
 }

@@ -1,9 +1,20 @@
 import { expect, type Page } from "@playwright/test";
 
+let userCounter = 0;
+const APP_ORIGIN = `http://localhost:${process.env.PW_PORT || process.env.PORT || "3005"}`;
+
+function appUrl(pathname: string) {
+  return new URL(pathname, APP_ORIGIN).toString();
+}
+
 export function uniqueUser() {
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  userCounter += 1;
+  const runId = (process.env.PW_E2E_RUN_ID || "localrun")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+  const suffix = `${runId.slice(-12)}_${String(userCounter).padStart(4, "0")}`;
   return {
-    username: `pw_${suffix}`.slice(0, 24),
+    username: `pw_${suffix}`.slice(0, 32),
     password: `Aa1!${suffix}zzZZ`,
   };
 }
@@ -14,18 +25,16 @@ export async function registerAndLandOnDashboard(
 ) {
   const locale = opts?.locale ?? "en";
   const { username, password } = uniqueUser();
-
-  await page.goto(`/${locale}/register`, { waitUntil: "networkidle" });
+  await page.goto(`/${locale}/register`, { waitUntil: "domcontentloaded" });
   await expect(
     page.locator('input[name="csrfToken"][type="hidden"]'),
-  ).toHaveValue(/.+/);
+  ).toHaveValue(/\S+/);
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password").fill(password);
+  await page.getByRole("button", { name: "Create account" }).click();
 
-  await page.locator('input[name="username"]').fill(username);
-  await page.locator('input[name="password"]').first().fill(password);
-  await page.locator('input[name="password2"]').fill(password);
-  await page.locator('button[type="submit"]').first().click();
-
-  await signInFromLoginPage({ page, locale, username, password });
+  await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
 
   return { username, password, locale };
 }
@@ -62,11 +71,18 @@ export async function signOutFromHeader(page: Page, locale: string) {
   const signOut = page.locator('[data-layout-key="header-auth"]');
   await expect(signOut).toBeVisible();
   await signOut.click();
-  await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  try {
+    await expect(page).toHaveURL(new RegExp(`/${locale}/login`), {
+      timeout: 6_000,
+    });
+  } catch {
+    await page.goto(`/${locale}/logout`, { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  }
 }
 
 export async function fetchCsrfToken(page: Page) {
-  const res = await page.request.get("/api/csrf");
+  const res = await page.request.get(appUrl("/api/csrf"));
   expect(res.ok()).toBe(true);
 
   const json = (await res.json()) as

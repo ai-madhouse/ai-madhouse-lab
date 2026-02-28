@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import { getDb } from "@/lib/db";
+import { getDb, withSqliteBusyRetry } from "@/lib/db";
 
 function randomId() {
   return crypto.randomBytes(24).toString("base64url");
@@ -23,10 +23,12 @@ export async function createSession({
 
   // Session details (ip/UA) are stored in encrypted form in sessions_meta.
   // We intentionally do not persist these fields in plaintext.
-  await db.execute({
-    sql: "insert into sessions(id, username, expires_at, ip, user_agent) values(?,?,?,?,?)",
-    args: [id, username, expiresAt, null, null],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "insert into sessions(id, username, expires_at, ip, user_agent) values(?,?,?,?,?)",
+      args: [id, username, expiresAt, null, null],
+    }),
+  );
 
   void ip;
   void userAgent;
@@ -64,15 +66,19 @@ export async function deleteSession(sessionId: string) {
   const db = await getDb();
 
   // sessions_meta isn't a FK; delete explicitly.
-  await db.execute({
-    sql: "delete from sessions_meta where session_id = ?",
-    args: [sessionId],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions_meta where session_id = ?",
+      args: [sessionId],
+    }),
+  );
 
-  await db.execute({
-    sql: "delete from sessions where id = ?",
-    args: [sessionId],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions where id = ?",
+      args: [sessionId],
+    }),
+  );
 }
 
 export async function listSessionsForUser(username: string) {
@@ -94,15 +100,19 @@ export async function deleteSessionsForUser(username: string) {
   const db = await getDb();
 
   // sessions_meta isn't a FK; delete explicitly.
-  await db.execute({
-    sql: "delete from sessions_meta where username = ?",
-    args: [username],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions_meta where username = ?",
+      args: [username],
+    }),
+  );
 
-  await db.execute({
-    sql: "delete from sessions where username = ?",
-    args: [username],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions where username = ?",
+      args: [username],
+    }),
+  );
 }
 
 export async function deleteOtherSessionsForUser({
@@ -115,13 +125,17 @@ export async function deleteOtherSessionsForUser({
   const db = await getDb();
 
   // sessions_meta isn't a FK; delete explicitly.
-  await db.execute({
-    sql: "delete from sessions_meta where username = ? and session_id <> ?",
-    args: [username, keepSessionId],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions_meta where username = ? and session_id <> ?",
+      args: [username, keepSessionId],
+    }),
+  );
 
-  await db.execute({
-    sql: "delete from sessions where username = ? and id <> ?",
-    args: [username, keepSessionId],
-  });
+  await withSqliteBusyRetry(() =>
+    db.execute({
+      sql: "delete from sessions where username = ? and id <> ?",
+      args: [username, keepSessionId],
+    }),
+  );
 }

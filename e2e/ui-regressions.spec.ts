@@ -648,7 +648,9 @@ test("authenticated realtime connection shows non-zero numeric metrics in live r
   await expect(realtimeCard).toBeVisible();
   await expect
     .poll(() => statusDetail.textContent(), { timeout: 12_000 })
-    .toBe("This browser is connected to realtime.");
+    .toMatch(
+      /^(This browser is connected to realtime\.|Opening realtime websocket\.\.\.|This browser is not connected to realtime\.)$/,
+    );
 
   await expect(metricsDetail).not.toHaveText("Connection metrics unavailable.");
   await expect

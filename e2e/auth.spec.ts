@@ -51,6 +51,9 @@ test("register submits credentials/csrf in POST body only", async ({
   });
 
   await page.goto(`/${locale}/register`, { waitUntil: "domcontentloaded" });
+  await expect(
+    page.locator('input[name="csrfToken"][type="hidden"]'),
+  ).toHaveValue(/\S+/);
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Confirm password").fill(password);
