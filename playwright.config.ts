@@ -3,19 +3,16 @@ import path from "node:path";
 import { defineConfig } from "@playwright/test";
 
 const PORT = Number(process.env.PW_PORT || process.env.PORT || "3005");
-const REALTIME_PORT = Number(
-  process.env.PW_REALTIME_PORT || process.env.REALTIME_PORT || `${PORT + 4000}`,
-);
+const REALTIME_PORT = Number(process.env.PW_REALTIME_PORT || `${PORT + 4000}`);
 const RUN_ID =
   process.env.PW_RUN_ID ||
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 const TMP_DIR = path.join(process.cwd(), "tmp", "e2e", RUN_ID);
 const DB_PATH = path.join(TMP_DIR, "app.db");
-const AUTH_SECRET = process.env.AUTH_SECRET || "playwright-test-secret";
-const REALTIME_SECRET = process.env.REALTIME_SECRET || AUTH_SECRET;
+const AUTH_SECRET = process.env.PW_AUTH_SECRET || "playwright-test-secret";
+const REALTIME_SECRET = process.env.PW_REALTIME_SECRET || AUTH_SECRET;
 const APP_URL = `http://localhost:${PORT}`;
-const REALTIME_URL =
-  process.env.REALTIME_URL || `http://localhost:${REALTIME_PORT}`;
+const REALTIME_URL = `http://localhost:${REALTIME_PORT}`;
 
 rmSync(TMP_DIR, { recursive: true, force: true });
 mkdirSync(TMP_DIR, { recursive: true });
