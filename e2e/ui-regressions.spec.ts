@@ -4,6 +4,27 @@ import { registerAndLandOnDashboard } from "./helpers";
 
 const locales = ["en", "ru", "lt"] as const;
 
+function toCreatePayload(value: unknown): {
+  note_id?: unknown;
+  payload_iv?: unknown;
+  payload_ciphertext?: unknown;
+} | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (candidate.kind !== "create") {
+    return null;
+  }
+
+  return {
+    note_id: candidate.note_id,
+    payload_iv: candidate.payload_iv,
+    payload_ciphertext: candidate.payload_ciphertext,
+  };
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   const sizes = await page.evaluate(() => {
     const html = document.documentElement;
@@ -230,15 +251,16 @@ test("notes create sends string payload fields and persists after reload", async
       return;
     }
 
-    let parsed: { kind?: unknown } | null = null;
+    let parsed: unknown = null;
     try {
-      parsed = JSON.parse(raw) as { kind?: unknown } | null;
+      parsed = JSON.parse(raw);
     } catch {
       await route.continue();
       return;
     }
-    if (parsed?.kind === "create") {
-      createPayloads.push(parsed);
+    const createPayload = toCreatePayload(parsed);
+    if (createPayload) {
+      createPayloads.push(createPayload);
     }
     await route.continue();
   });
