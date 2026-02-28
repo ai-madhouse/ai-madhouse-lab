@@ -1,6 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
 let userCounter = 0;
+const APP_ORIGIN = `http://localhost:${process.env.PW_PORT || process.env.PORT || "3005"}`;
+
+function appUrl(pathname: string) {
+  return new URL(pathname, APP_ORIGIN).toString();
+}
 
 export function uniqueUser() {
   userCounter += 1;
@@ -20,20 +25,15 @@ export async function registerAndLandOnDashboard(
 ) {
   const locale = opts?.locale ?? "en";
   const { username, password } = uniqueUser();
-  const csrfToken = await fetchCsrfToken(page);
-  const registerRes = await page.request.post("/api/auth/register", {
-    form: {
-      locale,
-      next: `/${locale}/dashboard`,
-      username,
-      password,
-      password2: password,
-      csrfToken,
-    },
-  });
-  expect(registerRes.ok()).toBe(true);
+  await page.goto(`/${locale}/register`, { waitUntil: "domcontentloaded" });
+  await expect(
+    page.locator('input[name="csrfToken"][type="hidden"]'),
+  ).toHaveValue(/\S+/);
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password").fill(password);
+  await page.getByRole("button", { name: "Create account" }).click();
 
-  await page.goto(`/${locale}/dashboard`, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
 
   return { username, password, locale };
@@ -82,7 +82,7 @@ export async function signOutFromHeader(page: Page, locale: string) {
 }
 
 export async function fetchCsrfToken(page: Page) {
-  const res = await page.request.get("/api/csrf");
+  const res = await page.request.get(appUrl("/api/csrf"));
   expect(res.ok()).toBe(true);
 
   const json = (await res.json()) as
