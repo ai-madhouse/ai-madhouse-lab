@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -17,6 +18,18 @@ function assertNoSensitiveQueryParams(rawUrl: string) {
   for (const field of SENSITIVE_QUERY_FIELDS) {
     expect(parsed.searchParams.has(field)).toBe(false);
   }
+}
+
+async function expectLogoutRedirectToLogin(page: Page, locale: string) {
+  await page
+    .goto(`/${locale}/logout`, { waitUntil: "commit" })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("ERR_ABORTED")) {
+        throw error;
+      }
+    });
+  await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
 }
 
 test("can register, see settings, and sign out", async ({ page }) => {
@@ -233,12 +246,10 @@ test("logout clears auth cookie and session endpoint returns unauthorized", asyn
   const { locale } = await registerAndLandOnDashboard(page, { locale: "en" });
   expect(await sessionMeStatusFromBrowser(page)).toBe(200);
 
-  await page.goto(`/${locale}/logout`, { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  await expectLogoutRedirectToLogin(page, locale);
   expect(await sessionMeStatusFromBrowser(page)).toBe(401);
 
-  await page.goto(`/${locale}/logout`, { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+  await expectLogoutRedirectToLogin(page, locale);
 });
 
 test("session endpoint rejects missing and tampered auth cookies", async ({

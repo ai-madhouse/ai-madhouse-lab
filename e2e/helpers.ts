@@ -29,10 +29,10 @@ export async function registerAndLandOnDashboard(
   await expect(
     page.locator('input[name="csrfToken"][type="hidden"]'),
   ).toHaveValue(/\S+/);
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByLabel("Confirm password").fill(password);
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page.locator('input[name="username"]').fill(username);
+  await page.locator('input[name="password"]').first().fill(password);
+  await page.locator('input[name="password2"]').fill(password);
+  await page.locator('button[type="submit"]').first().click();
 
   await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard`));
 
