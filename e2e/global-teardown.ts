@@ -12,7 +12,9 @@ async function removeDirIfExists(target: string) {
   try {
     await rm(target, { recursive: true, force: true });
   } catch (error) {
-    throw new Error(`[e2e teardown] failed to remove ${target}: ${String(error)}`);
+    throw new Error(
+      `[e2e teardown] failed to remove ${target}: ${String(error)}`,
+    );
   }
 }
 
